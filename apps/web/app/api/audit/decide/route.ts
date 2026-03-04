@@ -5,13 +5,23 @@ import {
     hasValidCronSecret,
     isAdminUser
 } from '@/lib/server/trust';
+import { z } from 'zod';
 
-type DecideBody = {
-    audit_id?: unknown;
-    decision?: unknown;
-    slash_amount?: unknown;
-    note?: unknown;
-};
+const DecideSchema = z.object({
+    audit_id: z.string().uuid(),
+    decision: z.preprocess(
+        (value) => (typeof value === 'string' ? value.trim().toUpperCase() : value),
+        z.enum(['PASS', 'FAIL'])
+    ),
+    slash_amount: z.preprocess(
+        (value) => (value === undefined || value === null || value === '' ? 0 : value),
+        z.coerce.number().int().min(0).max(1_000_000_000)
+    ),
+    note: z.preprocess(
+        (value) => (typeof value === 'string' ? value.slice(0, 2000) : value),
+        z.string().max(2000).nullable().optional()
+    ).default(null),
+});
 
 type DecideAuditRpcResult = {
     ok?: boolean;
@@ -72,20 +82,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 });
         }
 
-        const body = await req.json().catch(() => ({})) as DecideBody;
-        const auditId = typeof body.audit_id === 'string' ? body.audit_id : '';
-        const decisionRaw = typeof body.decision === 'string' ? body.decision : '';
-        const decision = decisionRaw.toUpperCase();
-        const slashAmountRaw = typeof body.slash_amount === 'number' ? body.slash_amount : Number(body.slash_amount);
-        const slashAmount = Number.isFinite(slashAmountRaw) ? Math.max(0, Math.trunc(slashAmountRaw)) : 0;
-        const note = typeof body.note === 'string' ? body.note : null;
-
-        if (!auditId || !['PASS', 'FAIL'].includes(decision)) {
+        const rawBody = await req.json().catch(() => null);
+        const parsed = DecideSchema.safeParse(rawBody);
+        if (!parsed.success) {
             return NextResponse.json(
                 { error: 'BAD_REQUEST', message: 'audit_id and decision(PASS|FAIL) are required' },
                 { status: 400 }
             );
         }
+        const {
+            audit_id: auditId,
+            decision,
+            slash_amount: slashAmount,
+            note,
+        } = parsed.data;
 
         const admin = getServiceRoleClient();
         const { data: rpcData, error: rpcError } = await admin.rpc('decide_audit_atomic', {
