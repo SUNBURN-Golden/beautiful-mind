@@ -17,6 +17,8 @@ async function hasActiveSession(): Promise<boolean> {
 
 export default async function HomePage() {
     const isSignedIn = await hasActiveSession();
+    const commit = process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
+    const commitShort = commit && commit.length >= 7 ? commit.slice(0, 7) : 'local';
 
     return (
         <main className="liquid-shell px-4 pb-16 pt-12 sm:px-8 sm:pt-16">
@@ -69,6 +71,10 @@ export default async function HomePage() {
                         <p className="text-sm text-[#1d1d1f]">Audit log, ledger, anchor 기반으로 포함증명 가능한 무결성 체계를 유지합니다.</p>
                     </article>
                 </section>
+
+                <footer className="pb-2 text-xs text-[#6e6e73]">
+                    build: soulbound-launch-ui-v1 · commit: {commitShort}
+                </footer>
             </div>
         </main>
     );
