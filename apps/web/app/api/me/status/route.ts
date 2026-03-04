@@ -5,9 +5,6 @@ import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 // STEP ENUM
 const STEPS = {
     LOGIN: 'LOGIN',
@@ -28,6 +25,9 @@ function formatError(code: string, message: string, status: number, details?: an
 
 export async function GET(req: Request) {
     try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
         // 1. Auth Check - Support both Cookies and Authorization Header (for API tokens)
         const cookieStore = await cookies();
         let supabase;
@@ -61,8 +61,6 @@ export async function GET(req: Request) {
         let qualificationMissing: string[] = [];
 
         // 2. Fetch User SSOT State (READ-ONLY)
-        // Check Banned status via RPC or Profile (assuming profiles.banned or similar. If not explicitly defined, we assume profiles has a mechanism. For now, let's query profiles.)
-        // In the exact prompt, "banned=true 유저 -> 403 BANNED"
         const { data: profile, error: profileErr } = await supabase
             .from('profiles')
             .select('verified, banned')
@@ -112,7 +110,6 @@ export async function GET(req: Request) {
                 nextStep = STEPS.CONSENT_HUB;
 
                 // Check CONSENT_HUB
-                // Assuming required modules are OSINT, LOCATION, DEVICE
                 const { data: consents } = await supabase
                     .from('consents')
                     .select('module, is_granted')
@@ -169,11 +166,11 @@ export async function GET(req: Request) {
 
         // Response formatting
         const response: any = {
-            stage: nextStep, // User requested 'stage'
-            step: nextStep,  // Keeping 'step' for backward compatibility just in case
+            stage: nextStep,
+            step: nextStep,
             completed: completedSteps.includes(nextStep),
             next: nextStep,
-            blockers: blockers.map(b => b.code), // mapping to string[]
+            blockers: blockers.map(b => b.code),
             meta: {
                 schema_version: 1,
                 server_time: new Date().toISOString()
@@ -181,9 +178,6 @@ export async function GET(req: Request) {
         };
 
         if (nextStep === STEPS.QUALIFICATION && qualificationMissing.length > 0) {
-            // "필수 3종 VERIFIED 전 -> step=QUALIFICATION + details.missing_types 포함"
-            // Wait, the manager said: `step=QUALIFICATION + details.missing_types`.
-            // The schema for 200 OK did not explicitely have `details`, but they asked for it. 
             response.details = { missing_types: qualificationMissing };
         }
 
