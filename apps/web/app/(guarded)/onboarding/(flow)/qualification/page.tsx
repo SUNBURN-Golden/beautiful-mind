@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useStatus } from '../../../../../lib/useStatus';
-import { Stepper, PrimaryButton, SecondaryButton, SupportCTA, Toast, Skeleton } from '../../../../../components/ui-kit';
+import { useStatus } from '@/lib/useStatus';
+import { Stepper, PrimaryButton, SecondaryButton, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
 
 export default function QualificationPage() {
     const { status, isLoading, refetch, handleActionError } = useStatus();

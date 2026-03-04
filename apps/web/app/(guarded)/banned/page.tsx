@@ -1,6 +1,6 @@
 'use client';
 
-import { SupportCTA } from '../../../components/ui-kit';
+import { SupportCTA } from '@/components/ui-kit';
 
 export default function BannedPage() {
     return (

@@ -1,7 +1,7 @@
 'use client';
 
-import { useStatus } from '../../../lib/useStatus';
-import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow } from '../../../components/ui-kit';
+import { useStatus } from '@/lib/useStatus';
+import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow } from '@/components/ui-kit';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {

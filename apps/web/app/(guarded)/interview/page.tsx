@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useStatus } from '../../../lib/useStatus';
-import { Stepper, PrimaryButton, SupportCTA, Toast, Skeleton } from '../../../components/ui-kit';
+import { useStatus } from '@/lib/useStatus';
+import { Stepper, PrimaryButton, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
 
 interface Message {
     role: 'ai' | 'user';
