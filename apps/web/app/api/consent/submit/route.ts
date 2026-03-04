@@ -1,21 +1,38 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+function getSupabaseEnv() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+        throw new Error('Missing Supabase env');
+    }
+    return { supabaseUrl, anonKey, serviceKey };
+}
 
 export async function POST(req: Request) {
     try {
+        const { supabaseUrl, anonKey, serviceKey } = getSupabaseEnv();
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey);
         const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-            return NextResponse.json({ error: 'AUTH_REQUIRED' }, { status: 401 });
-        }
+        const cookieStore = await cookies();
+        let supabaseAuth;
 
-        const supabaseAuth = createClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-            global: { headers: { Authorization: authHeader } }
-        });
+        if (authHeader) {
+            supabaseAuth = createClient(supabaseUrl, anonKey, {
+                global: { headers: { Authorization: authHeader } }
+            });
+        } else {
+            supabaseAuth = createServerClient(supabaseUrl, anonKey, {
+                cookies: {
+                    getAll() { return cookieStore.getAll(); },
+                    setAll() { },
+                },
+            });
+        }
 
         const { data: { user }, error: authErr } = await supabaseAuth.auth.getUser();
         if (authErr || !user) {
@@ -34,7 +51,11 @@ export async function POST(req: Request) {
             user_id: user.id,
             module: m,
             is_granted: true,
-            granted_at: new Date().toISOString()
+            granted_at: new Date().toISOString(),
+            terms_accepted: agreedTerms,
+            privacy_accepted: agreedPrivacy,
+            deep_profiling: true,
+            marketing_accepted: false
         }));
 
         const { error } = await supabaseAdmin.from('consents').upsert(inserts, { onConflict: 'user_id, module' });
@@ -47,7 +68,8 @@ export async function POST(req: Request) {
         // audit_logs is automatically populated via Postgres Trigger
         return NextResponse.json({ success: true });
 
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'INTERNAL_ERROR';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

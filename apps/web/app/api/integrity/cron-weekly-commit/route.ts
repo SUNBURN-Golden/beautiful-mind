@@ -1,16 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const CRON_SECRET = process.env.CRON_SECRET!;
 const ANCHOR_COMMIT_THRESHOLD = parseInt(process.env.ANCHOR_COMMIT_THRESHOLD || '5000', 10);
 
-// Bypassing RLS for system chron jobs
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+function getSupabaseAdmin() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+        throw new Error('Missing Supabase admin env');
+    }
+    // Bypassing RLS for system cron jobs.
+    return createClient(supabaseUrl, serviceKey);
+}
 
 export async function POST(req: Request) {
     try {
+        const supabase = getSupabaseAdmin();
         // C-1: Validate x-cron-secret
         const authHeader = req.headers.get('x-cron-secret');
         if (authHeader !== CRON_SECRET) {
@@ -94,8 +100,9 @@ export async function POST(req: Request) {
             threshold: ANCHOR_COMMIT_THRESHOLD
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
         console.error('Weekly Commit Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

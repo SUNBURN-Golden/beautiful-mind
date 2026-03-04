@@ -5,13 +5,20 @@ import { ethers } from 'ethers';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // service role for bypassing RLS to insert PENDING verification
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+function getSupabaseEnv() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+        throw new Error('Missing Supabase env');
+    }
+    return { supabaseUrl, anonKey, serviceKey };
+}
 
 export async function POST(req: Request) {
     try {
+        const { supabaseUrl, anonKey, serviceKey } = getSupabaseEnv();
+        const supabase = createClient(supabaseUrl, serviceKey); // service role for bypassing RLS to insert PENDING verification
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         const type = formData.get('type') as string;
@@ -22,16 +29,20 @@ export async function POST(req: Request) {
         }
 
         const cookieStore = await cookies();
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-        const supabaseSsr = createServerClient(supabaseUrl, supabaseKey, {
-            cookies: {
-                getAll() { return cookieStore.getAll(); },
-                setAll(cookiesToSet: any[]) { },
-            },
-        });
+        const authHeader = req.headers.get('Authorization');
 
-        const { data: { user } } = await supabaseSsr.auth.getUser();
+        const supabaseAuth = authHeader
+            ? createClient(supabaseUrl, anonKey, {
+                global: { headers: { Authorization: authHeader } }
+            })
+            : createServerClient(supabaseUrl, anonKey, {
+                cookies: {
+                    getAll() { return cookieStore.getAll(); },
+                    setAll() { },
+                },
+            });
+
+        const { data: { user } } = await supabaseAuth.auth.getUser();
         if (!user) {
             return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, { status: 401 });
         }
@@ -64,10 +75,14 @@ export async function POST(req: Request) {
         const expires_at = new Date();
         expires_at.setDate(expires_at.getDate() + 7); // 7 days TTL for artifacts
 
+        const status = skipFile && process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true'
+            ? 'VERIFIED'
+            : 'PENDING';
+
         const { data: inserted, error: dbErr } = await supabase.from('verifications').insert({
             user_id: user.id,
             type,
-            status: 'PENDING',
+            status,
             payload_hash_keccak,
             artifact_object_key: final_object_key,
             artifact_expires_at: expires_at.toISOString()
@@ -85,7 +100,8 @@ export async function POST(req: Request) {
             message: 'Artifact uploaded and securely hashed.'
         });
 
-    } catch (e: any) {
-        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message: e.message }, details: {} }, { status: 500 });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Unexpected server error';
+        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message }, details: {} }, { status: 500 });
     }
 }

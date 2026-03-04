@@ -8,15 +8,30 @@ import crypto from 'crypto';
  * exactly to zk_event_receipts using Hard Locked Hashing rules.
  */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+function getSupabaseAdmin() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Missing Supabase admin env');
+    }
+    return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function POST(req: Request) {
     try {
+        const supabase = getSupabaseAdmin();
         const authHeader = req.headers.get('authorization') || req.headers.get('x-cron-secret');
         if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && authHeader !== process.env.CRON_SECRET) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { data: zkFlag } = await supabase
+            .from('feature_flags')
+            .select('enabled')
+            .eq('flag_key', 'ZK_ROUTES_ENABLED')
+            .maybeSingle();
+        if (zkFlag?.enabled !== true) {
+            return NextResponse.json({ error: 'ZK_ROUTES_DISABLED' }, { status: 503 });
         }
 
         // 1. Fetch enabled registry events
@@ -144,7 +159,8 @@ export async function POST(req: Request) {
             skipped_unsupported: skippedUnsupported
         });
 
-    } catch (err: any) {
-        return NextResponse.json({ error: 'Internal Server Error', details: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return NextResponse.json({ error: 'Internal Server Error', details: message }, { status: 500 });
     }
 }

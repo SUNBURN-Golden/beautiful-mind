@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+function getSupabaseAdmin() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+        throw new Error('Missing Supabase admin env');
+    }
+    return createClient(supabaseUrl, serviceKey);
+}
 
 // Mock Gemini AI parsing for Phase 1.1 Backend validation
-async function mockGeminiVisionParse(buffer: Buffer, expectedNameHash: string): Promise<{ decision: string, extracted_value: any, confidence: number, reason?: string }> {
+type GeminiParseResult = {
+    decision: 'REJECT_RRN_FOUND' | 'AI_VERIFIED';
+    extracted_value: Record<string, unknown> | null;
+    confidence: number;
+    reason?: string;
+};
+
+async function mockGeminiVisionParse(buffer: Buffer): Promise<GeminiParseResult> {
     const text = buffer.toString('utf-8');
     // 1. RRN pattern check ######-#######
     if (/\d{6}-\d{7}/.test(text)) {
@@ -22,6 +33,7 @@ async function mockGeminiVisionParse(buffer: Buffer, expectedNameHash: string): 
 
 export async function POST(req: Request) {
     try {
+        const supabase = getSupabaseAdmin();
         const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Auth required' }, details: {} }, { status: 401 });
 
@@ -36,8 +48,7 @@ export async function POST(req: Request) {
 
         if (verification.user_id !== user.id) return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Not owner' }, details: {} }, { status: 403 });
 
-        const { data: claims } = await supabase.from('identity_claims').select('name_hash').eq('user_id', user.id).single();
-        const expectedNameHash = claims?.name_hash || '';
+        await supabase.from('identity_claims').select('name_hash').eq('user_id', user.id).single();
 
         const { data: fileData, error: fileErr } = await supabase.storage.from('verification-artifacts').download(verification.artifact_object_key);
 
@@ -50,7 +61,7 @@ export async function POST(req: Request) {
             buffer = Buffer.from(arrayBuffer);
         }
 
-        const aiResult = await mockGeminiVisionParse(buffer, expectedNameHash);
+        const aiResult = await mockGeminiVisionParse(buffer);
 
         if (aiResult.decision === 'REJECT_RRN_FOUND') {
             await supabase.from('verifications').update({ status: 'REJECTED', admin_note: 'Auto-Reject: PII (RRN) detected in document.' }).eq('id', verification_id);
@@ -69,7 +80,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ error: { code: 'AI_REJECTED', message: 'AI rejected document' }, details: {} }, { status: 400 });
 
-    } catch (e: any) {
-        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message: e.message }, details: {} }, { status: 500 });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Internal error';
+        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message }, details: {} }, { status: 500 });
     }
 }
