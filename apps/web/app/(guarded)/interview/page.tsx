@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useRef } from 'react';
 import { useStatus } from '../../../lib/useStatus';
 import { Stepper, PrimaryButton, SupportCTA, Toast, Skeleton } from '../../../components/ui-kit';
@@ -141,8 +143,8 @@ export default function InterviewPage() {
                     {messages.map((msg, i) => (
                         <div key={i} className={`flex ${msg.role === 'ai' ? 'justify-start' : 'justify-end'}`}>
                             <div className={`max-w-[85%] p-4 rounded-2xl text-[15px] leading-relaxed ${msg.role === 'ai'
-                                    ? 'bg-slate-100 text-[#111111] rounded-tl-none border border-slate-200'
-                                    : 'bg-[#0F172A] text-white rounded-tr-none'
+                                ? 'bg-slate-100 text-[#111111] rounded-tl-none border border-slate-200'
+                                : 'bg-[#0F172A] text-white rounded-tr-none'
                                 }`}>
                                 {msg.role === 'ai' && msg.topic && (
                                     <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">{msg.topic}</div>

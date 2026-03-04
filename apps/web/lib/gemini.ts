@@ -103,3 +103,25 @@ export const nextQuestionSchema: Schema = {
     },
     required: ["stage", "next_question", "topic", "rationale_short", "progress"]
 };
+
+/**
+ * Robust content generation wrapper with basic retry support.
+ */
+export async function generateContentWithRetry(prompt: string, schema: Schema, retries = 1) {
+    const modelUsed = 'gemini-2.5-flash-lite';
+
+    const response = await ai.models.generateContent({
+        model: modelUsed,
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: schema,
+            systemInstruction,
+        }
+    });
+
+    return {
+        response,
+        modelUsed
+    };
+}
