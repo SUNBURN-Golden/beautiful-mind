@@ -18,25 +18,165 @@ type VerifyBody = {
     identityVerificationId?: unknown;
 };
 
+type JsonRecord = Record<string, unknown>;
+
 type PortOneIdentity = {
     status: 'VERIFIED';
-    name: string;
-    birthYear: number;
-    gender: string;
-    phone: string;
+    name: string | null;
+    birthYear: number | null;
+    gender: string | null;
+    phone: string | null;
     ci: string;
 };
 
-async function mockFetchPortOneIdentity(identityVerificationId: string): Promise<PortOneIdentity | null> {
-    if (identityVerificationId === 'mock_fail') return null;
+function isTestModeEnabled(): boolean {
+    return (
+        process.env.ALLOW_TEST_API_ROUTES === 'true'
+        || process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true'
+    );
+}
+
+function asObject(value: unknown): JsonRecord | null {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+    return value as JsonRecord;
+}
+
+function pickString(values: unknown[]): string | null {
+    for (const value of values) {
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+    }
+    return null;
+}
+
+function normalizeBirthYear(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return Math.floor(value);
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = Number.parseInt(value, 10);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return null;
+}
+
+function normalizePortOneIdentity(payload: unknown): PortOneIdentity | null {
+    const root = asObject(payload);
+    if (!root) return null;
+
+    const verifiedCustomer = asObject(root.verifiedCustomer);
+    const customer = asObject(root.customer);
+    const identity = asObject(root.identity);
+
+    const statusRaw = pickString([
+        root.status,
+        verifiedCustomer?.status,
+        customer?.status,
+    ]);
+    if ((statusRaw || '').toUpperCase() !== 'VERIFIED') {
+        return null;
+    }
+
+    const ci = pickString([
+        root.ci,
+        root.identityKey,
+        root.identity_unique_key,
+        verifiedCustomer?.ci,
+        customer?.ci,
+        identity?.ci,
+    ]);
+    if (!ci) {
+        return null;
+    }
+
+    const name = pickString([
+        root.name,
+        verifiedCustomer?.name,
+        customer?.name,
+        identity?.name,
+    ]);
+
+    const birthYear = normalizeBirthYear(
+        root.birthYear
+        ?? root.birth_year
+        ?? verifiedCustomer?.birthYear
+        ?? verifiedCustomer?.birth_year
+        ?? customer?.birthYear
+        ?? customer?.birth_year
+        ?? identity?.birthYear
+        ?? identity?.birth_year
+    );
+
+    const gender = pickString([
+        root.gender,
+        verifiedCustomer?.gender,
+        customer?.gender,
+        identity?.gender,
+    ]);
+
+    const phone = pickString([
+        root.phone,
+        root.phoneNumber,
+        verifiedCustomer?.phone,
+        verifiedCustomer?.phoneNumber,
+        customer?.phone,
+        customer?.phoneNumber,
+        identity?.phone,
+        identity?.phoneNumber,
+    ]);
+
     return {
         status: 'VERIFIED',
-        name: '홍길동',
-        birthYear: 1990,
-        gender: 'MALE',
-        phone: '01012345678',
-        ci: 'abcdefg1234567890ci',
+        name,
+        birthYear,
+        gender,
+        phone,
+        ci,
     };
+}
+
+async function fetchPortOneIdentity(identityVerificationId: string): Promise<PortOneIdentity | null> {
+    if (isTestModeEnabled() && identityVerificationId.startsWith('mock_')) {
+        if (identityVerificationId === 'mock_fail') return null;
+        return {
+            status: 'VERIFIED',
+            name: '홍길동',
+            birthYear: 1990,
+            gender: 'MALE',
+            phone: '01012345678',
+            ci: 'abcdefg1234567890ci',
+        };
+    }
+
+    const portOneApiSecret = process.env.PORTONE_API_SECRET;
+    if (!portOneApiSecret) {
+        throw new Error('Missing PORTONE_API_SECRET');
+    }
+
+    const response = await fetch(`https://api.portone.io/identity-verifications/${encodeURIComponent(identityVerificationId)}`, {
+        method: 'GET',
+        headers: {
+            Authorization: `PortOne ${portOneApiSecret}`,
+        },
+        cache: 'no-store',
+    });
+
+    if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        console.error('PortOne API Error:', response.status, text);
+        return null;
+    }
+
+    const payload = await response.json().catch(() => null);
+    return normalizePortOneIdentity(payload);
 }
 
 export async function POST(req: Request) {
@@ -77,8 +217,20 @@ export async function POST(req: Request) {
 
         const userId = user.id;
 
-        // 1. Fetch from PortOne (Mocked for Phase 1.1)
-        const portOneData = await mockFetchPortOneIdentity(identityVerificationId);
+        let portOneData: PortOneIdentity | null = null;
+        try {
+            portOneData = await fetchPortOneIdentity(identityVerificationId);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'PORTONE_UNKNOWN_ERROR';
+            if (message.includes('PORTONE_API_SECRET')) {
+                return NextResponse.json(
+                    { error: { code: 'SERVER_MISCONFIG', message: 'Missing PORTONE_API_SECRET' } },
+                    { status: 500 },
+                );
+            }
+            throw error;
+        }
+
         if (!portOneData || portOneData.status !== 'VERIFIED') {
             return NextResponse.json(
                 { error: { code: 'PORTONE_VERIFICATION_FAILED', message: 'PortOne identity not verified.' } },
@@ -86,12 +238,14 @@ export async function POST(req: Request) {
             );
         }
 
-        // 2. Hash sensitive PII
         const ciHash = crypto.createHash('sha256').update(portOneData.ci).digest('hex');
-        const nameHash = crypto.createHash('sha256').update(portOneData.name).digest('hex');
-        const phoneEncrypted = crypto.createHash('sha256').update(portOneData.phone).digest('hex'); // Stub for encryption
+        const nameHash = portOneData.name
+            ? crypto.createHash('sha256').update(portOneData.name).digest('hex')
+            : null;
+        const phoneEncrypted = portOneData.phone
+            ? crypto.createHash('sha256').update(portOneData.phone).digest('hex')
+            : null;
 
-        // 3. INSERT into identity_claims (insert-only, immutable table)
         const { data: existingClaim } = await supabaseAdmin
             .from('identity_claims')
             .select('user_id')
@@ -120,14 +274,21 @@ export async function POST(req: Request) {
             }
         }
 
-        // 4. Update profiles additive fields (SSOT uses profiles.verified)
+        const profilePatch: {
+            verified: boolean;
+            birth_year?: number | null;
+            gender?: string | null;
+        } = { verified: true };
+        if (portOneData.birthYear !== null) {
+            profilePatch.birth_year = portOneData.birthYear;
+        }
+        if (portOneData.gender) {
+            profilePatch.gender = portOneData.gender;
+        }
+
         const { error: profilesErr } = await supabaseAdmin
             .from('profiles')
-            .update({
-                verified: true,
-                birth_year: portOneData.birthYear,
-                gender: portOneData.gender,
-            })
+            .update(profilePatch)
             .eq('id', userId);
 
         if (profilesErr) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import * as PortOne from '@portone/browser-sdk/v2';
 import { useStatus } from '@/lib/useStatus';
 import { Stepper, PrimaryButton, Input, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
 
@@ -13,7 +14,13 @@ export default function VerifyPage() {
     const [toastMsg, setToastMsg] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
 
     if (isLoading || status?.step !== 'KYC') {
-        return <main className="max-w-md mx-auto pt-24 px-6"><Skeleton /></main>;
+        return (
+            <main className="mx-auto max-w-md px-4 pt-20 sm:px-6 sm:pt-24">
+                <div className="liquid-pane rounded-3xl p-6">
+                    <Skeleton />
+                </div>
+            </main>
+        );
     }
 
     const handleVerify = async (e: React.FormEvent) => {
@@ -22,11 +29,35 @@ export default function VerifyPage() {
         setToastMsg(null);
 
         try {
+            const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+            const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+            if (!storeId || !channelKey) {
+                throw new Error('PORTONE_ENV_MISSING');
+            }
+
+            const verificationId = `verify-${crypto.randomUUID()}`;
+            const portOneResponse = await PortOne.requestIdentityVerification({
+                storeId,
+                channelKey,
+                identityVerificationId: verificationId,
+            });
+
+            if (portOneResponse?.code !== undefined) {
+                setToastMsg({ text: `인증 실패: ${portOneResponse.message}`, type: 'error' });
+                return;
+            }
+
+            const identityVerificationId = portOneResponse?.identityVerificationId;
+            if (!identityVerificationId) {
+                setToastMsg({ text: '인증이 취소되었거나 완료되지 않았습니다.', type: 'info' });
+                return;
+            }
+
             const res = await fetch('/api/verify/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    identityVerificationId: 'mock_success'
+                    identityVerificationId,
                 })
             });
 
@@ -40,25 +71,28 @@ export default function VerifyPage() {
 
             // Re-evaluate SSOT status to trigger stage progression
             await refetch();
-        } catch (err: any) {
-            handleActionError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'KYC_FAILED';
+            handleActionError(message);
+            if (message === 'PORTONE_ENV_MISSING') {
+                setToastMsg({ text: '운영 환경설정(PORTONE)이 누락되어 인증을 진행할 수 없습니다.', type: 'error' });
+                return;
+            }
             setToastMsg({ text: '인증 기관의 무응답이거나 정보 불일치입니다. 다시 시도해주십시오.', type: 'error' });
         } finally {
             setSubmitting(false);
         }
     };
 
-    const isBlocked = status?.blockers?.includes('IDENTITY_UNVERIFIED');
-
     return (
-        <main className="max-w-md mx-auto pt-16 px-6 pb-12 flex flex-col min-h-screen">
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-12 pt-12 sm:px-6 sm:pt-16">
             {toastMsg && <Toast message={toastMsg.text} type={toastMsg.type} />}
 
-            <div className="flex-1">
+            <div className="liquid-pane liquid-rise flex-1 rounded-3xl p-5 sm:p-8">
                 <Stepper currentStep={2} totalSteps={7} />
 
-                <h1 className="text-[24px] font-semibold tracking-tight text-[#111111] mb-2">본인 확인 절차를 진행합니다.</h1>
-                <p className="text-[15px] text-[#555555] mb-12">명의 도용 방지를 위해 실명 인증이 요구됩니다. 인증 결과는 증적 로그로 남습니다.</p>
+                <h1 className="liquid-title mb-2 text-[24px] font-semibold">본인 확인 절차를 진행합니다.</h1>
+                <p className="liquid-copy mb-12 text-[15px]">명의 도용 방지를 위해 실명 인증이 요구됩니다. 인증 결과는 증적 로그로 남습니다.</p>
 
                 <form onSubmit={handleVerify}>
                     <Input
@@ -79,7 +113,7 @@ export default function VerifyPage() {
                         disabled={submitting}
                     />
                     <div className="mt-8">
-                        <PrimaryButton type="submit" submitting={submitting} disabled={!isBlocked && submitting}>
+                        <PrimaryButton type="submit" submitting={submitting} disabled={submitting}>
                             인증 시작
                         </PrimaryButton>
                     </div>

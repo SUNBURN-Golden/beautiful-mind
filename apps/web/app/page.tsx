@@ -1,71 +1,65 @@
-'use client';
-
-import React, { useState } from 'react';
 import Link from 'next/link';
-import { SignatureModal } from '@/components/SignatureModal';
+import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { updateUserStatus } from '@/app/actions/userStatus';
-import { OnboardingStatus } from '@soulbound/core';
+import { createClient } from '@/utils/supabase/server';
 
-export default function DashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [signature, setSignature] = useState<string | null>(null);
-  const [status, setStatus] = useState<OnboardingStatus>('PENDING_CONSENT');
+export const dynamic = 'force-dynamic';
 
-  const handleSaveSignature = async (base64Url: string) => {
-    setSignature(base64Url);
+async function hasActiveSession(): Promise<boolean> {
+    try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        return Boolean(user);
+    } catch (error) {
+        console.error('Home session probe failed:', error);
+        return false;
+    }
+}
 
-    // 임시 더미 데이터로 Agent C 상태 계산 검증
-    const result = await updateUserStatus(
-      'temp-user-id',
-      { verified: true, reputation_score: 100 },
-      { osint_granted: true, location_granted: true, device_granted: true },
-      { agreed_to_terms: true, signature_base64: base64Url },
-      { decision: 'APPROVED', score: 95 }
+export default async function HomePage() {
+    if (await hasActiveSession()) {
+        redirect('/onboarding');
+    }
+
+    return (
+        <main className="liquid-shell px-4 pb-16 pt-12 sm:px-8 sm:pt-16">
+            <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-between gap-12">
+                <header className="space-y-5">
+                    <div className="liquid-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#6e6e73]">
+                        SoulBound Trust Network
+                    </div>
+                    <h1 className="liquid-title max-w-3xl text-[40px] font-semibold leading-tight tracking-tight sm:text-[56px]">
+                        Verify trust. Protect reputation. Launch with confidence.
+                    </h1>
+                    <p className="liquid-copy max-w-2xl text-[16px] sm:text-[18px]">
+                        본인인증, 자격 검증, 인터뷰 심사를 거쳐 신뢰 배지를 발급합니다.
+                        모든 상태 전이는 감사 로그와 원장 이벤트로 추적됩니다.
+                    </p>
+                    <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+                        <Button asChild className="h-12 px-6">
+                            <Link href="/signup">시작하기</Link>
+                        </Button>
+                        <Button asChild variant="outline" className="h-12 px-6">
+                            <Link href="/login">로그인</Link>
+                        </Button>
+                    </div>
+                </header>
+
+                <section className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-3">
+                    <article className="liquid-pane rounded-2xl p-5">
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Identity</h2>
+                        <p className="text-sm text-[#1d1d1f]">PortOne 실명인증과 증적 해시 기반으로 위조 리스크를 낮춥니다.</p>
+                    </article>
+                    <article className="liquid-pane rounded-2xl p-5">
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Trust SBT</h2>
+                        <p className="text-sm text-[#1d1d1f]">Self-claim LOW trust에서 Audit/Challenge 통과 시 HIGH trust로 승급됩니다.</p>
+                    </article>
+                    <article className="liquid-pane rounded-2xl p-5">
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Integrity</h2>
+                        <p className="text-sm text-[#1d1d1f]">Audit log, ledger, anchor 기반으로 포함증명 가능한 무결성 체계를 유지합니다.</p>
+                    </article>
+                </section>
+            </div>
+        </main>
     );
-    setStatus(result.status);
-  };
-
-  return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">SoulBound MVP Dashboard</h1>
-        <p className="text-gray-500 mt-2">안전하고 투명한 환경을 구성하는 검증 시스템입니다.</p>
-      </div>
-
-      <div className="flex gap-4">
-        <Button asChild variant="outline">
-          <Link href="/consent">Consent Hub 열기 (동의 화면 테스트)</Link>
-        </Button>
-        <Button onClick={() => setIsModalOpen(true)}>
-          확약서 서명하기 (서명 모달 테스트)
-        </Button>
-      </div>
-
-      {signature && (
-        <Card>
-          <CardHeader>
-            <CardTitle>제출된 서명 데이터</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="border rounded bg-gray-50 p-2">
-              <img src={signature} alt="사용자 서명" className="h-32 object-contain" />
-            </div>
-
-            <div className="bg-gray-900 text-green-400 p-4 rounded-md font-mono text-sm overflow-x-auto">
-              <h3 className="text-gray-400 mb-2">// Agent C Core Logic Result</h3>
-              <p>User Status: [ {status} ]</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <SignatureModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveSignature}
-      />
-    </main>
-  );
 }
