@@ -1,21 +1,33 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { ai, systemInstruction, finalizeSchema } from '@/lib/gemini';
+import { systemInstruction, finalizeSchema, generateContentWithRetry } from '@/lib/gemini';
+import { ethers } from 'ethers';
+
+function deepStableStringify(obj: any): string {
+    if (obj === null || obj === undefined) return JSON.stringify(null);
+    if (typeof obj !== 'object') return JSON.stringify(obj);
+    if (Array.isArray(obj)) return `[${obj.map(item => deepStableStringify(item)).join(',')}]`;
+    const sortedKeys = Object.keys(obj).sort();
+    const result = [];
+    for (const key of sortedKeys) {
+        result.push(`"${key}":${deepStableStringify(obj[key])}`);
+    }
+    return `{${result.join(',')}}`;
+}
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        const { interview_id } = body;
+        const body = await request.json().catch(() => ({}));
+        const { interview_id, final_answer } = body;
 
-        if (!interview_id) {
-            return NextResponse.json({ error: 'Missing interview_id' }, { status: 400 });
-        }
+        console.log('[SERVER DEBUG] Interview Finalize hit', { interview_id, has_answer: !!final_answer });
 
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
+            console.log('[SERVER DEBUG] Unauthorized access to finalize');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -24,19 +36,32 @@ export async function POST(request: Request) {
             process.env.SUPABASE_SERVICE_ROLE_KEY!
         );
 
-        // Fetch the interview
-        const { data: interview } = await supabase
-            .from('interviews')
-            .select('*')
-            .eq('id', interview_id)
-            .eq('user_id', user.id)
-            .single();
+        // Fetch the interview (auto-find if ID missing)
+        let interview_query = supabaseAdmin.from('interviews').select('*').eq('user_id', user.id);
+        if (interview_id) {
+            interview_query = interview_query.eq('id', interview_id);
+        } else {
+            interview_query = interview_query.eq('status', 'IN_PROGRESS').order('created_at', { ascending: false }).limit(1);
+        }
 
-        if (!interview) {
+        const { data: interview, error: fetchErr } = await interview_query.maybeSingle();
+
+        if (fetchErr || !interview) {
+            console.log('[SERVER DEBUG] Interview not found', { user_id: user.id });
             return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
         }
 
         const transcript = interview.transcript_json || [];
+        console.log('[SERVER DEBUG] Starting Gemini Finalization...', { transcript_len: transcript.length });
+        // Fetch PII-Free User Verified Profile for the Subject
+        const { data: verifiedProfile } = await supabaseAdmin
+            .from('user_verified_profile')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+        const stableSummaryStr = deepStableStringify(verifiedProfile || {});
+        const verifiedSummaryHash = ethers.keccak256(ethers.toUtf8Bytes(stableSummaryStr));
 
         // Call Gemini to Finalize
         const promptText = `
@@ -46,6 +71,10 @@ Extract raw preferences (books, movies, exercises) and derived traits.
 Do NOT guess MBTI unless the user explicitly stated it.
 Output valid JSON only.
 
+[VERIFIED_SUMMARY]
+${JSON.stringify(verifiedProfile || {}, null, 2)}
+
+[USER_INTERVIEW_DATA]
 Transcript:
 ${JSON.stringify(transcript, null, 2)}
         `;
@@ -53,23 +82,17 @@ ${JSON.stringify(transcript, null, 2)}
         let parsedNode: any = null;
         let retryCount = 0;
         const maxRetries = 1;
+        let finalModel = 'gemini-2.5-flash';
 
         while (retryCount <= maxRetries) {
             try {
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash-lite',
-                    contents: promptText,
-                    config: {
-                        responseMimeType: 'application/json',
-                        responseSchema: finalizeSchema,
-                        systemInstruction: systemInstruction,
-                    }
-                });
+                const { response, modelUsed } = await generateContentWithRetry(promptText, finalizeSchema);
+                finalModel = modelUsed;
 
                 parsedNode = JSON.parse(response.text || '{}');
                 break; // If parse succeeds, break out of loop
             } catch (err) {
-                console.warn(`JSON Parse failed on attempt ${retryCount + 1}`, err);
+                console.warn(`JSON Parse or API failed on attempt ${retryCount + 1}`, err);
                 retryCount++;
                 if (retryCount > maxRetries) {
                     parsedNode = {
@@ -90,8 +113,16 @@ ${JSON.stringify(transcript, null, 2)}
         const analysisJson = {
             raw_preferences: parsedNode.raw_preferences,
             derived_traits: parsedNode.derived_traits,
-            stage: parsedNode.stage
+            stage: parsedNode.stage,
+            verification_consistency: parsedNode.verification_consistency || 'UNKNOWN',
+            verification_conflicts: parsedNode.verification_conflicts || [],
+            verified_summary_hash_keccak: verifiedSummaryHash
         };
+
+        // Combine existing risk flags with parsed flags
+        const existingFlags = Array.isArray(interview.risk_flags) ? interview.risk_flags : [];
+        const newFlags = Array.isArray(parsedNode.risk_flags) ? parsedNode.risk_flags : [];
+        const combinedRiskFlags = Array.from(new Set([...existingFlags, ...newFlags]));
 
         // 1. Update interviews table (using admin client)
         const { error: interviewError } = await supabaseAdmin
@@ -101,18 +132,19 @@ ${JSON.stringify(transcript, null, 2)}
                 decision: parsedNode.decision,
                 absolute_score: parsedNode.absolute_score || parsedNode.score, // Handle dual mapping
                 score: parsedNode.score,
-                risk_flags: parsedNode.risk_flags,
+                risk_flags: combinedRiskFlags,
                 summary: parsedNode.summary,
-                model_version: 'gemini-2.5-flash'
+                model_version: finalModel,
+                status: 'DONE'
             })
-            .eq('id', interview_id);
+            .eq('id', interview.id);
 
         if (interviewError) {
             console.error('Failed to update interview:', interviewError);
             return NextResponse.json({ error: 'DB Update Failed', details: interviewError.message }, { status: 500 });
         }
 
-        // 2. Upsert user_traits table (matching cache)  (using admin client)
+        // 2. Upsert user_traits table (matching cache)  (using admin client) -> Service Role Write Only
         if (parsedNode.decision === 'PASS') {
             await supabaseAdmin
                 .from('user_traits')
@@ -124,6 +156,7 @@ ${JSON.stringify(transcript, null, 2)}
                 });
         }
 
+        console.log('[SERVER DEBUG] Interview Finalized Successfully', { interview_id: interview.id });
         return NextResponse.json(parsedNode);
 
     } catch (error: any) {
