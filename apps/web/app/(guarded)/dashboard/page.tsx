@@ -1,74 +1,152 @@
 'use client';
 
+import { useState } from 'react';
 import { useStatus } from '@/lib/useStatus';
 import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow } from '@/components/ui-kit';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 
 export default function DashboardPage() {
     const { status, isLoading } = useStatus();
     const router = useRouter();
+    const [isSigningOut, setIsSigningOut] = useState(false);
 
     if (isLoading || status?.step !== 'DASHBOARD_READY') {
-        return <main className="max-w-4xl mx-auto pt-24 px-6"><Skeleton /></main>;
+        return (
+            <main className="mx-auto max-w-5xl px-6 pb-12 pt-24">
+                <div className="liquid-pane rounded-3xl p-6">
+                    <Skeleton lines={4} />
+                </div>
+            </main>
+        );
     }
 
-    const receiptId = status.meta?.receipt_id || 'N/A: Loading Receipt ID...';
-    const docVersion = status.meta?.doc_version || 'N/A';
+    const meta = status.meta;
+    const receiptId = typeof meta?.receipt_id === 'string' ? meta.receipt_id : 'N/A: Loading Receipt ID...';
+    const docVersion = typeof meta?.doc_version === 'string' ? meta.doc_version : 'N/A';
     const timeBucket = new Date().toISOString();
+    const trustLevel = typeof meta?.trust_level === 'string' ? meta.trust_level : 'UNSET';
+    const sbtStatus = typeof meta?.sbt_status === 'string' ? meta.sbt_status : 'NONE';
+    const auditInProgress = meta?.audit_in_progress === true;
+    const selfDevConfidence = typeof meta?.self_dev_confidence === 'number' ? meta.self_dev_confidence : null;
+    const selfDevActionPlan = Array.isArray(meta?.self_dev_action_plan)
+        ? meta.self_dev_action_plan
+            .map((item) => (item && typeof item === 'object' ? item as Record<string, unknown> : null))
+            .filter((item): item is Record<string, unknown> => item !== null)
+            .map((item) => ({
+                title: typeof item.title === 'string' ? item.title : 'Action',
+                priority: typeof item.priority === 'string' ? item.priority : 'P2',
+                metric: typeof item.metric === 'string' ? item.metric : 'N/A',
+                target: typeof item.target === 'string' ? item.target : 'N/A',
+            }))
+            .slice(0, 3)
+        : [];
 
     const handleLogout = async () => {
-        // Basic signout (TBD actual flow depending on auth setup)
-        await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/logout`, { method: 'POST' });
-        router.push('/login');
+        if (isSigningOut) return;
+        setIsSigningOut(true);
+        try {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+        } finally {
+            router.replace('/login');
+            router.refresh();
+            setIsSigningOut(false);
+        }
     };
 
     return (
-        <main className="max-w-4xl mx-auto pt-16 px-6 pb-12 flex flex-col min-h-screen">
+        <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-14 pt-10 sm:px-8 sm:pt-14">
             <div className="flex-1">
-                <div className="flex justify-between items-center mb-12">
-                    <h1 className="text-[32px] font-semibold tracking-tight text-[#111111]">Dashboard.</h1>
-                    <div className="w-32">
-                        <SecondaryButton onClick={handleLogout}>안전 로그아웃</SecondaryButton>
+                <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between">
+                    <h1 className="liquid-title text-[30px] font-semibold sm:text-[34px]">Dashboard.</h1>
+                    <div className="w-full sm:w-32">
+                        <SecondaryButton onClick={handleLogout} disabled={isSigningOut}>
+                            {isSigningOut ? '로그아웃 중...' : '안전 로그아웃'}
+                        </SecondaryButton>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 gap-7 md:grid-cols-2">
                     {/* Main Status Card */}
-                    <div className="rounded-xl border border-[#E5E5E5] p-8 bg-white shadow-sm flex flex-col">
-                        <h2 className="text-[20px] font-semibold text-[#111111] mb-2">온보딩 통합 결과</h2>
-                        <p className="text-[14px] text-[#555555] mb-6 border-b border-slate-100 pb-6">
+                    <div className="liquid-pane liquid-rise flex flex-col rounded-3xl p-6 sm:p-8">
+                        <h2 className="liquid-title mb-2 text-[22px] font-semibold">온보딩 통합 결과</h2>
+                        <p className="liquid-copy mb-6 border-b pb-6 text-[14px] liquid-divider">
                             모든 심사 단계를 정상적으로 통과하셨습니다.<br />
                             메인 서비스의 모든 기능에 접근 권한이 활성화되었습니다.
                         </p>
 
-                        <div className="mt-auto pt-4 flex items-center justify-between text-[13px] text-[#888888]">
+                        <div className="mb-6 space-y-3">
+                            <div className="flex items-center justify-between text-[13px]">
+                                <span className="text-slate-600">SBT 신뢰 레벨</span>
+                                <span data-testid="trust-level-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">{trustLevel}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[13px]">
+                                <span className="text-slate-600">SBT 상태</span>
+                                <span data-testid="sbt-status-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">{sbtStatus}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[13px]">
+                                <span className="text-slate-600">감사 진행 상태</span>
+                                <span data-testid="audit-progress-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">
+                                    {auditInProgress ? 'UNDER_REVIEW' : 'NONE'}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[13px]">
+                                <span className="text-slate-600">Behavioral 신뢰도</span>
+                                <span className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">
+                                    {selfDevConfidence !== null ? selfDevConfidence.toFixed(2) : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {selfDevActionPlan.length > 0 && (
+                            <div className="mb-4 border-t pt-4 liquid-divider">
+                                <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">Self Development Loop</h3>
+                                <div className="space-y-2">
+                                    {selfDevActionPlan.map((action, idx) => (
+                                        <div key={`self-dev-action-${idx}`} className="rounded-xl border px-3 py-2 liquid-divider">
+                                            <div className="mb-1 flex items-center justify-between gap-2">
+                                                <span className="text-[12px] font-semibold text-slate-700">{action.title}</span>
+                                                <span className="liquid-chip rounded-full px-2 py-0.5 text-[10px] font-semibold text-slate-700">{action.priority}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                                                <span>{action.metric}</span>
+                                                <span>{action.target}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-auto flex items-center justify-between pt-4 text-[13px] text-slate-500">
                             <span>Status</span>
-                            <div className="px-3 py-1 bg-emerald-50 text-emerald-700 font-medium rounded-full">ACTIVE</div>
+                            <div className="liquid-chip rounded-full px-3 py-1 font-medium text-emerald-700">ACTIVE</div>
                         </div>
                     </div>
 
                     {/* Electronic Receipt / 증적 영수증 Card */}
-                    <div className="rounded-xl border border-[#E5E5E5] p-8 bg-[#F9FAFA] flex flex-col shadow-inner">
-                        <h2 className="text-[20px] font-semibold text-[#111111] mb-2">통합 서비스 영수증</h2>
-                        <p className="text-[13px] text-[#555555] mb-6">등록된 모든 자격 증명과 서명 내역은 감사 로그로 불변 격리 보호됩니다.</p>
+                    <div className="liquid-pane-muted liquid-rise flex flex-col rounded-3xl p-6 sm:p-8">
+                        <h2 className="liquid-title mb-2 text-[22px] font-semibold">통합 서비스 영수증</h2>
+                        <p className="liquid-copy mb-6 text-[13px]">등록된 모든 자격 증명과 서명 내역은 감사 로그로 불변 격리 보호됩니다.</p>
 
                         <div className="flex flex-col gap-3">
-                            <div className="flex justify-between border-b border-slate-200 pb-2">
-                                <span className="text-[13px] text-[#555555]">원장 Receipt ID</span>
-                                <span className="text-[12px] font-mono text-[#111111] truncate max-w-[150px]">{receiptId}</span>
+                            <div className="flex justify-between border-b pb-2 liquid-divider">
+                                <span className="text-[13px] text-slate-600">원장 Receipt ID</span>
+                                <span className="max-w-[160px] truncate text-[12px] font-mono text-slate-900">{receiptId}</span>
                             </div>
-                            <div className="flex justify-between border-b border-slate-200 pb-2">
-                                <span className="text-[13px] text-[#555555]">계약서 버전</span>
-                                <span className="text-[13px] font-mono text-[#111111]">{docVersion}</span>
+                            <div className="flex justify-between border-b pb-2 liquid-divider">
+                                <span className="text-[13px] text-slate-600">계약서 버전</span>
+                                <span className="text-[13px] font-mono text-slate-900">{docVersion}</span>
                             </div>
-                            <div className="flex justify-between border-b border-slate-200 pb-2">
-                                <span className="text-[13px] text-[#555555]">타임스탬프</span>
-                                <span className="text-[13px] font-mono text-[#111111]">{timeBucket}</span>
+                            <div className="flex justify-between border-b pb-2 liquid-divider">
+                                <span className="text-[13px] text-slate-600">타임스탬프</span>
+                                <span className="text-[13px] font-mono text-slate-900">{timeBucket}</span>
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-4 border-t border-slate-200">
-                            <h3 className="text-[12px] font-semibold text-[#888888] mb-3 uppercase tracking-wider">최근 감사 로그</h3>
+                        <div className="mt-8 border-t pt-4 liquid-divider">
+                            <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">최근 감사 로그</h3>
                             <AuditLogRow action="INTERVIEW_FINALIZED" timestamp={timeBucket} hash={receiptId} />
                             <AuditLogRow action="CONTRACT_SIGNATURE" timestamp={timeBucket} hash={receiptId} />
                             <AuditLogRow action="CONSENT_SIGN" timestamp={timeBucket} hash={receiptId} />
