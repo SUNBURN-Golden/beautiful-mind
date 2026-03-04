@@ -1,87 +1,245 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
-function getSupabaseAdmin() {
+function getSupabaseEnv() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceKey) {
-        throw new Error('Missing Supabase admin env');
+    if (!supabaseUrl || !anonKey || !serviceKey) {
+        throw new Error('Missing Supabase env');
     }
-    return createClient(supabaseUrl, serviceKey);
+    return { supabaseUrl, anonKey, serviceKey };
 }
 
-// Mock Gemini AI parsing for Phase 1.1 Backend validation
-type GeminiParseResult = {
-    decision: 'REJECT_RRN_FOUND' | 'AI_VERIFIED';
-    extracted_value: Record<string, unknown> | null;
-    confidence: number;
-    reason?: string;
+type VerifySubmitBody = {
+    verification_id?: unknown;
 };
 
-async function mockGeminiVisionParse(buffer: Buffer): Promise<GeminiParseResult> {
-    const text = buffer.toString('utf-8');
-    // 1. RRN pattern check ######-#######
-    if (/\d{6}-\d{7}/.test(text)) {
-        return { decision: 'REJECT_RRN_FOUND', extracted_value: null, confidence: 1.0, reason: 'RRN detected' };
+type VerificationRow = {
+    id: string;
+    user_id: string;
+    status: 'PENDING' | 'AI_VERIFIED' | 'VERIFIED' | 'REJECTED';
+    type: string;
+    artifact_object_key: string | null;
+    extracted_value: unknown;
+};
+
+type ScanResult = {
+    hasPii: boolean;
+    reason?: string;
+    confidence: number;
+    extracted: Record<string, unknown>;
+};
+
+function normalizeText(buffer: Buffer): string {
+    return buffer.toString('utf8').replace(/\u0000/g, ' ');
+}
+
+function runHeuristicScan(buffer: Buffer, verificationType: string): ScanResult {
+    const text = normalizeText(buffer);
+    const hasRRNDash = /\b\d{6}-\d{7}\b/.test(text);
+    const hasRRNCompact = /\b\d{13}\b/.test(text);
+    const hasPii = hasRRNDash || hasRRNCompact;
+    if (hasPii) {
+        return {
+            hasPii: true,
+            reason: 'RRN_PATTERN_DETECTED',
+            confidence: 1,
+            extracted: {},
+        };
     }
+
     return {
-        decision: 'AI_VERIFIED',
-        extracted_value: { band: 'A', tier: 1 },
-        confidence: 0.95
+        hasPii: false,
+        confidence: 0.6,
+        extracted: {
+            parser: 'heuristic_v1',
+            verification_type: verificationType,
+            file_size_bytes: buffer.length,
+            pii_scan: 'clear',
+        },
     };
+}
+
+async function resolveUserIdFromRequest(req: Request, supabaseUrl: string, anonKey: string): Promise<string | null> {
+    const cookieStore = await cookies();
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+
+    const supabaseAuth = authHeader
+        ? createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: authHeader } },
+        })
+        : createServerClient(supabaseUrl, anonKey, {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll();
+                },
+                setAll() {
+                    // read-only flow
+                },
+            },
+        });
+
+    const { data: { user }, error } = await supabaseAuth.auth.getUser();
+    if (error || !user) {
+        return null;
+    }
+    return user.id;
 }
 
 export async function POST(req: Request) {
     try {
-        const supabase = getSupabaseAdmin();
-        const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-        if (!authHeader) return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Auth required' }, details: {} }, { status: 401 });
+        const { supabaseUrl, anonKey, serviceKey } = getSupabaseEnv();
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 
-        const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-        if (authErr || !user) return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid token' }, details: {} }, { status: 401 });
+        const userId = await resolveUserIdFromRequest(req, supabaseUrl, anonKey);
+        if (!userId) {
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Not authenticated' }, details: {} },
+                { status: 401 },
+            );
+        }
 
-        const { verification_id } = await req.json();
-        if (!verification_id) return NextResponse.json({ error: { code: 'BAD_REQUEST', message: 'Missing verification_id' }, details: {} }, { status: 400 });
+        const body = await req.json().catch(() => ({})) as VerifySubmitBody;
+        const verificationId = typeof body.verification_id === 'string' ? body.verification_id : '';
+        if (!verificationId) {
+            return NextResponse.json(
+                { error: { code: 'BAD_REQUEST', message: 'Missing verification_id' }, details: {} },
+                { status: 400 },
+            );
+        }
 
-        const { data: verification } = await supabase.from('verifications').select('*').eq('id', verification_id).single();
-        if (!verification) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Verification not found' }, details: {} }, { status: 404 });
+        const { data: verification, error: verificationErr } = await supabaseAdmin
+            .from('verifications')
+            .select('id,user_id,status,type,artifact_object_key,extracted_value')
+            .eq('id', verificationId)
+            .maybeSingle<VerificationRow>();
 
-        if (verification.user_id !== user.id) return NextResponse.json({ error: { code: 'FORBIDDEN', message: 'Not owner' }, details: {} }, { status: 403 });
+        if (verificationErr) {
+            return NextResponse.json(
+                { error: { code: 'LOOKUP_FAILED', message: verificationErr.message }, details: {} },
+                { status: 500 },
+            );
+        }
+        if (!verification) {
+            return NextResponse.json(
+                { error: { code: 'NOT_FOUND', message: 'Verification not found' }, details: {} },
+                { status: 404 },
+            );
+        }
+        if (verification.user_id !== userId) {
+            return NextResponse.json(
+                { error: { code: 'FORBIDDEN', message: 'Not owner' }, details: {} },
+                { status: 403 },
+            );
+        }
 
-        await supabase.from('identity_claims').select('name_hash').eq('user_id', user.id).single();
+        if (verification.status === 'VERIFIED' || verification.status === 'REJECTED') {
+            return NextResponse.json(
+                {
+                    success: true,
+                    status: verification.status,
+                    message: 'Verification already finalized.',
+                },
+            );
+        }
 
-        const { data: fileData, error: fileErr } = await supabase.storage.from('verification-artifacts').download(verification.artifact_object_key);
+        if (!verification.artifact_object_key) {
+            return NextResponse.json(
+                {
+                    error: { code: 'ARTIFACT_MISSING', message: 'artifact_object_key is missing' },
+                    details: {},
+                },
+                { status: 400 },
+            );
+        }
 
-        let buffer: Buffer;
+        const { data: fileData, error: fileErr } = await supabaseAdmin
+            .storage
+            .from('verification-artifacts')
+            .download(verification.artifact_object_key);
+
         if (fileErr || !fileData) {
-            // Mock resilience
-            buffer = Buffer.from('Mock PDF with NO RRN...');
-        } else {
-            const arrayBuffer = await fileData.arrayBuffer();
-            buffer = Buffer.from(arrayBuffer);
+            return NextResponse.json(
+                {
+                    error: { code: 'ARTIFACT_DOWNLOAD_FAILED', message: fileErr?.message || 'Artifact not found' },
+                    details: {},
+                },
+                { status: 400 },
+            );
         }
 
-        const aiResult = await mockGeminiVisionParse(buffer);
+        const arrayBuffer = await fileData.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const scan = runHeuristicScan(buffer, verification.type);
 
-        if (aiResult.decision === 'REJECT_RRN_FOUND') {
-            await supabase.from('verifications').update({ status: 'REJECTED', admin_note: 'Auto-Reject: PII (RRN) detected in document.' }).eq('id', verification_id);
-            return NextResponse.json({ error: { code: 'PII_DETECTED', message: 'Extremely sensitive PII (RRN) detected. File rejected immediately.' }, details: {} }, { status: 400 });
+        if (scan.hasPii) {
+            const { error: rejectErr } = await supabaseAdmin
+                .from('verifications')
+                .update({
+                    status: 'REJECTED',
+                    admin_note: 'Auto-Reject: PII (RRN) detected in document.',
+                })
+                .eq('id', verificationId);
+
+            if (rejectErr) {
+                return NextResponse.json(
+                    { error: { code: 'UPDATE_FAILED', message: rejectErr.message }, details: {} },
+                    { status: 500 },
+                );
+            }
+
+            return NextResponse.json(
+                {
+                    error: {
+                        code: 'PII_DETECTED',
+                        message: 'Extremely sensitive PII (RRN) detected. File rejected immediately.',
+                    },
+                    details: { reason: scan.reason || 'RRN_PATTERN_DETECTED' },
+                },
+                { status: 400 },
+            );
         }
 
-        if (aiResult.decision === 'AI_VERIFIED') {
-            await supabase.from('verifications').update({
+        const currentExtracted = verification.extracted_value && typeof verification.extracted_value === 'object'
+            ? verification.extracted_value as Record<string, unknown>
+            : {};
+
+        const nextExtracted = {
+            ...currentExtracted,
+            ...scan.extracted,
+        };
+
+        const { error: verifyErr } = await supabaseAdmin
+            .from('verifications')
+            .update({
                 status: 'AI_VERIFIED',
-                extracted_value: aiResult.extracted_value,
-                ai_confidence: aiResult.confidence
-            }).eq('id', verification_id);
+                extracted_value: nextExtracted,
+                ai_confidence: scan.confidence,
+                admin_note: null,
+            })
+            .eq('id', verificationId);
 
-            return NextResponse.json({ success: true, status: 'AI_VERIFIED', message: 'AI parsed successfully. Awaiting admin.' });
+        if (verifyErr) {
+            return NextResponse.json(
+                { error: { code: 'UPDATE_FAILED', message: verifyErr.message }, details: {} },
+                { status: 500 },
+            );
         }
 
-        return NextResponse.json({ error: { code: 'AI_REJECTED', message: 'AI rejected document' }, details: {} }, { status: 400 });
-
+        return NextResponse.json({
+            success: true,
+            status: 'AI_VERIFIED',
+            message: 'Artifact scanned successfully. Awaiting admin review.',
+            verification_id: verificationId,
+        });
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : 'Internal error';
-        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message }, details: {} }, { status: 500 });
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message }, details: {} },
+            { status: 500 },
+        );
     }
 }
