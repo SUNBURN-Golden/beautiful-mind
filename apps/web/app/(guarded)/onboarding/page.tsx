@@ -31,6 +31,11 @@ export default function OnboardingPage() {
                 return;
             }
 
+            // response가 없으면 더 진행 불가 (사용자 취소/오류 케이스)
+            if (!response?.identityVerificationId) {
+                return;
+            }
+
             // 본인인증 성공 시, 서버로 검증 요청
             const verifyResult = await verifyIdentity(response.identityVerificationId);
 
