@@ -1,99 +1,125 @@
 "use client";
 
 import React, { PropsWithChildren } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { getExpectedRoute, STAGE_ROUTES, Stage } from "@/lib/stageRoutes";
+
+function isStage(value: string): value is Stage {
+    return Object.prototype.hasOwnProperty.call(STAGE_ROUTES, value);
+}
 
 export function Stepper({ currentStep = 0, totalSteps = 0 }: { currentStep?: number; totalSteps?: number }) {
+    const safeTotalSteps = Math.max(totalSteps, 1);
+    const normalizedCurrentStep = Math.min(Math.max(currentStep, 0), safeTotalSteps);
+
     return (
-        <div className="flex gap-2 mb-4" style={{ fontSize: 12, opacity: 0.8 }}>
-            Step {currentStep}/{totalSteps}
+        <div className="mb-6 inline-flex items-center gap-3 rounded-full px-3 py-1.5 liquid-stepper text-[11px] font-semibold tracking-[0.14em] text-slate-600">
+            <span className="uppercase">Step</span>
+            <span className="font-mono tracking-[0.08em] text-slate-700">
+                {normalizedCurrentStep}/{safeTotalSteps}
+            </span>
+            <div className="flex items-center gap-1.5">
+                {Array.from({ length: safeTotalSteps }).map((_, idx) => {
+                    const isActive = idx < normalizedCurrentStep;
+                    return (
+                        <span
+                            key={`step-dot-${idx}`}
+                            className={cn(
+                                "h-1.5 w-1.5 rounded-full transition-colors duration-200",
+                                isActive ? "bg-sky-500" : "bg-slate-300/80"
+                            )}
+                        />
+                    );
+                })}
+            </div>
         </div>
     );
 }
 
 export function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { submitting?: boolean }) {
+    const { submitting, children, className, ...buttonProps } = props;
     return (
         <button
-            {...props}
-            style={{
-                padding: "12px 16px",
-                borderRadius: 8,
-                border: "none",
-                background: props.disabled ? "#ccc" : "#0F172A",
-                color: "#fff",
-                width: "100%",
-                fontWeight: 600,
-                cursor: props.disabled ? "not-allowed" : "pointer",
-                transition: "opacity 0.2s",
-                ...(props.style ?? {}),
-            }}
+            {...buttonProps}
+            className={cn("liquid-btn liquid-btn-primary", className)}
+            aria-busy={submitting || undefined}
         >
-            {props.submitting ? "Processing..." : props.children}
+            {submitting ? "Processing..." : children}
         </button>
     );
 }
 
 export function SecondaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+    const { className, children, ...buttonProps } = props;
     return (
         <button
-            {...props}
-            style={{
-                padding: "12px 16px",
-                borderRadius: 8,
-                border: "1px solid #E5E5E5",
-                background: "transparent",
-                color: "#111",
-                width: "100%",
-                fontWeight: 500,
-                cursor: "pointer",
-                ...(props.style ?? {}),
-            }}
-        />
+            {...buttonProps}
+            className={cn("liquid-btn liquid-btn-secondary", className)}
+        >
+            {children}
+        </button>
     );
 }
 
 export function SupportCTA({ children }: PropsWithChildren) {
-    return <div style={{ marginTop: "auto", paddingTop: 32, textAlign: "center", fontSize: 13, color: "#888" }}>{children ?? "도움이 필요하신가요? 고객센터에 문의하세요."}</div>;
+    return (
+        <div className="mt-auto pt-8 text-center text-[13px] text-slate-500">
+            {children ?? (
+                <>
+                    진행이 어렵다면{" "}
+                    <Link href="/onboarding/help" className="font-semibold text-[#06c] underline underline-offset-2 hover:text-[#0077ed]">
+                        온보딩 도움말
+                    </Link>
+                    {" "}또는{" "}
+                    <Link href="/manual" className="font-semibold text-[#06c] underline underline-offset-2 hover:text-[#0077ed]">
+                        이용 매뉴얼
+                    </Link>
+                    {" "}을 먼저 확인해 주세요.
+                </>
+            )}
+        </div>
+    );
 }
 
 export function Toast({ message, type = 'info' }: { message?: string, type?: 'info' | 'error' | 'success' }) {
     if (!message) return null;
-    const colors = {
-        info: "#F1F5F9",
-        error: "#FEF2F2",
-        success: "#ECFDF5"
+
+    const typeClass = {
+        info: "liquid-toast-info",
+        error: "liquid-toast-error",
+        success: "liquid-toast-success",
     };
+
     return (
-        <div style={{ marginBottom: 16, padding: 12, background: colors[type], borderRadius: 8, fontSize: 14 }}>
+        <div className={cn("mb-4 liquid-toast liquid-rise", typeClass[type])} role="status" aria-live="polite">
             {message}
         </div>
     );
 }
 
-export function Skeleton({ lines = 3 }: { lines?: number }) {
+export function Skeleton({ lines = 3, className }: { lines?: number; className?: string }) {
     return (
-        <div style={{ display: "grid", gap: 12 }}>
+        <div className={cn("grid gap-3", className)}>
             {Array.from({ length: lines }).map((_, i) => (
-                <div key={i} style={{ height: 16, background: "#F1F5F9", borderRadius: 8, width: i === lines - 1 ? "60%" : "100%" }} />
+                <div
+                    key={`skeleton-line-${i}`}
+                    className="liquid-skeleton-line"
+                    style={{ width: i === lines - 1 ? "62%" : "100%" }}
+                />
             ))}
         </div>
     );
 }
 
 export function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+    const { className, ...inputProps } = props;
     return (
-        <div className="flex flex-col gap-2 mb-4" style={{ width: "100%" }}>
-            {label && <label className="text-[13px] font-medium text-[#555]">{label}</label>}
+        <div className="mb-4 flex w-full flex-col gap-2">
+            {label && <label className="text-[13px] font-medium text-slate-600">{label}</label>}
             <input
-                {...props}
-                style={{
-                    padding: "12px",
-                    borderRadius: 8,
-                    border: "1px solid #E5E5E5",
-                    width: "100%",
-                    fontSize: 15,
-                    boxSizing: "border-box",
-                    ...(props.style ?? {}),
-                }}
+                {...inputProps}
+                className={cn("liquid-input", className)}
             />
         </div>
     );
@@ -101,15 +127,20 @@ export function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputEl
 
 export function ConsentItem({ label, checked, onChange, link }: { label: string; checked?: boolean; onChange?: () => void; link?: string }) {
     return (
-        <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "flex", gap: 12, alignItems: "center", cursor: "pointer" }}>
-                <input type="checkbox" checked={!!checked} onChange={onChange} style={{ width: 18, height: 18 }} />
-                <span className="text-[15px] text-[#333]">{label}</span>
+        <div className="mb-4">
+            <label className="flex cursor-pointer items-center gap-3">
+                <input type="checkbox" checked={!!checked} onChange={onChange} className="liquid-checkbox" />
+                <span className="text-[15px] text-slate-700">{label}</span>
             </label>
             {link && (
-                <a href={link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginLeft: 30, marginTop: 4, fontSize: 12, color: "#3B82F6", textDecoration: "underline" }}>
+                <Link
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-[30px] mt-1 inline-block text-[12px] text-sky-600 underline"
+                >
                     약관 보기
-                </a>
+                </Link>
             )}
         </div>
     );
@@ -117,25 +148,84 @@ export function ConsentItem({ label, checked, onChange, link }: { label: string;
 
 export function DocumentViewer({ text }: { text?: string }) {
     return (
-        <div style={{ border: "1px solid #E5E5E5", borderRadius: 12, padding: 16, background: "#F9FAFA", maxHeight: 200, overflowY: "auto", fontSize: 13, lineHeight: 1.6, color: "#555", marginBottom: 24 }}>
+        <div className="mb-6 liquid-doc">
             {text ?? "문서 내용을 불러올 수 없습니다."}
         </div>
     );
 }
 
 export function SignaturePad({ onSign }: { onSign?: (data: string) => void }) {
+    const signatureData = "data:image/png;base64,STABLE_PLACEHOLDER";
+    const triggerSign = () => onSign?.(signatureData);
+
     return (
-        <div style={{ border: "1px solid #E5E5E5", borderRadius: 12, padding: 16, background: "#fff", height: 160, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, cursor: "crosshair", position: "relative" }} onClick={() => onSign?.("data:image/png;base64,STABLE_PLACEHOLDER")}>
-            <span style={{ opacity: 0.4, fontSize: 13 }}>이곳에 서명하십시오 (클릭하여 시뮬레이션)</span>
+        <div className="mb-6 liquid-sign-pad liquid-rise">
+            <div
+                className="mb-4 flex h-[124px] cursor-crosshair items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[13px] text-slate-500 transition-colors hover:border-[#06c]"
+                onClick={triggerSign}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        triggerSign();
+                    }
+                }}
+                role="button"
+                tabIndex={0}
+            >
+                이곳에 서명하십시오 (클릭하여 시뮬레이션)
+            </div>
+            <button type="button" onClick={triggerSign} className="liquid-btn liquid-btn-secondary">
+                서명 인식 테스트
+            </button>
         </div>
     );
 }
 
 export function AuditLogRow({ action, timestamp, hash }: { action: string; timestamp?: string; hash?: string }) {
     return (
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, paddingTop: 8, paddingBottom: 8, borderBottom: "1px solid #F1F5F9", fontSize: 12 }}>
-            <span style={{ fontWeight: 500, color: "#334155" }}>{action}</span>
-            <span style={{ opacity: 0.6, color: "#64748B" }}>{timestamp?.split('T')[0]}</span>
+        <div className="flex items-center justify-between gap-3 border-b liquid-divider py-2 text-[12px]">
+            <span className="font-medium text-slate-700">{action}</span>
+            <div className="flex items-center gap-2">
+                {hash && <span className="font-mono text-[11px] text-slate-500/80">{hash.slice(0, 8)}</span>}
+                <span className="text-slate-500/80">{timestamp?.split('T')[0]}</span>
+            </div>
         </div>
+    );
+}
+
+export function StageTransitionNotice({
+    currentStep,
+    title = "진행 상태를 동기화하는 중입니다.",
+    description = "사용자 상태에 맞는 화면으로 이동합니다. 잠시만 기다려 주세요.",
+}: {
+    currentStep?: string;
+    title?: string;
+    description?: string;
+}) {
+    const destination = currentStep && isStage(currentStep)
+        ? getExpectedRoute(currentStep)
+        : "/onboarding";
+
+    return (
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-12 pt-20 sm:px-6 sm:pt-24">
+            <div className="liquid-pane liquid-rise rounded-3xl p-6">
+                <h1 className="liquid-title text-[22px] font-semibold">{title}</h1>
+                <p className="liquid-copy mt-2 text-[14px]">{description}</p>
+                <div className="mt-5 grid gap-3">
+                    <Link
+                        href={destination}
+                        className="liquid-btn liquid-btn-primary"
+                    >
+                        현재 단계로 이동
+                    </Link>
+                    <Link
+                        href="/manual"
+                        className="liquid-btn liquid-btn-secondary"
+                    >
+                        이용 매뉴얼 보기
+                    </Link>
+                </div>
+            </div>
+        </main>
     );
 }

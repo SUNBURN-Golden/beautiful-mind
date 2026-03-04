@@ -3,17 +3,23 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useActionState } from 'react';
-import { login } from '@/app/actions/auth';
+import { login, type AuthState } from '@/app/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const initialState = { error: '' };
+const initialState: AuthState = {};
 
 export default function LoginPage() {
     const router = useRouter();
     const [state, formAction, isPending] = useActionState(login, initialState);
+
+    React.useEffect(() => {
+        if (state?.success) {
+            router.push('/onboarding');
+        }
+    }, [state, router]);
 
     return (
         <div className="liquid-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
@@ -39,9 +45,14 @@ export default function LoginPage() {
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t border-[#e5e5e7] p-4">
-                    <Button variant="link" onClick={() => router.push('/signup')}>
-                        계정이 없으신가요? 회원가입
-                    </Button>
+                    <div className="flex flex-col items-center gap-1.5">
+                        <Button variant="link" onClick={() => router.push('/signup')}>
+                            계정이 없으신가요? 회원가입
+                        </Button>
+                        <Button variant="link" onClick={() => router.push('/manual')}>
+                            이용 매뉴얼 보기
+                        </Button>
+                    </div>
                 </CardFooter>
             </Card>
         </div>

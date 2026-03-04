@@ -20,58 +20,61 @@ export default async function AdminDashboard() {
             .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
     ]);
 
+    const kpis = [
+        {
+            label: 'Total Users',
+            value: totalUsers || 0,
+            icon: Users,
+            iconColor: 'text-[#6e6e73]',
+        },
+        {
+            label: 'Verified Users',
+            value: verifiedUsers || 0,
+            icon: UserCheck,
+            iconColor: 'text-[#2f855a]',
+        },
+        {
+            label: 'Matches Made',
+            value: matches || 0,
+            icon: HeartHandshake,
+            iconColor: 'text-[#c53080]',
+        },
+        {
+            label: 'Daily Audit Logs',
+            value: todayLogs || 0,
+            icon: ShieldAlert,
+            iconColor: 'text-[#2b6cb0]',
+        },
+    ];
+
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold tracking-tight">System Overview</h1>
+            <header className="space-y-2">
+                <h1 className="liquid-title text-[34px] font-semibold tracking-tight">System Overview</h1>
+                <p className="liquid-copy text-[14px]">핵심 운영 지표와 감사 상태를 한눈에 확인합니다.</p>
+            </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{totalUsers || 0}</div>
-                    </CardContent>
-                </Card>
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {kpis.map((kpi) => {
+                    const Icon = kpi.icon;
+                    return (
+                        <Card key={kpi.label} className="liquid-pane liquid-rise rounded-2xl border-[#e5e5e7]">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-xs font-medium uppercase tracking-wider text-[#6e6e73]">{kpi.label}</CardTitle>
+                                <Icon className={`h-4 w-4 ${kpi.iconColor}`} />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-[30px] font-semibold leading-none tracking-tight text-[#1d1d1f]">{kpi.value}</div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </section>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Verified Users</CardTitle>
-                        <UserCheck className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{verifiedUsers || 0}</div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Matches Made</CardTitle>
-                        <HeartHandshake className="h-4 w-4 text-pink-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{matches || 0}</div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Daily Audit Logs</CardTitle>
-                        <ShieldAlert className="h-4 w-4 text-indigo-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{todayLogs || 0}</div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="mt-12 bg-white rounded-lg border p-6 shadow-sm">
-                <h2 className="text-lg font-semibold mb-4 text-gray-800">Recent Audit Activity</h2>
-                <div className="text-sm text-gray-500">
-                    <p>Refer to User Management to investigate specific events and view detailed audit trails.</p>
-                </div>
-            </div>
+            <section className="liquid-pane rounded-2xl border-[#e5e5e7] p-6">
+                <h2 className="mb-2 text-lg font-semibold text-[#1d1d1f]">Audit Activity</h2>
+                <p className="text-sm text-[#6e6e73]">세부 이벤트 조사와 증적 확인은 User Management 화면에서 진행하세요.</p>
+            </section>
         </div>
     );
 }

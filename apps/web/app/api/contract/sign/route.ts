@@ -27,7 +27,7 @@ export async function POST(req: Request) {
             supabaseAuth = createServerClient(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
                 cookies: {
                     getAll() { return cookieStore.getAll(); },
-                    setAll(cookiesToSet: any[]) { },
+                    setAll() { },
                 },
             });
         }
@@ -66,7 +66,8 @@ export async function POST(req: Request) {
             message: 'Signature recorded'
         });
 
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'SERVER_ERROR';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

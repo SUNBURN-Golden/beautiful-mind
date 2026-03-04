@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { isTestRouteEnabled } from '@/lib/server/trust';
 
 function getSupabaseEnv() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,6 +17,8 @@ function getSupabaseEnv() {
 
 type VerifyBody = {
     identityVerificationId?: unknown;
+    name?: unknown;
+    phone?: unknown;
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -28,13 +31,6 @@ type PortOneIdentity = {
     phone: string | null;
     ci: string;
 };
-
-function isTestModeEnabled(): boolean {
-    return (
-        process.env.ALLOW_TEST_API_ROUTES === 'true'
-        || process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true'
-    );
-}
 
 function asObject(value: unknown): JsonRecord | null {
     if (!value || typeof value !== 'object') {
@@ -66,6 +62,21 @@ function normalizeBirthYear(value: unknown): number | null {
         }
     }
     return null;
+}
+
+function normalizeName(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim().replace(/\s+/g, ' ');
+    return normalized.length >= 2 ? normalized : null;
+}
+
+function normalizePhoneDigits(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const digits = value.replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 11) {
+        return null;
+    }
+    return digits;
 }
 
 function normalizePortOneIdentity(payload: unknown): PortOneIdentity | null {
@@ -144,7 +155,7 @@ function normalizePortOneIdentity(payload: unknown): PortOneIdentity | null {
 }
 
 async function fetchPortOneIdentity(identityVerificationId: string): Promise<PortOneIdentity | null> {
-    if (isTestModeEnabled() && identityVerificationId.startsWith('mock_')) {
+    if (isTestRouteEnabled() && identityVerificationId.startsWith('mock_')) {
         if (identityVerificationId === 'mock_fail') return null;
         return {
             status: 'VERIFIED',
@@ -187,10 +198,26 @@ export async function POST(req: Request) {
         const identityVerificationId = typeof body.identityVerificationId === 'string'
             ? body.identityVerificationId
             : '';
+        const requestedName = normalizeName(body.name);
+        const requestedPhone = normalizePhoneDigits(body.phone);
 
         if (!identityVerificationId) {
             return NextResponse.json(
                 { error: { code: 'BAD_REQUEST', message: 'Missing verification ID' } },
+                { status: 400 },
+            );
+        }
+
+        if (body.name !== undefined && !requestedName) {
+            return NextResponse.json(
+                { error: { code: 'BAD_REQUEST', message: 'Invalid name format' } },
+                { status: 400 },
+            );
+        }
+
+        if (body.phone !== undefined && !requestedPhone) {
+            return NextResponse.json(
+                { error: { code: 'BAD_REQUEST', message: 'Invalid phone format' } },
                 { status: 400 },
             );
         }
@@ -238,6 +265,26 @@ export async function POST(req: Request) {
             );
         }
 
+        if (requestedName && portOneData.name) {
+            const normalizedPortOneName = normalizeName(portOneData.name);
+            if (normalizedPortOneName && normalizedPortOneName !== requestedName) {
+                return NextResponse.json(
+                    { error: { code: 'NAME_MISMATCH', message: 'Input name does not match verified identity.' } },
+                    { status: 400 },
+                );
+            }
+        }
+
+        if (requestedPhone && portOneData.phone) {
+            const normalizedPortOnePhone = normalizePhoneDigits(portOneData.phone);
+            if (normalizedPortOnePhone && normalizedPortOnePhone !== requestedPhone) {
+                return NextResponse.json(
+                    { error: { code: 'PHONE_MISMATCH', message: 'Input phone does not match verified identity.' } },
+                    { status: 400 },
+                );
+            }
+        }
+
         const ciHash = crypto.createHash('sha256').update(portOneData.ci).digest('hex');
         const nameHash = portOneData.name
             ? crypto.createHash('sha256').update(portOneData.name).digest('hex')
@@ -278,12 +325,17 @@ export async function POST(req: Request) {
             verified: boolean;
             birth_year?: number | null;
             gender?: string | null;
+            display_name?: string;
         } = { verified: true };
         if (portOneData.birthYear !== null) {
             profilePatch.birth_year = portOneData.birthYear;
         }
         if (portOneData.gender) {
             profilePatch.gender = portOneData.gender;
+        }
+        const displayName = requestedName || normalizeName(portOneData.name);
+        if (displayName) {
+            profilePatch.display_name = displayName;
         }
 
         const { error: profilesErr } = await supabaseAdmin

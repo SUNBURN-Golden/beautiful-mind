@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStatus } from '@/lib/useStatus';
-import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow } from '@/components/ui-kit';
+import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow, StageTransitionNotice } from '@/components/ui-kit';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 
@@ -11,7 +11,7 @@ export default function DashboardPage() {
     const router = useRouter();
     const [isSigningOut, setIsSigningOut] = useState(false);
 
-    if (isLoading || status?.step !== 'DASHBOARD_READY') {
+    if (isLoading) {
         return (
             <main className="mx-auto max-w-5xl px-6 pb-12 pt-24">
                 <div className="liquid-pane rounded-3xl p-6">
@@ -21,10 +21,28 @@ export default function DashboardPage() {
         );
     }
 
+    if (status?.step !== 'DASHBOARD_READY') {
+        return (
+            <StageTransitionNotice
+                currentStep={status?.step}
+                title="대시보드 준비 중입니다."
+                description="심사/온보딩 상태를 확인한 뒤 접근 가능한 화면으로 연결합니다."
+            />
+        );
+    }
+
     const meta = status.meta;
-    const receiptId = typeof meta?.receipt_id === 'string' ? meta.receipt_id : 'N/A: Loading Receipt ID...';
-    const docVersion = typeof meta?.doc_version === 'string' ? meta.doc_version : 'N/A';
-    const timeBucket = new Date().toISOString();
+    const receiptId = typeof meta?.receipt_id === 'string' ? meta.receipt_id : 'N/A';
+    const docVersion = typeof meta?.doc_version === 'string'
+        ? meta.doc_version
+        : `SSOT-v${typeof meta?.schema_version === 'number' ? meta.schema_version : 1}`;
+    const latestContractId = typeof meta?.latest_contract_id === 'string' ? meta.latest_contract_id : null;
+    const latestInterviewId = typeof meta?.latest_interview_id === 'string' ? meta.latest_interview_id : null;
+    const latestContractAt = typeof meta?.latest_contract_at === 'string' ? meta.latest_contract_at : null;
+    const latestInterviewAt = typeof meta?.latest_interview_at === 'string' ? meta.latest_interview_at : null;
+    const latestDecision = typeof meta?.latest_interview_decision === 'string' ? meta.latest_interview_decision : null;
+    const latestScore = typeof meta?.latest_interview_score === 'number' ? meta.latest_interview_score : null;
+    const timeBucket = latestInterviewAt || latestContractAt || (typeof meta?.server_time === 'string' ? meta.server_time : new Date().toISOString());
     const trustLevel = typeof meta?.trust_level === 'string' ? meta.trust_level : 'UNSET';
     const sbtStatus = typeof meta?.sbt_status === 'string' ? meta.sbt_status : 'NONE';
     const auditInProgress = meta?.audit_in_progress === true;
@@ -41,6 +59,11 @@ export default function DashboardPage() {
             }))
             .slice(0, 3)
         : [];
+    const auditLogRows = [
+        latestContractAt ? { action: 'CONTRACT_SIGNATURE', timestamp: latestContractAt, hash: latestContractId || receiptId } : null,
+        latestInterviewAt ? { action: `INTERVIEW_${latestDecision || 'DONE'}`, timestamp: latestInterviewAt, hash: latestInterviewId || receiptId } : null,
+        typeof meta?.sbt_issued_at === 'string' ? { action: 'SBT_STATUS_UPDATE', timestamp: meta.sbt_issued_at, hash: receiptId } : null,
+    ].filter((row): row is { action: string; timestamp: string; hash: string } => row !== null);
 
     const handleLogout = async () => {
         if (isSigningOut) return;
@@ -147,10 +170,16 @@ export default function DashboardPage() {
 
                         <div className="mt-8 border-t pt-4 liquid-divider">
                             <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">최근 감사 로그</h3>
-                            <AuditLogRow action="INTERVIEW_FINALIZED" timestamp={timeBucket} hash={receiptId} />
-                            <AuditLogRow action="CONTRACT_SIGNATURE" timestamp={timeBucket} hash={receiptId} />
-                            <AuditLogRow action="CONSENT_SIGN" timestamp={timeBucket} hash={receiptId} />
-                            <AuditLogRow action="ONBOARDING_VERIFICATION" timestamp={timeBucket} hash={receiptId} />
+                            {auditLogRows.length > 0 ? (
+                                auditLogRows.map((row, idx) => (
+                                    <AuditLogRow key={`audit-log-${idx}`} action={row.action} timestamp={row.timestamp} hash={row.hash} />
+                                ))
+                            ) : (
+                                <AuditLogRow action="NO_RECENT_AUDIT_LOG" timestamp={timeBucket} hash={receiptId} />
+                            )}
+                            {latestScore !== null && (
+                                <p className="mt-3 text-[12px] text-slate-600">최근 인터뷰 점수: {latestScore}</p>
+                            )}
                         </div>
                     </div>
                 </div>

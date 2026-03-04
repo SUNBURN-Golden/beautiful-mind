@@ -47,7 +47,7 @@ async function run() {
         FROM information_schema.triggers
         WHERE event_object_table = 'event_receipts';
     `;
-    const { data: g1Data, error: g1Err } = await adminClient.rpc('apply_patch', { sql_query: sqlG1 });
+    await adminClient.rpc('apply_patch', { sql_query: sqlG1 });
 
     // As apply_patch returns executed status and not result sets easily for select, we'll use direct table querying via REST if possible, 
     // or rely on a known mock for this specific CI script context if RPC doesn't return rows.

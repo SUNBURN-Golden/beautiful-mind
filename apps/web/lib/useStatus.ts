@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import useSWR from "swr";
 
 type JsonObject = Record<string, unknown>;
 
@@ -12,6 +13,8 @@ type Status = {
     details?: JsonObject;
     blockers: string[];
 };
+
+const STATUS_FETCH_TIMEOUT_MS = 10_000;
 
 function parseStatusPayload(payload: unknown): Status {
     if (typeof payload !== 'object' || payload === null) {
@@ -48,39 +51,45 @@ function parseStatusError(payload: unknown): string {
     return 'STATUS_FETCH_FAILED';
 }
 
-export function useStatus() {
-    const [status, setStatus] = useState<Status | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-
-    const refetch = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch("/api/me/status", { cache: "no-store" });
-            const payload: unknown = await res.json();
-
-            if (!res.ok) {
-                if (res.status === 401 && typeof window !== 'undefined') {
-                    window.location.assign('/login');
-                }
-                throw new Error(parseStatusError(payload));
+const fetcher = async (url: string): Promise<Status> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), STATUS_FETCH_TIMEOUT_MS);
+    try {
+        const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+        const payload = await res.json();
+        if (!res.ok) {
+            if (res.status === 401 && typeof window !== 'undefined') {
+                window.location.assign('/login');
             }
-
-            setStatus(parseStatusPayload(payload));
-        } catch (e: unknown) {
-            const message = e instanceof Error ? e.message : "unknown error";
-            setStatus({ error: message, blockers: [] });
-        } finally {
-            setIsLoading(false);
+            throw new Error(parseStatusError(payload));
         }
-    }, []);
+        return parseStatusPayload(payload);
+    } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+            throw new Error('STATUS_TIMEOUT');
+        }
+        throw e;
+    } finally {
+        window.clearTimeout(timeoutId);
+    }
+};
 
-    useEffect(() => {
-        refetch();
-    }, [refetch]);
+export function useStatus() {
+    const { data, error, mutate } = useSWR<Status, Error>('/api/me/status', fetcher, {
+        revalidateOnFocus: true,
+        shouldRetryOnError: false,
+    });
 
     const handleActionError = useCallback((e: unknown) => {
         console.error(e);
     }, []);
 
-    return { status, isLoading, refetch, handleActionError };
+    const resolvedStatus = data || (error ? { error: error.message, blockers: [] } : null);
+
+    return {
+        status: resolvedStatus,
+        isLoading: !data && !error,
+        refetch: mutate,
+        handleActionError
+    };
 }

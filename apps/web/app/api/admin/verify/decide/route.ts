@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+type ProfileUpdates = {
+    height_cm?: number;
+    weight_band?: string;
+    location_region?: string;
+    location_city?: string;
+};
+
 const getAdminClient = () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -31,7 +38,10 @@ export async function POST(req: Request) {
         const { data: verification } = await supabase.from('verifications').select('*').eq('id', verification_id).single();
         if (!verification) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Verification not found' }, details: {} }, { status: 404 });
 
-        let extracted_value = verification.extracted_value || {};
+        let extracted_value: Record<string, unknown> =
+            verification.extracted_value && typeof verification.extracted_value === 'object'
+                ? verification.extracted_value
+                : {};
         if (tier || band) {
             extracted_value = { ...extracted_value, tier, band };
         }
@@ -51,13 +61,13 @@ export async function POST(req: Request) {
 
         if (decision === 'VERIFIED') {
             // Derive profiles updates
-            const updates: any = {};
+            const updates: ProfileUpdates = {};
             if (verification.type === 'PHYSICAL') {
-                if (extracted_value.height_cm) updates.height_cm = extracted_value.height_cm;
-                if (extracted_value.band) updates.weight_band = extracted_value.band;
+                if (typeof extracted_value.height_cm === 'number') updates.height_cm = extracted_value.height_cm;
+                if (typeof extracted_value.band === 'string') updates.weight_band = extracted_value.band;
             } else if (verification.type === 'RESIDENCE') {
-                if (extracted_value.region) updates.location_region = extracted_value.region;
-                if (extracted_value.city) updates.location_city = extracted_value.city;
+                if (typeof extracted_value.region === 'string') updates.location_region = extracted_value.region;
+                if (typeof extracted_value.city === 'string') updates.location_city = extracted_value.city;
             }
             if (Object.keys(updates).length > 0) {
                 await supabase.from('profiles').update(updates).eq('id', verification.user_id);
@@ -81,7 +91,8 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ success: true, message: `Verification marked as ${decision}, artifact permanently purged.` });
-    } catch (e: any) {
-        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message: e.message }, details: {} }, { status: 500 });
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'INTERNAL_ERROR';
+        return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message }, details: {} }, { status: 500 });
     }
 }

@@ -847,3 +847,56 @@ B) E2E 스크립트 fallback 주입 제거
 
 결론: 현재 코드/DB 모두에서 audit decide 경로는 완전 원자 RPC 경로로 고정됨.
 - 추가 확인: `pnpm --filter web test:unit` -> 통과 (7 passed)
+
+## 23) Tokenomics 점수상승 하드닝 패치 (2026-03-05)
+
+### 23-1. 신규 마이그레이션 추가
+- 파일: `supabase/migrations/20260305000000_tokenomics_hardening.sql`
+- 포함 내용:
+  - `treasury_spend_with_budget(...)` RPC 추가
+    - `treasury_budgets`를 `FOR UPDATE`로 잠그고 outflow cap 초과 시 거절
+    - 지출 성공 시 `token_ledger`에 `TREASURY_SPEND` append-only 기록 + `outflow_used` 동시 갱신
+  - `claim_soul_airdrop(...)` RPC 추가
+    - 유저 1회 claim 경로를 DB 트랜잭션 단위로 처리
+    - claim_no 기반 tier 산정 (TOP100/TOP1000/BASE) + `token_ledger` AIRDROP 기록
+  - 비-UUID PK 테이블 감사로그 복구
+    - `uuid_from_text(...)` + `log_audit_event_flexible(...)` 도입
+    - `treasury_wallet`, `user_wallets`, `soul_airdrop_claims`, `treasury_vaults`, `economy_config` 감사 트리거 연결
+
+### 23-2. 신규 API 엔드포인트 추가
+- 파일: `apps/web/app/api/airdrop/claim/route.ts`
+  - cookie session 유저가 RPC `claim_soul_airdrop` 호출
+  - 응답: `status, claim_no, cohort, amount, ledger_id`
+- 파일: `apps/web/app/api/treasury/spend/route.ts`
+  - admin 또는 cron 전용
+  - RPC `treasury_spend_with_budget` 호출
+  - budget 상태(`BUDGET_NOT_FOUND`, `BUDGET_EXCEEDED`)를 HTTP 409로 매핑
+
+### 23-3. 공통 로직 + 유닛테스트 보강
+- 파일: `apps/web/lib/server/tokenomics-core.js`
+  - `resolveAirdropTier(claimNo)`
+  - `mapTreasurySpendStatusToHttp(status)`
+- 파일: `apps/web/tests/unit/tokenomics-core.test.mjs`
+  - airdrop tier 경계값 테스트
+  - treasury spend status 매핑 테스트
+
+### 23-4. 문서/인벤토리 반영
+- 파일: `docs/endpoint_inventory.csv`
+  - `/api/airdrop/claim`
+  - `/api/treasury/spend`
+
+## 24) Vercel Auth Loop 배포 차단 이슈 정리 (2026-03-05)
+
+### 24-1. 관찰
+- `apps/web/middleware.ts`와 `apps/web/proxy.ts`가 동시에 존재하던 상태에서
+  Next 16 빌드가 아래 오류로 중단됨:
+  - `Both middleware file "./middleware.ts" and proxy file "./proxy.ts" are detected`
+- 결과적으로 새 인증 수정이 배포되지 않아, 실서버에서 로그인 루프가 계속될 수 있는 상태였음.
+
+### 24-2. 조치
+- `apps/web/middleware.ts` 삭제
+- `apps/web/proxy.ts` 단일 엔트리로 `updateSession`을 유지
+
+### 24-3. 검증
+- `pnpm --filter web build` 재실행 -> 통과
+- 빌드 출력에 `ƒ Proxy (Middleware)` 표시되어 proxy 기반 세션 미들웨어가 활성화됨을 확인

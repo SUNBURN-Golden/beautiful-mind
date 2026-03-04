@@ -20,21 +20,35 @@ export async function GET() {
         });
 
         const text = response.text || '';
-        const parsed = JSON.parse(text);
+        const parsed: unknown = JSON.parse(text);
 
         return NextResponse.json({
             status: 200,
             message: 'Gemini API Key is valid and operational.',
-            data: parsed,
-            usedKey: `${apiKey.substring(0, 5)}...${apiKey.slice(-5)}`
+            data: parsed
         });
-    } catch (e: any) {
-        const apiKey = process.env.GEMINI_API_KEY || '';
+    } catch (e: unknown) {
+        const status = (
+            typeof e === 'object'
+            && e !== null
+            && 'status' in e
+            && typeof (e as { status?: unknown }).status === 'number'
+        )
+            ? (e as { status: number }).status
+            : 500;
+        const message = (
+            typeof e === 'object'
+            && e !== null
+            && 'message' in e
+            && typeof (e as { message?: unknown }).message === 'string'
+        )
+            ? (e as { message: string }).message
+            : 'Unknown error';
+
         return NextResponse.json({
-            status: e.status || 500,
+            status,
             message: 'Gemini API Key validation failed.',
-            error: e.message,
-            usedKey: apiKey ? `${apiKey.substring(0, 5)}...${apiKey.slice(-5)}` : 'none'
-        }, { status: e.status || 500 });
+            error: message
+        }, { status });
     }
 }

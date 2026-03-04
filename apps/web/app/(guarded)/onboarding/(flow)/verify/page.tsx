@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import * as PortOne from '@portone/browser-sdk/v2';
 import { useStatus } from '@/lib/useStatus';
-import { Stepper, PrimaryButton, Input, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
+import { Stepper, PrimaryButton, Input, SupportCTA, Toast, Skeleton, StageTransitionNotice } from '@/components/ui-kit';
 
 export default function VerifyPage() {
     const { status, isLoading, refetch, handleActionError } = useStatus();
@@ -13,7 +13,7 @@ export default function VerifyPage() {
     const [submitting, setSubmitting] = useState(false);
     const [toastMsg, setToastMsg] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
 
-    if (isLoading || status?.step !== 'KYC') {
+    if (isLoading) {
         return (
             <main className="mx-auto max-w-md px-4 pt-20 sm:px-6 sm:pt-24">
                 <div className="liquid-pane rounded-3xl p-6">
@@ -23,12 +23,33 @@ export default function VerifyPage() {
         );
     }
 
+    if (status?.step !== 'KYC') {
+        return (
+            <StageTransitionNotice
+                currentStep={status?.step}
+                title="본인 인증 단계로 이동 중입니다."
+                description="현재 계정 진행도에 맞는 화면으로 자동 동기화합니다."
+            />
+        );
+    }
+
     const handleVerify = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
         setToastMsg(null);
 
         try {
+            const normalizedName = name.trim();
+            const normalizedPhone = phone.replace(/\D/g, '');
+            if (normalizedName.length < 2) {
+                setToastMsg({ text: '이름은 2자 이상으로 입력해 주세요.', type: 'error' });
+                return;
+            }
+            if (normalizedPhone.length < 10 || normalizedPhone.length > 11) {
+                setToastMsg({ text: '휴대폰 번호 형식이 올바르지 않습니다.', type: 'error' });
+                return;
+            }
+
             const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
             const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
             if (!storeId || !channelKey) {
@@ -58,6 +79,8 @@ export default function VerifyPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     identityVerificationId,
+                    name: normalizedName,
+                    phone: normalizedPhone,
                 })
             });
 
@@ -113,7 +136,7 @@ export default function VerifyPage() {
                         disabled={submitting}
                     />
                     <div className="mt-8">
-                        <PrimaryButton type="submit" submitting={submitting} disabled={submitting}>
+                        <PrimaryButton type="submit" submitting={submitting} disabled={submitting || !name.trim() || !phone.trim()}>
                             인증 시작
                         </PrimaryButton>
                     </div>

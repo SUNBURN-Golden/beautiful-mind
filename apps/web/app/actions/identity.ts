@@ -42,8 +42,9 @@ export async function verifyIdentity(identityVerificationId: string) {
         }
 
         return { success: true, verification }
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
         console.error('Verification Exception:', error)
-        return { success: false, error: error.message }
+        return { success: false, error: message }
     }
 }

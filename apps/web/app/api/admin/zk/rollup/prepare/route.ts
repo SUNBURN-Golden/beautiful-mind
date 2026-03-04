@@ -84,7 +84,8 @@ export async function POST(req: Request) {
             batch_id: batchId
         });
 
-    } catch (err: any) {
-        return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR', message: err.message }, { status: 500 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'INTERNAL_SERVER_ERROR';
+        return NextResponse.json({ error: 'INTERNAL_SERVER_ERROR', message }, { status: 500 });
     }
 }

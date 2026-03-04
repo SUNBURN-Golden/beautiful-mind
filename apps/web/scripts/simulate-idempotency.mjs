@@ -19,7 +19,7 @@ async function runTest() {
     console.log('=== STARTING E2E IDEMPOTENCY PROOF (Backend APIs) ===\n');
 
     // Fetch Real Users to avoid `auth.users` Foreign Key Violations on `token_ledger`
-    const { data: users, error: userErr } = await s.from('profiles').select('*').limit(2);
+    const { data: users } = await s.from('profiles').select('*').limit(2);
     if (!users || users.length < 2) return console.error('Need at least 2 users for test.');
 
     const t_uid = users[0].id;

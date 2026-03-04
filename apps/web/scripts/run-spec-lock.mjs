@@ -31,7 +31,7 @@ async function run() {
         const { data, error } = await supabase.rpc('apply_patch', { sql_query: checkSql });
         if (error) throw error;
         mismatchData = data ? JSON.parse(data) : [];
-    } catch (err) {
+    } catch {
         console.log("RPC Error, executing direct select query");
         const { data: registry } = await supabase.from('zk_event_registry').select('event_type').eq('enabled', true);
         const { data: receipts } = await supabase.from('event_receipts').select('event_type');

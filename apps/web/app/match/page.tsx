@@ -19,45 +19,44 @@ export default function MatchListPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-2xl mx-auto space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">당신의 매칭 리스트</h1>
-                    <p className="text-gray-500 mt-2">안전 검증을 통과한 신뢰도 높은 회원들입니다.</p>
-                </div>
+        <div className="liquid-shell min-h-screen px-4 pb-12 pt-10 sm:px-6 sm:pt-14">
+            <div className="mx-auto max-w-3xl space-y-7">
+                <header className="space-y-2">
+                    <h1 className="liquid-title text-[30px] font-semibold tracking-tight sm:text-[34px]">매칭 리스트</h1>
+                    <p className="liquid-copy text-[15px]">검증을 통과한 후보를 확인하고 채팅을 시작하세요.</p>
+                </header>
 
                 <div className="flex flex-col gap-4">
                     {DUMMY_MATCHES.map((match) => (
-                        <Card key={match.id} className="w-full transition-shadow hover:shadow-md">
-                            <CardHeader className="pb-2">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-xl">{match.name}</CardTitle>
-                                        <CardDescription className="mt-1">
-                                            신뢰도 티어: <span className="font-bold text-black">{match.score}점</span>
+                        <Card key={match.id} className="liquid-pane liquid-rise w-full rounded-3xl border-[#e5e5e7]">
+                            <CardHeader className="pb-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-[22px] font-semibold text-[#1d1d1f]">{match.name}</CardTitle>
+                                        <CardDescription className="text-[14px]">
+                                            신뢰도 티어: <span className="font-semibold text-[#1d1d1f]">{match.score}점</span>
                                         </CardDescription>
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded border font-semibold ${match.score >= 100
-                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                            : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                    <span className={`inline-flex w-fit rounded-full border px-3 py-1 text-[12px] font-semibold ${match.score >= 100
+                                            ? 'border-[#cde8d4] bg-[#edf9f1] text-[#14532d]'
+                                            : 'border-[#f4d6b8] bg-[#fff7ed] text-[#9a3412]'
                                         }`}>
                                         {match.status}
                                     </span>
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="flex gap-2 mt-2">
-                                    {match.tags.map(tag => (
-                                        <span key={tag} className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">#{tag}</span>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                    {match.tags.map((tag) => (
+                                        <span key={tag} className="liquid-chip rounded-full px-2.5 py-1 text-[12px] text-[#6e6e73]">
+                                            #{tag}
+                                        </span>
                                     ))}
                                 </div>
                             </CardContent>
-                            <CardFooter className="bg-gray-50 pt-4 rounded-b-lg">
-                                <Button
-                                    className="w-full"
-                                    onClick={() => handleChat(match.id, match.name)}
-                                >
-                                    채팅하기
+                            <CardFooter className="rounded-b-3xl border-t border-[#ececf0] bg-[#fbfbfd] pt-4">
+                                <Button className="h-12 w-full" onClick={() => handleChat(match.id, match.name)}>
+                                    채팅 시작
                                 </Button>
                             </CardFooter>
                         </Card>

@@ -1,9 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { hasValidCronSecret, isTestRouteEnabled } from '@/lib/server/trust';
 
 export async function POST(req: Request) {
     try {
+        if (!isTestRouteEnabled()) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        if (!hasValidCronSecret(req)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { email, password } = await req.json();
+        if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+            return NextResponse.json({ error: 'email/password are required' }, { status: 400 });
+        }
 
         if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
             return NextResponse.json({ error: 'Missing Supabase environment variables in .env.local' }, { status: 500 });
@@ -52,8 +63,9 @@ export async function POST(req: Request) {
             profile: profData
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Internal Server Error';
         console.error('Unexpected error:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

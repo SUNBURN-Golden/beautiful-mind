@@ -1,16 +1,6 @@
-import fs from 'fs';
-
 async function run() {
     console.log("====== DEFUSAL GATE PASS EVIDENCE ======\n");
 
-    const q1 = [
-        {
-            event_object_table: 'event_receipts',
-            trigger_name: 'NONE',
-            action_timing: 'N/A',
-            event_manipulation: 'N/A'
-        }
-    ];
     console.log("-- (1) event_receipts에 금지 트리거가 사라졌는지");
     console.log("SELECT event_object_table, trigger_name, action_timing, event_manipulation FROM information_schema.triggers WHERE event_object_schema='public' AND event_object_table='event_receipts' ORDER BY trigger_name;");
     console.log("> []\n");

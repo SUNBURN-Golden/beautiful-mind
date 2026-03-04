@@ -7,8 +7,6 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 // Since we cannot use Supabase Client due to broken schema cache (PostgREST issue without Docker restart),
 // we simulate the API's exact DB operations using a raw Postgres connection.
 
-const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL.replace('http://', 'postgres://postgres:postgres@').replace(':54321', ':54322/postgres');
-// Wait, local supabase direct connection is usually postgresql://postgres:postgres@localhost:54322/postgres
 const connStr = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 async function runRawSim() {

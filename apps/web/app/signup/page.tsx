@@ -9,17 +9,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const initialState = { error: '' };
+const initialState = { error: '', success: false };
 
 export default function SignupPage() {
     const router = useRouter();
     const [state, formAction, isPending] = useActionState(signup, initialState);
 
+    React.useEffect(() => {
+        if (state?.success) {
+            router.push('/login');
+        }
+    }, [state, router]);
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <Card className="w-full max-w-md">
+        <div className="liquid-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
+            <Card className="liquid-rise w-full max-w-md border-[#e5e5e7]">
                 <CardHeader>
-                    <CardTitle className="text-2xl text-center">회원가입</CardTitle>
+                    <CardTitle className="text-center text-3xl font-semibold tracking-tight">회원가입</CardTitle>
                     <CardDescription className="text-center">이 단계는 10-step 에서 회원가입 플로우를 나타냅니다.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -36,12 +42,15 @@ export default function SignupPage() {
                             <Label htmlFor="password">비밀번호</Label>
                             <Input id="password" name="password" type="password" required />
                         </div>
-                        {state?.error && <p className="text-sm text-red-500">{state.error}</p>}
+                        {state?.error && <p className="text-sm text-[#b42318]">{state.error}</p>}
                         <Button type="submit" disabled={isPending} className="w-full">
                             {isPending ? '가입 중...' : '가입하기'}
                         </Button>
                         <Button type="button" variant="outline" disabled={isPending} className="w-full" onClick={() => router.push('/login')}>
                             취소
+                        </Button>
+                        <Button type="button" variant="link" disabled={isPending} className="w-full" onClick={() => router.push('/manual')}>
+                            가입 전에 이용 매뉴얼 보기
                         </Button>
                     </form>
                 </CardContent>

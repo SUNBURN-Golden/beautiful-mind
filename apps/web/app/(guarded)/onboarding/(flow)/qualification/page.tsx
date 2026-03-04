@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStatus } from '@/lib/useStatus';
-import { Stepper, PrimaryButton, SecondaryButton, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
+import { Stepper, PrimaryButton, SupportCTA, Toast, Skeleton, StageTransitionNotice } from '@/components/ui-kit';
 
 const VERIFICATION_TYPES = ['RESIDENCE', 'PHYSICAL', 'CAREER', 'EDUCATION'] as const;
 type VerificationType = (typeof VERIFICATION_TYPES)[number];
@@ -14,13 +14,23 @@ export default function QualificationPage() {
     const [submitting, setSubmitting] = useState(false);
     const [toastMsg, setToastMsg] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
 
-    if (isLoading || status?.step !== 'QUALIFICATION') {
+    if (isLoading) {
         return (
             <main className="mx-auto max-w-md px-4 pt-20 sm:px-6 sm:pt-24">
                 <div className="liquid-pane rounded-3xl p-6">
                     <Skeleton />
                 </div>
             </main>
+        );
+    }
+
+    if (status?.step !== 'QUALIFICATION') {
+        return (
+            <StageTransitionNotice
+                currentStep={status?.step}
+                title="자격 검증 단계로 이동 중입니다."
+                description="제출 상태를 확인하고 다음 화면으로 자연스럽게 안내합니다."
+            />
         );
     }
 
@@ -97,10 +107,10 @@ export default function QualificationPage() {
             handleActionError(message);
             if (message === 'PII_DETECTED') {
                 setToastMsg({ text: '주민등록번호 패턴이 감지되어 즉시 반려되었습니다. 민감정보를 마스킹 후 다시 제출하십시오.', type: 'error' });
-                setSubmitting(false);
                 return;
             }
             setToastMsg({ text: '파일 업로드 중 오류가 발생했습니다. 다시 시도하십시오.', type: 'error' });
+        } finally {
             setSubmitting(false);
         }
     };
@@ -139,14 +149,6 @@ export default function QualificationPage() {
                         서류 제출
                     </PrimaryButton>
 
-                    {/* Debug mock skip - Gated for safety */}
-                    {process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true' && (
-                        <div className="mt-4">
-                            <SecondaryButton type="button" onClick={() => submitQualifications(true)} disabled={submitting}>
-                                [테스트용] 제출 건너뛰기
-                            </SecondaryButton>
-                        </div>
-                    )}
                 </form>
             </div>
 

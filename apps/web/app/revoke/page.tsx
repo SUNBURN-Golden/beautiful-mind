@@ -7,10 +7,21 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
+type OsintReportData = {
+    trustScore: number;
+    socialFootprint: string;
+};
+
+type MockOsintResponse = {
+    message?: string;
+    error?: string;
+    data?: OsintReportData;
+};
+
 export default function ConsentRevokeTestPage() {
     const [consentOsint, setConsentOsint] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [reportData, setReportData] = useState<any>(null);
+    const [reportData, setReportData] = useState<OsintReportData | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     const handleGenerateReport = async () => {
@@ -26,15 +37,15 @@ export default function ConsentRevokeTestPage() {
                 body: JSON.stringify({ consent_osint: consentOsint })
             });
 
-            const data = await res.json();
+            const data = await res.json() as MockOsintResponse;
 
             if (!res.ok) {
                 // API 레벨의 차단 확인
                 setErrorMsg(`API 에러 (${res.status}): ${data.message} [${data.error}]`);
-            } else {
+            } else if (data.data) {
                 setReportData(data.data);
             }
-        } catch (err: any) {
+        } catch {
             setErrorMsg('네트워크 또는 알 수 없는 오류 발생');
         } finally {
             setIsGenerating(false);
@@ -42,35 +53,29 @@ export default function ConsentRevokeTestPage() {
     };
 
     return (
-        <div className="min-h-screen p-8 bg-gray-100 flex items-center justify-center">
-            <Card className="w-full max-w-lg">
+        <div className="liquid-shell flex min-h-screen items-center justify-center p-4 sm:p-8">
+            <Card className="liquid-pane liquid-rise w-full max-w-lg rounded-3xl border-[#e5e5e7]">
                 <CardHeader>
-                    <CardTitle>Consent Revoke Test</CardTitle>
+                    <CardTitle className="text-[28px] font-semibold tracking-tight">Consent Revoke Test</CardTitle>
                     <CardDescription>
-                        OSINT 동의 상태(ON/OFF)에 따른 API 차단 및 UI 잠금 방어 로직 검증.
+                        OSINT 동의 ON/OFF에 따른 API 차단 및 UI 잠금 동작을 검증합니다.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-
-                    <div className="flex items-center justify-between border-b pb-4">
+                    <div className="flex items-center justify-between border-b border-[#ececf0] pb-4">
                         <div className="space-y-1">
-                            <Label htmlFor="osint-toggle" className="text-base font-semibold">OSINT 웹 평판 / 신뢰도 검증</Label>
-                            <p className="text-sm text-gray-500">동의 철회 시 리포트 갱신 및 API 접근이 차단됩니다.</p>
+                            <Label htmlFor="osint-toggle" className="text-base font-semibold">OSINT 평판 검증</Label>
+                            <p className="text-sm text-[#6e6e73]">동의 철회 시 리포트 갱신 및 API 접근이 차단됩니다.</p>
                         </div>
-                        <Switch
-                            id="osint-toggle"
-                            checked={consentOsint}
-                            onCheckedChange={setConsentOsint}
-                        />
+                        <Switch id="osint-toggle" checked={consentOsint} onCheckedChange={setConsentOsint} />
                     </div>
 
                     <div className="space-y-4">
-                        <Label>OSINT 신뢰도 분석 리포트 관리</Label>
+                        <Label>OSINT 리포트 관리</Label>
 
-                        {/* UI 잠금 (Disabled State) 처리 */}
                         <Button
                             onClick={handleGenerateReport}
-                            className="w-full"
+                            className="h-12 w-full"
                             disabled={!consentOsint || isGenerating}
                             variant={consentOsint ? 'default' : 'secondary'}
                         >
@@ -79,22 +84,22 @@ export default function ConsentRevokeTestPage() {
 
                         {isGenerating && (
                             <div className="flex justify-center py-4">
-                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                <Loader2 className="h-8 w-8 animate-spin text-[#8e8e93]" />
                             </div>
                         )}
 
                         {errorMsg && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md text-sm">
-                                ❌ {errorMsg}
-                                <p className="mt-2 text-xs text-gray-500">
-                                    UI에서 임의로 버튼 disabled를 해제하더라도 서버/API 단에서 위와 같이 차단됨. 앱은 다운되지 않음.
+                            <div className="rounded-md border border-[#f3d1d1] bg-[#fff5f5] p-4 text-sm text-[#b42318]">
+                                {errorMsg}
+                                <p className="mt-2 text-xs text-[#6e6e73]">
+                                    UI에서 버튼 잠금을 우회하더라도 서버 레벨에서 차단되어 앱 안정성은 유지됩니다.
                                 </p>
                             </div>
                         )}
 
                         {reportData && (
-                            <div className="text-sm space-y-2 text-gray-600 bg-green-50 border border-green-200 rounded p-4">
-                                <p className="text-green-800 font-semibold mb-2">✅ 리포트 정상 생성 (동의 상태: ON)</p>
+                            <div className="space-y-2 rounded-xl border border-[#cde8d4] bg-[#edf9f1] p-4 text-sm text-[#3a3a3c]">
+                                <p className="mb-2 font-semibold text-[#14532d]">리포트 정상 생성 (동의 상태: ON)</p>
                                 <div className="flex justify-between">
                                     <span>신뢰 점수:</span> <span className="font-bold">{reportData.trustScore}</span>
                                 </div>

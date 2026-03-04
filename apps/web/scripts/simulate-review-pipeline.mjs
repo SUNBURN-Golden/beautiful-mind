@@ -29,7 +29,7 @@ async function simulateReviewPipeline() {
     console.log('=== STARTING REVIEW CO-AUTHOR PIPELINE ===\n');
 
     // Setup: Get two verified users
-    const { data: users, error: userErr } = await s.from('profiles').select('*').eq('verified', true).limit(2);
+    const { data: users } = await s.from('profiles').select('*').eq('verified', true).limit(2);
     if (!users || users.length < 2) return console.error('Need at least 2 verified users.');
     const reviewer = users[0], target = users[1];
 

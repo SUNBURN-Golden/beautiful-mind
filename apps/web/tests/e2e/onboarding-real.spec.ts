@@ -1,4 +1,142 @@
 import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+
+dotenv.config({ path: '.env.test.local' });
+dotenv.config({ path: '.env.local' });
+
+type E2ECreds = {
+    user_id: string;
+};
+
+function getAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    }
+
+    return createClient(supabaseUrl, serviceRoleKey);
+}
+
+function readE2ECreds(): E2ECreds {
+    const credsPath = path.resolve(process.cwd(), '.e2e/creds.json');
+    const raw = fs.readFileSync(credsPath, 'utf8');
+    return JSON.parse(raw) as E2ECreds;
+}
+
+async function ensureDashboardReadyState(userId: string) {
+    const admin = getAdminClient();
+    const nowIso = new Date().toISOString();
+
+    await admin
+        .from('feature_flags')
+        .upsert([
+            { flag_key: 'COLLATERAL_REQUIRED_ON_SIGNUP', enabled: false },
+            { flag_key: 'COLLATERAL_REQUIRED_FOR_HIGH_TRUST', enabled: false }
+        ], { onConflict: 'flag_key' });
+
+    await admin
+        .from('profiles')
+        .update({
+            verified: true,
+            banned: false,
+            is_frozen: false,
+            freeze_reason: null,
+            freeze_updated_at: nowIso
+        })
+        .eq('id', userId);
+
+    const requiredVerificationTypes = ['RESIDENCE', 'PHYSICAL', 'CAREER'];
+    const { data: verifiedDocs } = await admin
+        .from('verifications')
+        .select('type')
+        .eq('user_id', userId)
+        .eq('status', 'VERIFIED');
+
+    const existingTypes = new Set((verifiedDocs || []).map((row) => row.type));
+    const missingTypes = requiredVerificationTypes.filter((type) => !existingTypes.has(type));
+
+    if (missingTypes.length > 0) {
+        await admin
+            .from('verifications')
+            .insert(missingTypes.map((type) => ({
+                user_id: userId,
+                type,
+                status: 'VERIFIED',
+                reviewed_at: nowIso
+            })));
+    }
+
+    const modules = ['OSINT', 'LOCATION', 'DEVICE'];
+    await admin
+        .from('consents')
+        .upsert(
+            modules.map((module) => ({
+                user_id: userId,
+                module,
+                is_granted: true,
+                granted_at: nowIso,
+                terms_accepted: true,
+                privacy_accepted: true,
+                deep_profiling: true
+            })),
+            { onConflict: 'user_id,module' }
+        );
+
+    const { data: existingContract } = await admin
+        .from('contracts')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+    if (!existingContract) {
+        await admin
+            .from('contracts')
+            .insert({
+                user_id: userId,
+                signature_base64: 'e2e-signature',
+                agreed_to_terms: true
+            });
+    }
+
+    const { data: latestInterview } = await admin
+        .from('interviews')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (latestInterview) {
+        await admin
+            .from('interviews')
+            .update({
+                status: 'DONE',
+                decision: 'PASS',
+                score: 95,
+                absolute_score: 95,
+                summary: 'E2E ready'
+            })
+            .eq('id', latestInterview.id);
+    } else {
+        await admin
+            .from('interviews')
+            .insert({
+                user_id: userId,
+                status: 'DONE',
+                decision: 'PASS',
+                score: 95,
+                absolute_score: 95,
+                summary: 'E2E ready',
+                transcript_json: []
+            });
+    }
+}
 
 // These tests require a local environment with the seed script executed beforehand so the DB state matches expectations.
 
@@ -52,14 +190,24 @@ test.describe('Real E2E Onboarding Flow (Local Backend Integration)', () => {
 
         // 3. Complete Qualification if present
         if (page.url().includes('qualification')) {
-            await page.getByRole('button', { name: '[테스트용] 제출 건너뛰기' }).click();
-            await page.waitForFunction(async () => {
-                const res = await fetch('/api/me/status');
-                const data = await res.json();
-                return data.step !== 'QUALIFICATION';
-            }, { timeout: 60000, polling: 3000 });
-            await page.waitForTimeout(3000);
-            await page.goto('/onboarding/consent');
+            await page.setInputFiles('input[type="file"]', {
+                name: 'qualification-proof.pdf',
+                mimeType: 'application/pdf',
+                buffer: Buffer.from('qualification-proof'),
+            });
+            await page.getByRole('button', { name: '서류 제출' }).click();
+
+            await expect.poll(async () => {
+                const res = await page.evaluate(async () => {
+                    const r = await fetch('/api/me/status');
+                    return r.json();
+                });
+                return res.step;
+            }, {
+                timeout: 60000,
+                intervals: [1000, 2000, 5000]
+            }).not.toBe('QUALIFICATION');
+
             await page.waitForLoadState('networkidle');
         }
 
@@ -121,24 +269,38 @@ test.describe('Real E2E Onboarding Flow (Local Backend Integration)', () => {
         if (page.url().includes('interview')) {
             console.log('[PLAYWRIGHT DEBUG] In Interview Phase');
 
-            // (a) Wait for the POST request to finalize the interview (Gemini can be slow)
-            const finalizePromise = page.waitForResponse(r =>
-                r.url().includes('/api/interview/finalize') &&
-                r.request().method() === 'POST',
+            // (a) Submit iterative answers until finalize button appears.
+            const answerInput = page.getByPlaceholder('답변을 입력해주세요...');
+            const finalizeButton = page.getByRole('button', { name: '인터뷰 완료 및 제출' });
+
+            await expect(answerInput).toBeVisible({ timeout: 30000 });
+            for (let i = 0; i < 8; i += 1) {
+                if (await finalizeButton.isVisible().catch(() => false)) {
+                    break;
+                }
+
+                await answerInput.fill(`이것은 인터뷰 답변입니다. #${i + 1}`);
+                await page.locator('form button[type="submit"]').click();
+                await page.waitForTimeout(1200);
+            }
+
+            // (b) Wait for finalize request and submit
+            const finalizePromise = page.waitForResponse((r) =>
+                r.url().includes('/api/interview/finalize')
+                && r.request().method() === 'POST',
                 { timeout: 90000 }
             );
 
-            await page.waitForSelector('textarea');
-            await page.fill('textarea', '이것은 인터뷰 답변입니다.');
+            await expect(finalizeButton).toBeVisible({ timeout: 60000 });
             console.log('[PLAYWRIGHT DEBUG] Clicking Finalize Interview');
-            await page.click('button:has-text("종료 및 저장")');
+            await finalizeButton.click();
             console.log('[PLAYWRIGHT DEBUG] Waiting for Finalize API response (90s timeout)...');
 
             const finalizeRes = await finalizePromise;
             console.log(`[PLAYWRIGHT DEBUG] Interview Finalize API Response: ${finalizeRes.status()}`);
             expect(finalizeRes.status()).toBe(200);
 
-            // (b) Poll SSOT until DASHBOARD_READY (eliminates race with GuardedLayout)
+            // (c) Poll SSOT until DASHBOARD_READY (eliminates race with GuardedLayout)
             console.log('[PLAYWRIGHT DEBUG] Interview finalized successfully. Polling for DASHBOARD_READY state...');
             await expect.poll(async () => {
                 const res = await page.evaluate(async () => {
@@ -152,14 +314,147 @@ test.describe('Real E2E Onboarding Flow (Local Backend Integration)', () => {
                 intervals: [1000, 2000, 5000]
             }).toBe('DASHBOARD_READY');
 
-            // (c) Finally wait for /dashboard URL
+            // (d) Finally wait for /dashboard URL
             console.log('[PLAYWRIGHT DEBUG] State confirmed. Waiting for /dashboard URL...');
             await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
         }
         await expect(page.locator('text=온보딩 통합 결과')).toBeVisible({ timeout: 15000 });
     });
 
-    test('Revoke consent kicks user back to CONSENT_HUB', async ({ page }) => {
+    test('Revoke consent kicks user back to CONSENT_HUB', async () => {
         // ... Logic for revoke consent test
+    });
+});
+
+test.describe('Trust SBT Flow (fcqs-backed)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    test('self-claim -> low-trust issuance -> dashboard reflection', async ({ page }) => {
+        const { user_id: userId } = readE2ECreds();
+        await ensureDashboardReadyState(userId);
+
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
+
+        const claimType = `income_over_100m_e2e_${Date.now()}`;
+        const selfClaimResult = await page.evaluate(async (nextClaimType) => {
+            const res = await fetch('/api/sbt/self-claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    claim_type: nextClaimType,
+                    claim_payload: { source: 'playwright-e2e' }
+                })
+            });
+            return { status: res.status, body: await res.json() };
+        }, claimType);
+
+        expect(selfClaimResult.status).toBe(200);
+
+        await expect.poll(async () => {
+            const status = await page.evaluate(async () => {
+                const r = await fetch('/api/me/status', { cache: 'no-store' });
+                return r.json();
+            });
+            return {
+                trust: status.meta?.trust_level,
+                sbt: status.meta?.sbt_status
+            };
+        }, {
+            timeout: 60000,
+            intervals: [1000, 2000, 5000]
+        }).toEqual({ trust: 'LOW', sbt: 'ACTIVE' });
+
+        await page.reload();
+        await expect(page.getByTestId('trust-level-badge')).toHaveText('LOW', { timeout: 10000 });
+        await expect(page.getByTestId('sbt-status-badge')).toHaveText('ACTIVE', { timeout: 10000 });
+    });
+
+    test('random audit -> freeze -> decide(pass) -> high-trust promotion', async ({ page, request }) => {
+        const { user_id: userId } = readE2ECreds();
+        await ensureDashboardReadyState(userId);
+
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
+
+        const claimType = `degree_verified_e2e_${Date.now()}`;
+        const selfClaimResult = await page.evaluate(async (nextClaimType) => {
+            const res = await fetch('/api/sbt/self-claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    claim_type: nextClaimType,
+                    claim_payload: { source: 'playwright-e2e' }
+                })
+            });
+            return { status: res.status, body: await res.json() };
+        }, claimType);
+
+        expect(selfClaimResult.status).toBe(200);
+        const claimId = selfClaimResult.body?.claim?.id as string;
+        expect(typeof claimId).toBe('string');
+
+        const cronSecret = process.env.CRON_SECRET || '';
+        expect(cronSecret.length).toBeGreaterThan(0);
+
+        const auditOpenRes = await request.post('/api/audit/random/open', {
+            headers: { 'x-cron-secret': cronSecret },
+            data: {
+                subject_user_id: userId,
+                claim_id: claimId,
+                note: 'E2E random audit open'
+            }
+        });
+        expect(auditOpenRes.status()).toBe(200);
+        const auditOpenJson = await auditOpenRes.json();
+        const auditId = auditOpenJson.audit_id as string;
+        expect(typeof auditId).toBe('string');
+
+        await expect.poll(async () => {
+            const status = await page.evaluate(async () => {
+                const r = await fetch('/api/me/status', { cache: 'no-store' });
+                return r.json();
+            });
+            return {
+                isFrozen: status.meta?.is_frozen === true,
+                auditInProgress: status.meta?.audit_in_progress === true
+            };
+        }, {
+            timeout: 60000,
+            intervals: [1000, 2000, 5000]
+        }).toEqual({ isFrozen: true, auditInProgress: true });
+
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/.*\/banned$/, { timeout: 30000 });
+
+        const decideRes = await request.post('/api/audit/decide', {
+            headers: { 'x-cron-secret': cronSecret },
+            data: {
+                audit_id: auditId,
+                decision: 'PASS',
+                note: 'E2E pass decision'
+            }
+        });
+        expect(decideRes.status()).toBe(200);
+
+        await expect.poll(async () => {
+            const status = await page.evaluate(async () => {
+                const r = await fetch('/api/me/status', { cache: 'no-store' });
+                return r.json();
+            });
+            return {
+                trust: status.meta?.trust_level,
+                sbt: status.meta?.sbt_status,
+                frozen: status.meta?.is_frozen === true
+            };
+        }, {
+            timeout: 60000,
+            intervals: [1000, 2000, 5000]
+        }).toEqual({ trust: 'HIGH', sbt: 'ACTIVE', frozen: false });
+
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
+        await expect(page.getByTestId('trust-level-badge')).toHaveText('HIGH', { timeout: 10000 });
+        await expect(page.getByTestId('audit-progress-badge')).toHaveText('NONE', { timeout: 10000 });
     });
 });

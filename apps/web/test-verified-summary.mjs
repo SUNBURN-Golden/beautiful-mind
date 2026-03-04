@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { ethers } from "ethers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -67,7 +66,7 @@ async function test() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ interview_id: interview.id })
     });
-    const finalResponse = await fRes.json();
+    await fRes.json();
     
     // 5. Check DB storage to prove the hash and schema expansion was saved
     const { data: dbCheck } = await supabase.from("interviews").select("analysis_json, transcript_json").eq("id", interview.id).single();

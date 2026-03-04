@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export default function ChatPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">채팅방을 불러오는 중...</div>}>
+        <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center text-[#6e6e73]">채팅방을 불러오는 중...</div>}>
             <ChatClient />
         </Suspense>
     );

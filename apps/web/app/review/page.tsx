@@ -25,58 +25,56 @@ export default function ReviewPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <Card className="w-full max-w-md">
+        <div className="liquid-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
+            <Card className="liquid-pane liquid-rise w-full max-w-md rounded-3xl border-[#e5e5e7]">
                 <CardHeader>
-                    <CardTitle className="text-2xl text-center">매칭 리뷰 작성</CardTitle>
-                    <CardDescription className="text-center">상대방과의 만남은 어떠셨나요? 긍정적인 평가가 누적되면 신뢰 티어가 상승합니다.</CardDescription>
+                    <CardTitle className="text-center text-[28px] font-semibold tracking-tight">매칭 리뷰</CardTitle>
+                    <CardDescription className="text-center">
+                        만남 경험을 평가하면 신뢰도 계산에 반영됩니다.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-
                     {!isSubmitted ? (
                         <div className="space-y-4">
-                            <Label>긍정 평가 태그 (다중 선택 가능)</Label>
-                            <div className="flex flex-col gap-3 border rounded-md p-4 bg-white">
-                                {TAGS.map(tag => (
+                            <Label className="text-[14px]">긍정 평가 태그 (복수 선택)</Label>
+                            <div className="liquid-pane-muted flex flex-col gap-3 rounded-2xl p-4">
+                                {TAGS.map((tag) => (
                                     <div key={tag} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={tag}
-                                            checked={selectedTags.includes(tag)}
-                                            onCheckedChange={() => toggleTag(tag)}
-                                        />
-                                        <Label htmlFor={tag} className="cursor-pointer font-normal">{tag}</Label>
+                                        <Checkbox id={tag} checked={selectedTags.includes(tag)} onCheckedChange={() => toggleTag(tag)} />
+                                        <Label htmlFor={tag} className="cursor-pointer font-normal text-[#3a3a3c]">
+                                            {tag}
+                                        </Label>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center space-y-4 animate-in fade-in zoom-in py-8">
-                            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                                <span className="text-3xl">🎉</span>
+                        <div className="animate-in fade-in zoom-in space-y-4 py-8 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#cde8d4] bg-[#edf9f1] text-sm font-semibold text-[#14532d]">
+                                완료
                             </div>
-                            <h3 className="text-xl font-bold">리뷰 제출 완료!</h3>
-                            <p className="text-gray-500">상호 긍정적인 평가를 받아 신뢰도 티어가 상승했습니다.</p>
+                            <h3 className="text-[22px] font-semibold text-[#1d1d1f]">리뷰 제출 완료</h3>
+                            <p className="text-[#6e6e73]">상호 평가가 반영되어 신뢰도 티어가 갱신되었습니다.</p>
 
-                            <div className="bg-gray-100 p-4 rounded-md mt-4">
-                                <p className="font-mono text-sm text-gray-700">티어 점수 변화 (User A):</p>
-                                <div className="flex items-center justify-center gap-4 mt-2">
-                                    <span className="text-2xl font-bold text-gray-400">100</span>
-                                    <span className="text-xl text-green-500">→</span>
-                                    <span className="text-3xl font-bold text-green-600">110</span>
+                            <div className="mt-4 rounded-2xl border border-[#e5e5e7] bg-[#f5f5f7] p-4">
+                                <p className="text-sm text-[#3a3a3c]">티어 점수 변화 (User A)</p>
+                                <div className="mt-2 flex items-center justify-center gap-4">
+                                    <span className="text-2xl font-semibold text-[#8e8e93]">100</span>
+                                    <span className="text-xl text-[#06c]">→</span>
+                                    <span className="text-3xl font-semibold text-[#1d1d1f]">110</span>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </CardContent>
-                <CardFooter className="flex flex-col gap-2">
+                <CardFooter className="flex flex-col gap-2 border-t border-[#ececf0] bg-[#fbfbfd]">
                     {!isSubmitted ? (
-                        <Button className="w-full" onClick={handleSubmit} disabled={selectedTags.length === 0}>
-                            리뷰 제출하기
+                        <Button className="h-12 w-full" onClick={handleSubmit} disabled={selectedTags.length === 0}>
+                            리뷰 제출
                         </Button>
                     ) : (
-                        <Button variant="outline" className="w-full" onClick={() => router.push('/')}>
-                            대시보드로 돌아가기
+                        <Button variant="outline" className="h-12 w-full" onClick={() => router.push('/')}>
+                            대시보드로 이동
                         </Button>
                     )}
                 </CardFooter>

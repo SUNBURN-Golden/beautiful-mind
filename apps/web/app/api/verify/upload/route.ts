@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { ethers } from 'ethers';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { isTestRouteEnabled } from '@/lib/server/trust';
 
 function getSupabaseEnv() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
         const expires_at = new Date();
         expires_at.setDate(expires_at.getDate() + 7); // 7 days TTL for artifacts
 
-        const status = skipFile && process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true'
+        const status = skipFile && isTestRouteEnabled()
             ? 'VERIFIED'
             : 'PENDING';
 

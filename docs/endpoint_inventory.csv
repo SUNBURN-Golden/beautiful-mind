@@ -13,3 +13,5 @@ POST,/api/interview/next,true,user,"Get next interview question","{ question }",
 POST,/api/interview/finalize,true,user,"Finalize interview logic","{ decision_status }","apps/web/app/api/interview/finalize/route.ts"
 GET,/api/mock-db,false,public,"Mock generic endpoint (DEV GUARDED)","{ ok }","apps/web/app/api/mock-db/route.ts"
 POST,/api/integrity/merkle-snapshot,true,admin,"Snapshot merkle boundaries","{ root_hash }","apps/web/app/api/integrity/merkle-snapshot/route.ts"
+POST,/api/airdrop/claim,true,user,"Claim anti-farming SOUL airdrop","{ status, claim_no, cohort, amount, ledger_id }","apps/web/app/api/airdrop/claim/route.ts"
+POST,/api/treasury/spend,true,admin|cron,"Budget-enforced treasury spend","{ status, data }","apps/web/app/api/treasury/spend/route.ts"

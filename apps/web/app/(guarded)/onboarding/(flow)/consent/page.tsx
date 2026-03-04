@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStatus } from '@/lib/useStatus';
-import { Stepper, PrimaryButton, ConsentItem, SupportCTA, Toast, Skeleton } from '@/components/ui-kit';
+import { Stepper, PrimaryButton, ConsentItem, SupportCTA, Toast, Skeleton, StageTransitionNotice } from '@/components/ui-kit';
 
 export default function ConsentPage() {
     const { status, isLoading, refetch, handleActionError } = useStatus();
@@ -13,8 +13,24 @@ export default function ConsentPage() {
     const [submitting, setSubmitting] = useState(false);
     const [toastMsg, setToastMsg] = useState<{ text: string, type: 'info' | 'error' | 'success' } | null>(null);
 
-    if (isLoading || status?.step !== 'CONSENT_HUB') {
-        return <main className="max-w-md mx-auto pt-24 px-6"><Skeleton /></main>;
+    if (isLoading) {
+        return (
+            <main className="mx-auto max-w-md px-4 pt-20 sm:px-6 sm:pt-24">
+                <div className="liquid-pane rounded-3xl p-6">
+                    <Skeleton />
+                </div>
+            </main>
+        );
+    }
+
+    if (status?.step !== 'CONSENT_HUB') {
+        return (
+            <StageTransitionNotice
+                currentStep={status?.step}
+                title="동의 단계로 이동 중입니다."
+                description="현재 온보딩 진행도 기준으로 올바른 화면을 열어드립니다."
+            />
+        );
     }
 
     const isAllRequiredChecked = agreedTerms && agreedPrivacy;
@@ -40,22 +56,24 @@ export default function ConsentPage() {
             setToastMsg({ text: '해당 내용이 감사 로그로 안전하게 기록되었습니다.', type: 'success' });
             // SSOT re-evaluation enforces progression
             await refetch();
-        } catch (err: any) {
-            handleActionError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'CONSENT_REQUIRED';
+            handleActionError(message);
             setToastMsg({ text: '동의 내역 처리 중 오류가 발생했습니다. 다시 시도하십시오.', type: 'error' });
+        } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <main className="max-w-md mx-auto pt-16 px-6 pb-12 flex flex-col min-h-screen">
+        <main className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-12 pt-12 sm:px-6 sm:pt-16">
             {toastMsg && <Toast message={toastMsg.text} type={toastMsg.type} />}
 
-            <div className="flex-1">
+            <div className="liquid-pane liquid-rise flex-1 rounded-3xl p-5 sm:p-8">
                 <Stepper currentStep={4} totalSteps={7} />
 
-                <h1 className="text-[24px] font-semibold tracking-tight text-[#111111] mb-2">이용 약관 및 정보 수집 동의.</h1>
-                <p className="text-[15px] text-[#555555] mb-8">서비스 진행을 위해 필수 약관 사항을 숙지하고 동의해주십시오.</p>
+                <h1 className="liquid-title mb-2 text-[24px] font-semibold">이용 약관 및 정보 수집 동의.</h1>
+                <p className="liquid-copy mb-8 text-[15px]">서비스 진행을 위해 필수 약관 사항을 숙지하고 동의해주십시오.</p>
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-8">

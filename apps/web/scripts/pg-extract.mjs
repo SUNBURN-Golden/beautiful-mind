@@ -1,7 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-
-const supabase = createClient("https://fcqsdfpbwqjpvpunrxdh.supabase.co", "sb_secret_GF1fazFZDiH2pynDpcBwoA_brJqUYJS");
 
 async function run() {
     console.log("====== PAYLOAD FOR WALKTHROUGH EVIDENCE ======");
@@ -20,7 +17,6 @@ async function run() {
     console.table(registryData);
 
     const user_id = crypto.randomUUID();
-    const source_receipt_id = crypto.randomUUID();
 
     const mockMeta = {
         verification_type: "ID_CARD",

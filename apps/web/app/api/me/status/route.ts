@@ -234,9 +234,17 @@ export async function GET(req: Request) {
             .eq('subject_user_id', user.id)
             .in('state', ['OPEN', 'FROZEN', 'UNDER_REVIEW']);
 
+        const { data: latestContract } = await supabase
+            .from('contracts')
+            .select('id, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
         const { data: latestInterviewRows } = await supabase
             .from('interviews')
-            .select('analysis_json')
+            .select('id, analysis_json, decision, absolute_score, created_at')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(1);
@@ -265,6 +273,14 @@ export async function GET(req: Request) {
                 freeze_reason?: string | null;
                 audit_in_progress?: boolean;
                 open_audit_count?: number;
+                latest_contract_id?: string | null;
+                latest_contract_at?: string | null;
+                latest_interview_id?: string | null;
+                latest_interview_at?: string | null;
+                latest_interview_decision?: string | null;
+                latest_interview_score?: number | null;
+                receipt_id?: string | null;
+                doc_version?: string;
                 self_dev_confidence?: number | null;
                 self_dev_focus_topics?: string[];
                 self_dev_action_plan?: SelfDevActionPreview[];
@@ -288,6 +304,15 @@ export async function GET(req: Request) {
                 freeze_reason: profile?.freeze_reason || null,
                 audit_in_progress: (openAudits?.length || 0) > 0,
                 open_audit_count: openAudits?.length || 0,
+                latest_contract_id: latestContract?.id || null,
+                latest_contract_at: latestContract?.created_at || null,
+                latest_interview_id: typeof latestInterview?.id === 'string' ? latestInterview.id : null,
+                latest_interview_at: typeof latestInterview?.created_at === 'string' ? latestInterview.created_at : null,
+                latest_interview_decision: typeof latestInterview?.decision === 'string' ? latestInterview.decision : null,
+                latest_interview_score: typeof latestInterview?.absolute_score === 'number' ? latestInterview.absolute_score : null,
+                receipt_id: latestContract?.id
+                    || (typeof latestInterview?.id === 'string' ? latestInterview.id : null),
+                doc_version: 'SSOT-v1',
                 self_dev_confidence: selfDevMeta.confidence,
                 self_dev_focus_topics: selfDevMeta.focusTopics,
                 self_dev_action_plan: selfDevMeta.actionPlan

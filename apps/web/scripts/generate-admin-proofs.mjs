@@ -1,9 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = "https://fcqsdfpbwqjpvpunrxdh.supabase.co";
-const supabaseKey = "sb_secret_GF1fazFZDiH2pynDpcBwoA_brJqUYJS";
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 async function run() {
     console.log("====== SPEC LOCK & ADMIN CONTROL EVIDENCE ======\n");
 

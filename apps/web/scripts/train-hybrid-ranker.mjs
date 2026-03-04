@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const supabaseAdmin = createClient(
@@ -10,12 +9,19 @@ const supabaseAdmin = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Basic Pearson Correlation calculation
+function asNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
 function calculateCorrelation(x, y) {
     if (x.length !== y.length || x.length === 0) return 0;
     const n = x.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
-
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumX2 = 0;
+    let sumY2 = 0;
     for (let i = 0; i < n; i++) {
         sumX += x[i];
         sumY += y[i];
@@ -23,36 +29,49 @@ function calculateCorrelation(x, y) {
         sumX2 += x[i] * x[i];
         sumY2 += y[i] * y[i];
     }
-
     const numerator = (n * sumXY) - (sumX * sumY);
     const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
     if (denominator === 0) return 0;
     return numerator / denominator;
 }
 
-// Basic Top-K Hit Rate
 function calculateTopKHit(predicted, actual, k = 10) {
     if (predicted.length === 0) return 0;
+    const safeK = Math.min(k, predicted.length);
+    const sortedPred = predicted
+        .map((val, idx) => ({ val, idx }))
+        .sort((a, b) => b.val - a.val)
+        .map((o) => o.idx);
+    const sortedAct = actual
+        .map((val, idx) => ({ val, idx }))
+        .sort((a, b) => b.val - a.val)
+        .map((o) => o.idx);
 
-    // Sort indices by score desc
-    const sortedPred = predicted.map((val, idx) => ({ val, idx })).sort((a, b) => b.val - a.val).map(o => o.idx);
-    const sortedAct = actual.map((val, idx) => ({ val, idx })).sort((a, b) => b.val - a.val).map(o => o.idx);
-
-    const topKPred = new Set(sortedPred.slice(0, k));
-    const topKAct = sortedAct.slice(0, k);
-
+    const topKPred = new Set(sortedPred.slice(0, safeK));
+    const topKAct = sortedAct.slice(0, safeK);
     let hits = 0;
     for (const idx of topKAct) {
         if (topKPred.has(idx)) hits++;
     }
+    return hits / safeK;
+}
 
-    return hits / k; // Hit rate ratio
+function calculateMAE(predicted, actual) {
+    if (predicted.length !== actual.length || predicted.length === 0) return 0;
+    let sum = 0;
+    for (let i = 0; i < predicted.length; i++) {
+        sum += Math.abs(predicted[i] - actual[i]);
+    }
+    return sum / predicted.length;
+}
+
+function pairKey(a, b) {
+    return a < b ? `${a}|${b}` : `${b}|${a}`;
 }
 
 async function runAutoTrain() {
-    console.log('--- STARTING AUTO-TRAIN AND EVALUATION ---');
+    console.log('--- STARTING AUTO-TRAIN AND EVALUATION (v2) ---');
 
-    // 1. Fetch current active model to know the last window end
     const { data: activeModels } = await supabaseAdmin
         .from('match_model_registry')
         .select('*')
@@ -63,101 +82,114 @@ async function runAutoTrain() {
     const activeModel = activeModels && activeModels.length > 0 ? activeModels[0] : null;
     const windowStart = activeModel ? activeModel.train_window_end : new Date('2000-01-01').toISOString();
 
-    // 2. Fetch all reviews
-    const { data: reviews, error: reviewErr } = await supabaseAdmin
-        .from('match_reviews')
-        .select('*');
-    // Let's pretend we fetch only new ones since windowStart in reality, 
-    // but for training we need all historical data up to now for the total holdout set.
+    const [{ data: reviews, error: reviewErr }, { data: stats }, { data: matches, error: matchErr }] = await Promise.all([
+        supabaseAdmin.from('match_reviews').select('*'),
+        supabaseAdmin.from('user_scoring_stats').select('*'),
+        supabaseAdmin.from('matches').select('user1_id,user2_id,match_score,algorithm_version,status,updated_at'),
+    ]);
 
     if (reviewErr || !reviews || reviews.length < 50) {
         console.log(`Not enough total reviews to train (Count: ${reviews ? reviews.length : 0}). Aborting.`);
         return;
     }
+    if (matchErr || !matches) {
+        console.log('Failed to load matches for evaluation. Aborting.', matchErr);
+        return;
+    }
 
-    // 3. Aggregate Actual Delta / Exact Pair Metrics
-    // Needs user_scoring_stats for shrinkage
-    const { data: stats } = await supabaseAdmin
-        .from('user_scoring_stats')
-        .select('*');
-
+    const globalMu = stats && stats.length > 0 ? asNumber(stats[0].mu, 3.0) : 3.0;
     const statsMap = {};
-    const globalMu = stats && stats.length > 0 ? stats[0].mu : 3.0;
     if (stats) {
-        stats.forEach(s => {
+        for (const s of stats) {
+            const givenCount = asNumber(s.given_count, 0);
+            const recvCount = asNumber(s.received_count, 0);
+            const mu = asNumber(s.mu, globalMu);
+            const avgGiven = asNumber(s.avg_given_score, mu);
+            const avgRecv = asNumber(s.avg_received_score, mu);
             statsMap[s.user_id] = {
-                given_shrunk: ((s.given_count / (s.given_count + 10)) * s.avg_given_score) + ((10 / (s.given_count + 10)) * s.mu),
-                recv_shrunk: ((s.received_count / (s.received_count + 10)) * s.avg_received_score) + ((10 / (s.received_count + 10)) * s.mu)
+                given_shrunk: ((givenCount / (givenCount + 10)) * avgGiven) + ((10 / (givenCount + 10)) * mu),
+                recv_shrunk: ((recvCount / (recvCount + 10)) * avgRecv) + ((10 / (recvCount + 10)) * mu)
             };
+        }
+    }
+
+    const pairedReviews = {};
+    for (const r of reviews) {
+        const key = pairKey(r.reviewer_id, r.target_id);
+        if (!pairedReviews[key]) {
+            pairedReviews[key] = {
+                userA: key.split('|')[0],
+                userB: key.split('|')[1],
+                scores: {}
+            };
+        }
+        pairedReviews[key].scores[`${r.reviewer_id}->${r.target_id}`] = asNumber(r.score, 3);
+    }
+
+    const predictedByPair = {};
+    for (const m of matches) {
+        const key = pairKey(m.user1_id, m.user2_id);
+        if (predictedByPair[key] === undefined || asNumber(m.match_score, -999) > asNumber(predictedByPair[key], -999)) {
+            predictedByPair[key] = asNumber(m.match_score, 0);
+        }
+    }
+
+    const dataset = [];
+    for (const key of Object.keys(pairedReviews)) {
+        const pair = pairedReviews[key];
+        const scoreA2B = pair.scores[`${pair.userA}->${pair.userB}`];
+        const scoreB2A = pair.scores[`${pair.userB}->${pair.userA}`];
+        if (scoreA2B === undefined || scoreB2A === undefined) continue;
+
+        const statA = statsMap[pair.userA] || { given_shrunk: globalMu, recv_shrunk: globalMu };
+        const statB = statsMap[pair.userB] || { given_shrunk: globalMu, recv_shrunk: globalMu };
+        const deltaA2B = scoreA2B - statA.given_shrunk - statB.recv_shrunk + globalMu;
+        const deltaB2A = scoreB2A - statB.given_shrunk - statA.recv_shrunk + globalMu;
+        const actualChem = deltaA2B + deltaB2A;
+
+        const predictedChem =
+            predictedByPair[key] !== undefined
+                ? predictedByPair[key]
+                : globalMu;
+
+        dataset.push({
+            pairId: key,
+            actualChem,
+            predictedChem
         });
     }
 
-    // Group by pair (direction agnostic index)
-    const pairs = {};
-    reviews.forEach(r => {
-        const key = [r.reviewer_id, r.target_id].sort().join('|');
-        if (!pairs[key]) pairs[key] = { a_to_b: null, b_to_a: null, userA: r.reviewer_id, userB: r.target_id };
-
-        if (r.reviewer_id === pairs[key].userA) pairs[key].a_to_b = r.score;
-        else pairs[key].b_to_a = r.score;
-    });
-
-    const dataset = [];
-    // We only want pairs where both sides rated
-    Object.values(pairs).forEach(p => {
-        if (p.a_to_b !== null && p.b_to_a !== null) {
-            const statA = statsMap[p.userA] || { given_shrunk: globalMu, recv_shrunk: globalMu };
-            const statB = statsMap[p.userB] || { given_shrunk: globalMu, recv_shrunk: globalMu };
-
-            const deltaA2B = p.a_to_b - statA.given_shrunk - statB.recv_shrunk + globalMu;
-            const deltaB2A = p.b_to_a - statB.given_shrunk - statA.recv_shrunk + globalMu;
-            const actualChem = deltaA2B + deltaB2A;
-
-            dataset.push({ actualChem, pairId: `${p.userA}|${p.userB}` });
-        }
-    });
-
-    if (dataset.length < 5) {
+    if (dataset.length < 10) {
         console.log(`Insufficient bi-directional feedback pairs (${dataset.length}). Aborting.`);
         return;
     }
 
-    console.log(`Dataset Ready: ${dataset.length} bi-directional pairs.`);
-
-    // 4. Simulate Holdout Eval (In MVP, we just calculate metrics vs baseline "0" memory)
-    // In prod, you'd fetch the matching metadata pred score and compare. 
-    // Here we generate random noise prediction to simulate "baseline model"
-    const actualScores = dataset.map(d => d.actualChem);
-    // Pretend the model predicted something slightly correlated (0.2 noise)
-    const predictedScores = actualScores.map(val => val + (Math.random() - 0.5) * 2);
+    const actualScores = dataset.map((d) => d.actualChem);
+    const predictedScores = dataset.map((d) => d.predictedChem);
 
     const corr = calculateCorrelation(predictedScores, actualScores);
-    const topK = calculateTopKHit(predictedScores, actualScores, Math.min(10, dataset.length));
+    const topK = calculateTopKHit(predictedScores, actualScores, 10);
+    const mae = calculateMAE(predictedScores, actualScores);
+    const calibration = Math.max(0, 1 - (mae / 3)); // 0~1 normalization for rough calibration signal
 
-    console.log(`Metrics -> Pearson R: ${corr.toFixed(4)}, Top-K Hit Rate: ${topK.toFixed(4)}`);
+    console.log(`Eval pairs=${dataset.length}`);
+    console.log(`Metrics -> Pearson R=${corr.toFixed(4)}, Top-K Hit=${topK.toFixed(4)}, MAE=${mae.toFixed(4)}, Calibration=${calibration.toFixed(4)}`);
 
-    // 5. Promotion Gate Logic
-    const nextVersion = `hybrid-v1.0.${Math.floor(Date.now() / 1000)}`;
+    const nextVersion = `hybrid-v3.train.${Math.floor(Date.now() / 1000)}`;
+    const failReason = [];
     let status = 'CANDIDATE';
-    let failReason = [];
 
-    // Gate 1: Correlation improvement or baseline maintain
     if (corr < 0.15) failReason.push('Correlation < 0.15');
+    if (topK < 0.1) failReason.push('Top-K Hit < 0.10');
+    if (dataset.length < 100) failReason.push('Insufficient Eval Samples (<100)');
+    if (calibration < 0.35) failReason.push('Calibration < 0.35');
 
-    // Gate 2: Hit rate
-    if (topK < 0.1) failReason.push('Top-K Hit < 0.1');
+    if (activeModel && activeModel.metric_corr !== null && asNumber(activeModel.metric_corr) > corr + 0.02) {
+        failReason.push('Regression vs active correlation');
+    }
 
-    // Gate 3: Sample Size
-    if (dataset.length < 100) failReason.push('Insufficient Eval Samples (< 100)');
-
-    // Forced MVP exception to show system working
-    if (failReason.length > 0) {
-        console.log(`Gates failed: ${failReason.join(', ')}. Remaining CANDIDATE.`);
-    } else {
-        console.log(`All gates passed! Promoting to ACTIVE.`);
+    if (failReason.length === 0) {
         status = 'ACTIVE';
-
-        // Retire old model
         if (activeModel) {
             await supabaseAdmin.from('match_model_registry')
                 .update({ status: 'RETIRED' })
@@ -165,22 +197,29 @@ async function runAutoTrain() {
         }
     }
 
-    // 6. Save to Registry
     const { error: regErr } = await supabaseAdmin.from('match_model_registry').insert({
         algo: 'hybrid-ranker',
         version: nextVersion,
-        status: status,
+        status,
         train_window_start: windowStart,
         train_window_end: new Date().toISOString(),
-        train_samples: dataset.length, // simplify split
+        train_samples: dataset.length,
         eval_samples: dataset.length,
         metric_corr: corr,
         metric_topk_hit: topK,
-        notes: { reasoning: "Auto-trained simulation", gates_failed: failReason }
+        metric_calibration: calibration,
+        notes: {
+            reasoning: 'Auto-trained against realized bidirectional review deltas',
+            gates_failed: failReason,
+            mae
+        }
     });
 
-    if (regErr) console.error('Failed to save to registry:', regErr);
-    else console.log(`Saved model ${nextVersion} as ${status}.`);
+    if (regErr) {
+        console.error('Failed to save model registry row:', regErr);
+    } else {
+        console.log(`Saved model ${nextVersion} as ${status}.`);
+    }
 }
 
 runAutoTrain();

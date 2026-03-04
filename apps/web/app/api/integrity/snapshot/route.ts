@@ -4,13 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 export async function POST(req: Request) {
     try {
         const cronSecret = req.headers.get('x-cron-secret');
-        const expectedSecret = process.env.CRON_SECRET || 'super_secret_cron_key_12345';
-
-        console.log('[DEBUG] Required:', expectedSecret, 'Received:', cronSecret);
+        const expectedSecret = process.env.CRON_SECRET;
 
         // 1. Verify cron secret
         if (!expectedSecret || cronSecret !== expectedSecret) {
-            return NextResponse.json({ error: 'Unauthorized', received: cronSecret, expected_exists: !!expectedSecret }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         // 2. Initialize Supabase Admin Client
@@ -41,8 +39,9 @@ export async function POST(req: Request) {
             hash: result.hash || null
         });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Internal error';
         console.error('[Integrity Snapshot] Internal Error:', err);
-        return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: message }, { status: 500 });
     }
 }

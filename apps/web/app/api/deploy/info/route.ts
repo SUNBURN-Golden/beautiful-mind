@@ -13,7 +13,7 @@ export async function GET() {
 
     return NextResponse.json({
         app: 'beautiful-mind-web',
-        signature: 'soulbound-launch-ui-v1',
+        signature: 'soulbound-launch-ui-v2',
         commit: commit || null,
         commit_short: shortCommit(commit),
         env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',

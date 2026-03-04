@@ -13,39 +13,46 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     }
 
     return (
-        <div className="flex h-screen bg-gray-50 text-gray-900">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-                <div className="p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                        <ShieldCheck className="w-6 h-6 text-indigo-600" />
-                        Admin Panel
+        <div className="liquid-shell flex min-h-screen flex-col text-[#1d1d1f] md:flex-row">
+            <aside className="border-b border-[#e5e5e7] bg-white/95 md:sticky md:top-0 md:h-screen md:w-72 md:border-b-0 md:border-r">
+                <div className="border-b border-[#e5e5e7] px-4 py-5 md:px-6 md:py-7">
+                    <h2 className="flex items-center gap-2 text-[21px] font-semibold tracking-tight">
+                        <ShieldCheck className="h-6 w-6 text-[#06c]" />
+                        Admin Control
                     </h2>
-                    <p className="text-xs text-gray-500 mt-1">{user.email}</p>
+                    <p className="mt-2 truncate text-xs text-[#6e6e73]">{user.email}</p>
                 </div>
-                <nav className="flex-1 p-4 space-y-2">
-                    <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
-                        <Activity className="w-5 h-5" />
+
+                <nav className="flex gap-2 overflow-x-auto px-3 py-3 md:block md:space-y-2 md:overflow-visible md:px-4 md:py-5">
+                    <Link
+                        href="/admin"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Activity className="h-4 w-4" />
                         Dashboard
                     </Link>
-                    <Link href="/admin/users" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
-                        <Users className="w-5 h-5" />
-                        User Management
+                    <Link
+                        href="/admin/users"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Users className="h-4 w-4" />
+                        Users
                     </Link>
                 </nav>
-                <div className="p-4 border-t border-gray-200">
-                    <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 text-gray-600 rounded-md hover:bg-gray-100 transition-colors text-sm">
-                        <LogOut className="w-4 h-4" />
+
+                <div className="border-t border-[#e5e5e7] p-3 md:p-4">
+                    <Link
+                        href="/dashboard"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d2d2d7] bg-[#fbfbfd] px-4 text-sm font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
+                    >
+                        <LogOut className="h-4 w-4" />
                         Exit Admin
                     </Link>
                 </div>
             </aside>
 
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-                <div className="max-w-7xl mx-auto p-8">
-                    {children}
-                </div>
+            <main className="flex-1">
+                <div className="mx-auto max-w-7xl px-4 pb-12 pt-8 md:px-8 md:pt-10">{children}</div>
             </main>
         </div>
     );

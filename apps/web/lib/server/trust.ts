@@ -41,10 +41,7 @@ export function hasValidCronSecret(req: Request): boolean {
 }
 
 export function isTestRouteEnabled(): boolean {
-    return (
-        process.env.ALLOW_TEST_API_ROUTES === 'true'
-        || process.env.NEXT_PUBLIC_ALLOW_TEST_FEATURES === 'true'
-    );
+    return process.env.ALLOW_TEST_API_ROUTES === 'true';
 }
 
 export async function getSessionUser(): Promise<AuthUser | null> {

@@ -72,7 +72,7 @@ async function run() {
     console.log("\n-> 2. Manually testing Snapshot Logic within Node (mocking API behavior due to local fetch locks)");
     // Bypass REST cache issues, perform direct RPC or fallback mock to build the Registry Map
     const q1 = `SELECT json_agg(t) FROM (SELECT * FROM public.zk_event_registry WHERE enabled = true) t;`;
-    const { data: d1, error: regErr } = await supabase.rpc('apply_patch', { sql_query: q1 });
+    const { data: d1 } = await supabase.rpc('apply_patch', { sql_query: q1 });
 
     let registryData = [];
     if (d1) {

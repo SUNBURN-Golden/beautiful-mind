@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
+type MockDbResponse = {
+    data: Array<{ id: string }> | { id: string };
+};
+
 export default function RlsTestPage() {
     const [currentUser, setCurrentUser] = useState<string | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
@@ -23,7 +27,7 @@ export default function RlsTestPage() {
         addLog(`============== [ 로그아웃 ] ==============`);
     };
 
-    const createData = async (table: string, data: any) => {
+    const createData = async (table: string, data: Record<string, unknown>) => {
         if (!currentUser) return addLog('로그인이 필요합니다.');
 
         addLog(`[Req] POST /api/mock-db (Create ${table}) by ${currentUser}`);
@@ -33,8 +37,12 @@ export default function RlsTestPage() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentUser}` },
             body: JSON.stringify({ action: 'insert', table, data })
         });
-        const result = await res.json();
-        addLog(`[Res] 200 OK | Created ID: ${result.data.id}`);
+        const result = await res.json() as MockDbResponse;
+        if (!Array.isArray(result.data) && result.data?.id) {
+            addLog(`[Res] 200 OK | Created ID: ${result.data.id}`);
+            return;
+        }
+        addLog('[Res] 200 OK | Created');
     };
 
     const fetchData = async (table: string, targetUserId: string) => {
@@ -47,12 +55,13 @@ export default function RlsTestPage() {
         });
 
         const isBlocked = res.headers.get('X-RLS-Result') === 'BLOCKED_ZERO_ROWS';
-        const result = await res.json();
+        const result = await res.json() as MockDbResponse;
 
-        if (isBlocked || result.data.length === 0) {
+        const rows = Array.isArray(result.data) ? result.data : [];
+        if (isBlocked || rows.length === 0) {
             addLog(`[Res] 200 OK | Data: 0 rows returned (RLS Policy Applied)`);
         } else {
-            addLog(`[Res] 200 OK | Data: ${result.data.length} rows returned`);
+            addLog(`[Res] 200 OK | Data: ${rows.length} rows returned`);
         }
     };
 
@@ -72,36 +81,42 @@ export default function RlsTestPage() {
     };
 
     return (
-        <div className="min-h-screen p-8 bg-gray-100 flex gap-6">
-            <Card className="w-1/3 h-fit">
-                <CardHeader>
-                    <CardTitle>RLS Browser Test 시나리오</CardTitle>
-                    <CardDescription>
-                        계정 A로 데이터 생성 후, 계정 B로 로그인하여 계정 A의 데이터를 조회 시도합니다. RLS에 의해 0건 커트됨을 네트워크 탭과 로그로 확인합니다.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Button onClick={runScenario} className="w-full">RLS 자동 테스트 시나리오 실행</Button>
-                    <hr />
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => login(accountA)}>A 로그인</Button>
-                        <Button variant="outline" onClick={() => login(accountB)}>B 로그인</Button>
-                        <Button variant="secondary" onClick={logout}>로그아웃</Button>
-                    </div>
-                </CardContent>
-            </Card>
+        <main className="liquid-shell min-h-screen px-4 pb-12 pt-10 sm:px-8 sm:pt-14">
+            <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
+                <Card className="liquid-pane h-fit w-full rounded-2xl border-[#e5e5e7] lg:w-1/3">
+                    <CardHeader>
+                        <CardTitle className="text-[24px] font-semibold tracking-tight">RLS Browser Test</CardTitle>
+                        <CardDescription>
+                            계정 A로 데이터 생성 후 계정 B로 조회 시도하여 RLS 커트(0 rows)를 검증합니다.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="liquid-chip flex items-center justify-between rounded-xl px-3 py-2 text-xs">
+                            <span className="text-[#6e6e73]">Current User</span>
+                            <span className="font-semibold text-[#1d1d1f]">{currentUser ?? 'NONE'}</span>
+                        </div>
+                        <Button onClick={runScenario} className="h-12 w-full">RLS 자동 테스트 실행</Button>
+                        <hr className="liquid-divider" />
+                        <div className="flex flex-wrap gap-2">
+                            <Button variant="outline" onClick={() => login(accountA)} className="h-11 flex-1 min-w-[96px]">A 로그인</Button>
+                            <Button variant="outline" onClick={() => login(accountB)} className="h-11 flex-1 min-w-[96px]">B 로그인</Button>
+                            <Button variant="secondary" onClick={logout} className="h-11 w-full sm:w-auto">로그아웃</Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <Card className="w-2/3 h-fit">
-                <CardHeader>
-                    <CardTitle>Network / Action Logs (Mock Network Tab)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-[500px] overflow-y-auto whitespace-pre-wrap">
-                        {logs.length === 0 && <span className="text-gray-500">대기 중...</span>}
-                        {logs.join('\n')}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                <Card className="liquid-pane h-fit w-full rounded-2xl border-[#e5e5e7] lg:w-2/3">
+                    <CardHeader>
+                        <CardTitle className="text-[24px] font-semibold tracking-tight">Network / Action Logs</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[420px] overflow-y-auto whitespace-pre-wrap rounded-xl border border-[#e5e5e7] bg-white p-4 font-mono text-sm text-[#1d1d1f] md:h-[500px]">
+                            {logs.length === 0 && <span className="text-[#8e8e93]">대기 중...</span>}
+                            {logs.join('\n')}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </main>
     );
 }
