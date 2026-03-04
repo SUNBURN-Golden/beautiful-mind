@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
+import type { RealtimeChannel, RealtimePostgresChangesPayload, User } from '@supabase/supabase-js';
+import { Button } from '@/components/ui/button';
 
 type LogEvent = {
     id: string; // generated client-side for log list
@@ -13,19 +15,53 @@ type LogEvent = {
     masked_content: string;
 };
 
+type TargetTable = 'messages' | 'match_reviews';
+
+type RealtimeRecord = {
+    id?: string;
+    sender_id?: string;
+    reviewer_id?: string;
+    content?: string;
+    feedback_text?: string;
+};
+
+function extractRealtimeRecord(value: unknown): RealtimeRecord | null {
+    if (value && typeof value === 'object') {
+        return value as RealtimeRecord;
+    }
+    return null;
+}
+
 export default function RealtimeDebugPage() {
     const router = useRouter();
-    const supabase = createClient();
-    const [user, setUser] = useState<any>(null);
+    const supabase = useMemo(() => {
+        if (typeof window === 'undefined') return null;
+        try {
+            return createClient();
+        } catch (error) {
+            console.error('Supabase client init failed:', error);
+            return null;
+        }
+    }, []);
+    const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [matchId, setMatchId] = useState('');
-    const [table, setTable] = useState<'messages' | 'match_reviews'>('messages');
+    const [table, setTable] = useState<TargetTable>('messages');
     const [status, setStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'SUBSCRIBED'>('DISCONNECTED');
     const [logs, setLogs] = useState<LogEvent[]>([]);
-    const channelRef = useRef<any>(null);
+    const [notice, setNotice] = useState<string | null>(null);
+    const channelRef = useRef<RealtimeChannel | null>(null);
+
+    useEffect(() => {
+        if (!supabase) {
+            setLoading(false);
+            setNotice('Supabase client unavailable.');
+        }
+    }, [supabase]);
 
     // Auth Check
     useEffect(() => {
+        if (!supabase) return;
         const checkAuth = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
@@ -36,7 +72,7 @@ export default function RealtimeDebugPage() {
             setLoading(false);
         };
         checkAuth();
-    }, [router, supabase.auth]);
+    }, [router, supabase]);
 
     const maskContent = (text: string | null | undefined) => {
         if (!text) return 'N/A';
@@ -44,10 +80,15 @@ export default function RealtimeDebugPage() {
     };
 
     const handleSubscribe = () => {
-        if (!matchId.trim()) {
-            alert('Please enter a valid match_id (UUID)');
+        if (!supabase) {
+            setNotice('Supabase client unavailable.');
             return;
         }
+        if (!matchId.trim()) {
+            setNotice('유효한 match_id(UUID)를 입력하세요.');
+            return;
+        }
+        setNotice(null);
 
         if (channelRef.current) {
             supabase.removeChannel(channelRef.current);
@@ -62,13 +103,13 @@ export default function RealtimeDebugPage() {
                 {
                     event: '*',
                     schema: 'public',
-                    table: table,
-                    filter: `match_id=eq.${matchId}`
+                    table,
+                    filter: `match_id=eq.${matchId}`,
                 },
-                (payload) => {
+                (payload: RealtimePostgresChangesPayload<RealtimeRecord>) => {
                     console.log('Realtime Payload:', payload);
-                    const newRecord = payload.new as any;
-                    const oldRecord = payload.old as any;
+                    const newRecord = extractRealtimeRecord(payload.new);
+                    const oldRecord = extractRealtimeRecord(payload.old);
 
                     const record = newRecord || oldRecord;
                     if (!record) return;
@@ -78,8 +119,12 @@ export default function RealtimeDebugPage() {
                         event_type: payload.eventType,
                         created_at: new Date().toISOString(),
                         record_id: record.id || 'unknown',
-                        actor_id: table === 'messages' ? record.sender_id : record.reviewer_id,
-                        masked_content: maskContent(table === 'messages' ? record.content : record.feedback_text || 'N/A')
+                        actor_id: table === 'messages' ? (record.sender_id || 'unknown') : (record.reviewer_id || 'unknown'),
+                        masked_content: maskContent(
+                            table === 'messages'
+                                ? record.content
+                                : (record.feedback_text || 'N/A'),
+                        ),
                     };
 
                     setLogs((prev) => [newLog, ...prev].slice(0, 20)); // Keep only last 20
@@ -98,6 +143,7 @@ export default function RealtimeDebugPage() {
     };
 
     const handleUnsubscribe = () => {
+        if (!supabase) return;
         if (channelRef.current) {
             supabase.removeChannel(channelRef.current);
             channelRef.current = null;
@@ -107,6 +153,7 @@ export default function RealtimeDebugPage() {
 
     // Cleanup on unmount
     useEffect(() => {
+        if (!supabase) return;
         return () => {
             if (channelRef.current) {
                 supabase.removeChannel(channelRef.current);
@@ -115,37 +162,40 @@ export default function RealtimeDebugPage() {
     }, [supabase]);
 
     if (loading) {
-        return <div className="p-8 text-white">Verifying session...</div>;
+        return <div className="px-8 py-12 text-[#1d1d1f]">Verifying session...</div>;
     }
 
     if (!user) return null; // Will redirect
 
     return (
-        <div className="min-h-screen bg-[#0A0A0A] text-white p-8 font-mono">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#E2C792]">Realtime E2E Debug Harness</h1>
-                    <p className="text-sm text-gray-400 mt-2">Authenticated as: {user.email} ({user.id})</p>
-                </div>
+        <main className="liquid-shell min-h-screen px-4 pb-12 pt-10 text-[#1d1d1f] sm:px-8 sm:pt-14">
+            <div className="mx-auto max-w-4xl space-y-6">
+                <header className="space-y-2">
+                    <h1 className="liquid-title text-[32px] font-semibold tracking-tight">Realtime Debug Harness</h1>
+                    <p className="liquid-copy text-sm break-all">Authenticated as: {user.email} ({user.id})</p>
+                </header>
 
-                <div className="bg-[#111111] border border-[#333333] p-6 rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <section className="liquid-pane space-y-4 rounded-2xl p-5 sm:p-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                            <label className="text-xs text-gray-400 uppercase tracking-widest">Match ID (UUID)</label>
+                            <label className="text-xs uppercase tracking-widest text-[#6e6e73]">Match ID (UUID)</label>
                             <input
                                 type="text"
                                 value={matchId}
                                 onChange={(e) => setMatchId(e.target.value)}
                                 placeholder="Enter match_id uuid..."
-                                className="w-full bg-black border border-[#333333] rounded px-3 py-2 text-sm focus:outline-none focus:border-[#E2C792]"
+                                className="liquid-input h-11"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs text-gray-400 uppercase tracking-widest">Target Table</label>
+                            <label className="text-xs uppercase tracking-widest text-[#6e6e73]">Target Table</label>
                             <select
                                 value={table}
-                                onChange={(e) => setTable(e.target.value as any)}
-                                className="w-full bg-black border border-[#333333] rounded px-3 py-2 text-sm focus:outline-none focus:border-[#E2C792]"
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    setTable(value === 'match_reviews' ? 'match_reviews' : 'messages');
+                                }}
+                                className="h-11 w-full rounded-xl border border-[#d2d2d7] bg-white px-3 text-sm text-[#1d1d1f] outline-none transition focus:border-[#06c] focus:ring-[3px] focus:ring-[#06c]/20"
                             >
                                 <option value="messages">messages</option>
                                 <option value="match_reviews">match_reviews</option>
@@ -153,81 +203,84 @@ export default function RealtimeDebugPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center space-x-4 pt-2">
-                        <button
-                            onClick={handleSubscribe}
-                            disabled={status === 'SUBSCRIBED' || status === 'CONNECTING'}
-                            className="bg-[#E2C792] text-black px-4 py-2 rounded text-sm font-semibold disabled:opacity-50 hover:bg-[#d1b681] transition-colors"
-                        >
+                    <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
+                        <Button onClick={handleSubscribe} disabled={status === 'SUBSCRIBED' || status === 'CONNECTING'} className="h-11 sm:w-auto">
                             Subscribe
-                        </button>
-                        <button
-                            onClick={handleUnsubscribe}
-                            disabled={status === 'DISCONNECTED'}
-                            className="bg-red-900/40 text-red-200 border border-red-900/50 px-4 py-2 rounded text-sm font-semibold disabled:opacity-50 hover:bg-red-900/60 transition-colors"
-                        >
+                        </Button>
+                        <Button onClick={handleUnsubscribe} disabled={status === 'DISCONNECTED'} variant="outline" className="h-11 sm:w-auto">
                             Unsubscribe
-                        </button>
+                        </Button>
 
-                        <div className="flex-1 flex justify-end items-center space-x-2">
-                            <span className="text-xs text-gray-400">Status:</span>
-                            <span className={`text-xs font-bold px-2 py-1 rounded ${status === 'SUBSCRIBED' ? 'bg-green-900/50 text-green-400' :
-                                status === 'CONNECTING' ? 'bg-yellow-900/50 text-yellow-400' :
-                                    'bg-gray-800 text-gray-400'
-                                }`}>
+                        <div className="flex flex-1 items-center justify-start gap-2 sm:justify-end">
+                            <span className="text-xs text-[#6e6e73]">Status:</span>
+                            <span
+                                className={`rounded-full px-2 py-1 text-xs font-semibold ${status === 'SUBSCRIBED'
+                                    ? 'bg-[#edf9f1] text-[#14532d]'
+                                    : status === 'CONNECTING'
+                                        ? 'bg-[#fff7ed] text-[#9a3412]'
+                                        : 'bg-[#ececf0] text-[#6e6e73]'
+                                    }`}
+                            >
                                 {status}
                             </span>
                         </div>
                     </div>
-                </div>
+                    {notice && (
+                        <p className="rounded-xl border border-[#f3d1d1] bg-[#fff5f5] px-3 py-2 text-xs text-[#b42318]">
+                            {notice}
+                        </p>
+                    )}
+                </section>
 
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-sm text-gray-400 uppercase tracking-widest border-b border-[#333] pb-2 w-full">
-                            Event Log (Last 20)
-                        </h2>
-                    </div>
+                <section className="space-y-2">
+                    <h2 className="w-full border-b border-[#d2d2d7] pb-2 text-sm uppercase tracking-widest text-[#6e6e73]">
+                        Event Log (Last 20)
+                    </h2>
 
-                    <div className="bg-[#111111] border border-[#333333] rounded-lg overflow-hidden">
+                    <div className="liquid-pane overflow-hidden rounded-2xl">
                         {logs.length === 0 ? (
-                            <div className="p-8 text-center text-gray-600 text-sm">
-                                No events received yet. Start inserting data from another client.
+                            <div className="p-8 text-center text-sm text-[#6e6e73]">
+                                No events received yet. Insert rows from another client.
                             </div>
                         ) : (
-                            <div className="divide-y divide-[#222222]">
+                            <div className="divide-y divide-[#ececf0]">
                                 {logs.map((log) => (
-                                    <div key={log.id} className="p-3 text-sm grid grid-cols-12 gap-4 hover:bg-[#1a1a1a] transition-colors">
-                                        <div className="col-span-2 flex flex-col justify-center">
-                                            <span className={`text-xs font-bold ${log.event_type === 'INSERT' ? 'text-green-400' :
-                                                log.event_type === 'UPDATE' ? 'text-blue-400' :
-                                                    'text-red-400'
-                                                }`}>
+                                    <article key={log.id} className="grid grid-cols-1 gap-3 p-3 text-sm transition-colors hover:bg-[#f8f8fa] sm:grid-cols-12 sm:gap-4">
+                                        <div className="sm:col-span-2">
+                                            <span
+                                                className={`text-xs font-semibold ${log.event_type === 'INSERT'
+                                                    ? 'text-[#14532d]'
+                                                    : log.event_type === 'UPDATE'
+                                                        ? 'text-[#06c]'
+                                                        : 'text-[#b91c1c]'
+                                                    }`}
+                                            >
                                                 {log.event_type}
                                             </span>
-                                            <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                                            <p className="whitespace-nowrap text-[10px] text-[#8e8e93]">
                                                 {new Date(log.created_at).toLocaleTimeString()}
-                                            </span>
+                                            </p>
                                         </div>
-                                        <div className="col-span-10 flex flex-col space-y-1">
-                                            <div className="flex text-xs space-x-2">
-                                                <span className="text-gray-500">Row ID:</span>
-                                                <span className="text-gray-300">{log.record_id}</span>
+                                        <div className="sm:col-span-10 space-y-1">
+                                            <div className="flex items-start space-x-2 text-xs">
+                                                <span className="text-[#8e8e93]">Row ID:</span>
+                                                <span className="break-all text-[#1d1d1f]">{log.record_id}</span>
                                             </div>
-                                            <div className="flex text-xs space-x-2">
-                                                <span className="text-gray-500">Actor:</span>
-                                                <span className="text-[#E2C792]">{log.actor_id}</span>
+                                            <div className="flex items-start space-x-2 text-xs">
+                                                <span className="text-[#8e8e93]">Actor:</span>
+                                                <span className="break-all text-[#06c]">{log.actor_id}</span>
                                             </div>
-                                            <div className="text-gray-400 text-xs italic bg-black p-1.5 rounded mt-1 overflow-x-auto whitespace-nowrap">
+                                            <div className="mt-1 overflow-x-auto whitespace-nowrap rounded bg-[#f5f5f7] p-1.5 text-xs italic text-[#6e6e73]">
                                                 {log.masked_content}
                                             </div>
                                         </div>
-                                    </div>
+                                    </article>
                                 ))}
                             </div>
                         )}
                     </div>
-                </div>
+                </section>
             </div>
-        </div>
+        </main>
     );
 }
