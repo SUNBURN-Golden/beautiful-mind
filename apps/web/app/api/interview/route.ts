@@ -2,8 +2,40 @@ import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/utils/supabase/server';
 
-// Initialize the new Google Gen AI SDK
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+function getGeminiClient() {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('GEMINI_API_KEY environment variable is not set.');
+    }
+    return new GoogleGenAI({ apiKey });
+}
+
+type InterviewResult = {
+    decision: 'PASS' | 'REVIEW' | 'REJECT';
+    score: number;
+    risk_flags: string[];
+    summary: string;
+};
+
+function isInterviewResult(value: unknown): value is InterviewResult {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const candidate = value as Record<string, unknown>;
+    const decision = candidate.decision;
+    const score = candidate.score;
+    const riskFlags = candidate.risk_flags;
+    const summary = candidate.summary;
+
+    return (
+        (decision === 'PASS' || decision === 'REVIEW' || decision === 'REJECT') &&
+        typeof score === 'number' &&
+        Array.isArray(riskFlags) &&
+        riskFlags.every((flag) => typeof flag === 'string') &&
+        typeof summary === 'string'
+    );
+}
 
 /**
  * Agent E: Gemini 2.5 API Integration
@@ -11,6 +43,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
  */
 export async function POST(request: Request) {
     try {
+        const ai = getGeminiClient();
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -39,7 +72,7 @@ export async function POST(request: Request) {
 컨텍스트: ${JSON.stringify(interviewContext)}
 `;
 
-        let parsedResult = null;
+        let parsedResult: InterviewResult | null = null;
         let attempts = 0;
         const maxAttempts = 2;
 
@@ -80,13 +113,14 @@ export async function POST(request: Request) {
                 });
 
                 const textOutput = response.text || '{}';
-                parsedResult = JSON.parse(textOutput);
+                const candidateResult = JSON.parse(textOutput) as unknown;
 
-                // 기본 유효성 검사
-                if (!['PASS', 'REVIEW', 'REJECT'].includes(parsedResult.decision)) {
+                if (!isInterviewResult(candidateResult)) {
                     throw new Error('Invalid decision format');
                 }
-            } catch (err) {
+
+                parsedResult = candidateResult;
+            } catch (err: unknown) {
                 console.warn(`[Gemini Parse Warning] Attempt ${attempts} failed:`, err);
                 if (attempts >= maxAttempts) {
                     throw err;
@@ -95,12 +129,19 @@ export async function POST(request: Request) {
         }
 
         // 1. DB 처리
+        const safeResult = parsedResult || {
+            decision: 'REVIEW' as const,
+            score: 0,
+            risk_flags: ['PARSE_FAIL'],
+            summary: 'Failed to parse interview output',
+        };
+
         const { error: dbError } = await supabase.from('interviews').insert({
             user_id: user.id,
-            decision: parsedResult.decision,
-            score: parsedResult.score,
-            flags: parsedResult.risk_flags,
-            summary: parsedResult.summary
+            decision: safeResult.decision,
+            score: safeResult.score,
+            flags: safeResult.risk_flags,
+            summary: safeResult.summary
         });
 
         if (dbError) {
@@ -110,13 +151,14 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
-            result: parsedResult
+            result: safeResult
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Gemini API Error]', error);
+        const message = error instanceof Error ? error.message : 'AI Interview Processing Failed';
         return NextResponse.json(
-            { success: false, error: 'AI Interview Processing Failed' },
+            { success: false, error: message },
             { status: 500 }
         );
     }
