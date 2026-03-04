@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:e2e:remote": "node ../../scripts/remote_e2e_seed.mjs && playwright test tests/e2e/onboarding-real.spec.ts; node ../../scripts/remote_e2e_cleanup.mjs"
+    "test:e2e:remote": "node ../../scripts/remote_e2e_seed.mjs && playwright test tests/e2e/onboarding-real.spec.ts --reporter=github,html; node ../../scripts/remote_e2e_cleanup.mjs"
   },
   "dependencies": {
     "@beautiful-mind/core": "workspace:*",
