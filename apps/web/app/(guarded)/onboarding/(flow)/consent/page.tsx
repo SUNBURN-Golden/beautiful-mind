@@ -60,7 +60,7 @@ export default function ConsentPage() {
                 <form onSubmit={handleSubmit}>
                     <div className="mb-8">
                         <ConsentItem
-                            label="[필수] Beautiful Mind 서비스 이용 약관"
+                            label="[필수] SoulBound 서비스 이용 약관"
                             link="/terms"
                             checked={agreedTerms}
                             onChange={() => setAgreedTerms(!agreedTerms)}

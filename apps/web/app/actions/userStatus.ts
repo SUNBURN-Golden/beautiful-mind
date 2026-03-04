@@ -7,7 +7,7 @@ import {
     UserConsent,
     UserContract,
     UserInterview
-} from '@beautiful-mind/core';
+} from '@soulbound/core';
 
 /**
  * Server Action Bridge

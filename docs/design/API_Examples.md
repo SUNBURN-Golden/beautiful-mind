@@ -1,4 +1,4 @@
-# Beautiful Mind - API Examples (Agent E)
+# SoulBound - API Examples (Agent E)
 
 본 문서에는 PortOne 파이프라인 목업과 Gemini 2.5 API 및 프롬프트 인젝션 방어 구조에 대한 API 호출 시나리오를 포함합니다.
 

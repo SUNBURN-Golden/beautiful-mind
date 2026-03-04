@@ -1,10 +1,10 @@
 # User Interface (UI) Screens & Copywriting
 
-Beautiful Mind MVP의 사용자 화면 목록과 프리미엄 톤(Premium & Trustworthy)을 적용한 핵심 카피라이팅입니다. 심플하고 절제된 언어를 통해 '보안성'과 '사용자 주권'을 강조합니다.
+SoulBound MVP의 사용자 화면 목록과 프리미엄 톤(Premium & Trustworthy)을 적용한 핵심 카피라이팅입니다. 심플하고 절제된 언어를 통해 '보안성'과 '사용자 주권'을 강조합니다.
 
 ## 1. Onboarding & Registration (온보딩 및 권한 동의)
 - **Screen:** `Splash / Intro`
-  - **Copy:** "보이지 않는 진실을 증명하는 단 하나의 기준. Beautiful Mind에 오신 것을 환영합니다."
+  - **Copy:** "보이지 않는 진실을 증명하는 단 하나의 기준. SoulBound에 오신 것을 환영합니다."
 - **Screen:** `Sign Up (Legal & Consent)`
   - **Copy:** "안전하고 투명한 환경을 위해 필수적인 절차입니다. 본 약관은 고객님의 권리와 프라이버시를 보호하기 위해 마련되었습니다."
   - *(참고: 하단 약관 전문은 `docs/legal`에서 원본 텍스트를 수정 없이 불러와 렌더링. 하단부 '동의하고 계속하기' 버튼 활성화 여부로 제어)*
@@ -28,4 +28,4 @@ Beautiful Mind MVP의 사용자 화면 목록과 프리미엄 톤(Premium & Trus
   - **Legal Consent Checkbox Copy:** "주의: 본 신고 체계를 악용하여 타인을 고의로 음해하거나 담합/허위 신고할 경우, 역패널티 및 강력한 계정 제한 조치가 취해질 수 있음에 온전히 동의합니다."
 - **Screen:** `Penalty Warning & Appeal` (제재 당사자용 소명 화면 - 프로세스 기반 제재)
   - **Copy:** "고객님의 계정에서 비정상적인 활동 패턴이 감지되어, 일부 서비스 이용이 일시적으로 보류되었습니다."
-  - **Sub Copy:** "Beautiful Mind는 무결하고 정의로운 생태계를 지향합니다. 오탐지이거나 시스템 오류라고 판단되실 경우, 아래 절차를 통해 소명해 주시길 바랍니다." — [소명 절차 시작하기]
+  - **Sub Copy:** "SoulBound는 무결하고 정의로운 생태계를 지향합니다. 오탐지이거나 시스템 오류라고 판단되실 경우, 아래 절차를 통해 소명해 주시길 바랍니다." — [소명 절차 시작하기]

@@ -1,6 +1,6 @@
-# Beautiful Mind MVP
+# SoulBound MVP
 
-Beautiful Mind는 신뢰할 수 있는 사용자 간의 명시적 동의와 검증 기반 보안 플랫폼입니다. 이 리포지토리는 Monorepo 구조로 설계되었으며, 독립적인 UI 앱과 순수 논리 인터페이스(Core)를 포함합니다.
+SoulBound는 신뢰할 수 있는 사용자 간의 명시적 동의와 검증 기반 보안 플랫폼입니다. 이 리포지토리는 Monorepo 구조로 설계되었으며, 독립적인 UI 앱과 순수 논리 인터페이스(Core)를 포함합니다.
 
 ## 시스템 아키텍처 (Tech Stack)
 - **런타임 & 모노레포**: Node.js, pnpm workspaces

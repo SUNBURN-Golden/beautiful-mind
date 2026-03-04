@@ -6,7 +6,7 @@ import { SignatureModal } from '@/components/SignatureModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { updateUserStatus } from '@/app/actions/userStatus';
-import { OnboardingStatus } from '@beautiful-mind/core';
+import { OnboardingStatus } from '@soulbound/core';
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen p-8 max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Beautiful Mind MVP Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">SoulBound MVP Dashboard</h1>
         <p className="text-gray-500 mt-2">안전하고 투명한 환경을 구성하는 검증 시스템입니다.</p>
       </div>
 

@@ -53,7 +53,7 @@ export default function ContractPage() {
 
                     <div className="h-48 overflow-y-scroll border p-4 bg-white rounded-md text-sm text-gray-700">
                         <h3 className="font-bold mb-2">서비스 이용약관 및 개인정보 처리방침</h3>
-                        <p className="mb-4">제1조 (목적) 본 약관은 Beautiful Mind 서비스의 권리, 의무를 규정함을 목적으로 합니다...</p>
+                        <p className="mb-4">제1조 (목적) 본 약관은 SoulBound 서비스의 권리, 의무를 규정함을 목적으로 합니다...</p>
                         <p className="mb-4">제2조 (개인정보 수집) OSINT 분석, 위치 정보 등 민감 정보가 신뢰 검증 목적으로 수집될 수 있습니다...</p>
                         <p className="mb-4">제3조 (패널티 정책) 허위 신고나 담합 적발 시 계정 영구 정지 등 강력한 조치가 취해질 수 있습니다...</p>
                         <p className="mb-4">...</p>

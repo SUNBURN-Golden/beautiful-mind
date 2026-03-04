@@ -1,5 +1,5 @@
 {
-  "name": "beautiful-mind",
+  "name": "soulbound",
   "private": true,
   "scripts": {
     "dev": "pnpm -F web dev",

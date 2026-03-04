@@ -1,4 +1,4 @@
-# Beautiful Mind MVP - Definition of Done (DoD)
+# SoulBound MVP - Definition of Done (DoD)
 
 각 Core 모듈별 MVP 완료 조건 (체크리스트)입니다. 해당 조건이 모두 충족되어야 기능 출시가 가능합니다.
 

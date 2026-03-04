@@ -1,0 +1,10 @@
+---FILE: docs/uiux/state_transition_table.csv ---
+stage,route,screen_goal,user_inputs,primary_cta,action_api,status_success_condition,blockers_ui,fail_states,error_code_to_action
+LOGIN,/login,사용자 인증 획득,Email/Password 또는 OAuth,로그인/시작하기,Supabase Auth SignIn,session 토큰 발급 및 profiles 생성,["AUTH_MISSING"],"Auth Error","INVALID_CREDENTIALS -> retry"
+KYC,/onboarding/verify,통신사 실명 본인확인,이름/생년월일/모바일,인증 시작,POST /api/verify/complete,profiles.verified=true OR identity_claims 존재,["IDENTITY_UNVERIFIED"],"Timeout/Mismatch","KYC_FAILED -> retry, PORTONE_ERROR -> support"
+QUALIFICATION,/onboarding/qualification,필수 자격 증명 제출,문서 파일 및 메타데이터,제출하기,POST /api/verify/upload (TBD),verifications 필수 type 모두 VERIFIED,["DOCUMENT_MISSING"],"File Too Large","FILE_TOO_LARGE -> retry, UPLOAD_ERROR -> retry"
+CONSENT_HUB,/onboarding/consent,이용약관/프라이버시 동의,체크박스,동의하고 넘어가기,POST /api/consent/submit (TBD),consents 필수 module is_granted=true,["TERMS_NOT_ACCEPTED"],"Network/DB Error","DB_ERROR -> retry"
+E_SIGN,/onboarding/sign,본인 서명 및 전자계약 체결,서명 패드 Draw/Type,서명 제출,POST /api/contract/sign (TBD),contracts에 signature 및 document_version 일치,["SIGNATURE_MISSING"],"Version Mismatch","VERSION_MISMATCH -> reload document"
+AI_INTERVIEW,/interview,AI 챗봇/화상 기반 인터뷰,답변 입력/녹음,답변 제출 -> 완료,POST /api/interview/finalize,interviews.decision 존재,["INTERVIEW_INCOMPLETE"],"Session Expired","SESSION_LOST -> resume"
+DASHBOARD_READY,/dashboard,메인 서비스 이용,없음,없음,N/A,N/A,[],"No Permissions","BANNED -> support"
+---END FILE---

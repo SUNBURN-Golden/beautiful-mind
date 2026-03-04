@@ -1,4 +1,4 @@
-# Beautiful Mind RLS 격리 & Audit Log 테스트 시나리오
+# SoulBound RLS 격리 & Audit Log 테스트 시나리오
 
 Agent B (Security/DB) 산출물로서, 계정 간 데이터 격리 및 Audit Log의 무결성을 검증하기 위한 테스트 시나리오입니다.
 

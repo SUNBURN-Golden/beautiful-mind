@@ -1,6 +1,6 @@
 # API Specification (Core Modules)
 
-Beautiful Mind MVP의 백엔드 API 명세입니다. 극대화된 보안과 프라이버시 보호를 위해 Auth, OSINT, Location, Device, Penalty 모듈을 완전히 분리된 마이크로 라우트로 설계했습니다.
+SoulBound MVP의 백엔드 API 명세입니다. 극대화된 보안과 프라이버시 보호를 위해 Auth, OSINT, Location, Device, Penalty 모듈을 완전히 분리된 마이크로 라우트로 설계했습니다.
 
 ## 공통 헤더 및 권한 검증 (API Gateway / Authorizer)
 - **Authorization:** `Bearer <JWT_TOKEN>`

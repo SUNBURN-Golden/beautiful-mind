@@ -16,7 +16,7 @@ export default function BannedPage() {
                     제한 사유 조회 및 이의 제기는 고객지원 센터를 통해 접수하실 수 있습니다.
                 </p>
 
-                <a href="mailto:support@beautifulmind.com" className="w-full h-12 flex items-center justify-center rounded-lg bg-[#0F172A] text-white font-medium text-[15px] transition-opacity hover:opacity-90 shadow-sm">
+                <a href="mailto:support@soulbound.foundation" className="w-full h-12 flex items-center justify-center rounded-lg bg-[#0F172A] text-white font-medium text-[15px] transition-opacity hover:opacity-90 shadow-sm">
                     이의 제기(소명) 신청하기
                 </a>
             </div>

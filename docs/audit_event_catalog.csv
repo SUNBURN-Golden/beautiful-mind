@@ -1,0 +1,9 @@
+event_name,trigger_action,where_logged(table),required_fields_present(Y/N),source_location,notes
+"ADMIN_ZK_REGISTRY_UPSERT","Manual API Insert/Update","audit_logs",Y,"api/admin/zk/registry/upsert/route.ts",""
+"ADMIN_ZK_REGISTRY_TOGGLE","Manual API Update","audit_logs",Y,"api/admin/zk/registry/toggle/route.ts",""
+"ADMIN_ZK_SNAPSHOT_RUN","Manual API Insert","audit_logs",Y,"api/admin/zk/snapshot/route.ts",""
+"ADMIN_ZK_ROLLUP_PREPARE","Manual API Insert","audit_logs",Y,"api/admin/zk/rollup/prepare/route.ts",""
+"ADMIN_ZK_RESET_ALL","Manual API Truncate","audit_logs",Y,"api/admin/zk/reset/route.ts","DEV Only; production completely disables this endpoint."
+"ONBOARDING_VERIFICATION","DB Trigger or Server Insert","audit_logs",Y,"05_master_init.sql",""
+"CONSENT_SIGN","DB Trigger or Server Insert","audit_logs",Y,"05_master_init.sql / 00_init_schema.sql",""
+"CONTRACT_SIGNATURE","DB Trigger or Server Insert","audit_logs",N,"확인 불가","(P0) 계약 서명 시 audit_logs 기록 트리거가 명확하지 않을 수 있음. 추후 트리거 확인 필요."

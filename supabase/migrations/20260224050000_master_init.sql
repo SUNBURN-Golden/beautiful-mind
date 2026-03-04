@@ -1,5 +1,5 @@
 -- ==========================================
--- BEAUTIFUL MIND MVP - MASTER DB MIGRATION (PATCHED)
+-- SOULBOUND MVP - MASTER DB MIGRATION (PATCHED)
 -- ==========================================
 
 -- Extensions

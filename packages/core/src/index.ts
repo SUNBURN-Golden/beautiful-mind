@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * Beautiful Mind MVP
+ * SoulBound MVP
  * 규칙: 법무 텍스트는 오직 docs/legal 폴더에서 원본 파일을 읽어와서 렌더링해야 함.
  * 이 유틸리티는 이를 강제하기 위한 기본 세팅입니다.
  */

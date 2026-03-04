@@ -1,9 +1,9 @@
-# Beautiful Mind MVP - Phase 1 Briefing Report
+# SoulBound MVP - Phase 1 Briefing Report
 
 **작성일**: 2026-02-23
-**보고 대상**: Beautiful Mind 프로젝트 매니저 및 이해관계자
+**보고 대상**: SoulBound 프로젝트 매니저 및 이해관계자
 
-본 리포트는 Beautiful Mind MVP 프로젝트의 Phase 1 (Foundation & Core Security Setup) 완료에 따른 현황 요약과 다음 Phase의 마일스톤을 정리한 문서입니다.
+본 리포트는 SoulBound MVP 프로젝트의 Phase 1 (Foundation & Core Security Setup) 완료에 따른 현황 요약과 다음 Phase의 마일스톤을 정리한 문서입니다.
 
 ---
 
@@ -75,4 +75,4 @@
 - 어뷰징 룰 엔진(허위 신고, 스푸핑 감지) 연동.
 - 관리자 권한(Role) 분리 및 대시보드에서 `audit_logs` 테이블 시각화 및 실시간 모니터링 적용.
 
-> Phase 1을 통해 "Beautiful Mind"는 데이터 독립성과 무결성을 보장하는 강력한 안티-스캠/안전검증 기반을 입증했습니다. Phase 2에서는 이러한 보안 근간 위에 실제 유저 가치를 전달하는 핵심 Flow를 완성할 예정입니다.
+> Phase 1을 통해 "SoulBound"는 데이터 독립성과 무결성을 보장하는 강력한 안티-스캠/안전검증 기반을 입증했습니다. Phase 2에서는 이러한 보안 근간 위에 실제 유저 가치를 전달하는 핵심 Flow를 완성할 예정입니다.

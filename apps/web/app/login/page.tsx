@@ -19,21 +19,21 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle className="text-2xl text-center">Beautiful Mind</CardTitle>
+                    <CardTitle className="text-2xl text-center">SoulBound</CardTitle>
                     <CardDescription className="text-center">신뢰 증명 서비스에 로그인하세요</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form action={formAction} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="email">이메일</Label>
-                            <Input id="email" name="email" type="email" placeholder="m@example.com" required defaultValue="test@example.com" />
+                            <Input id="email" name="email" type="email" placeholder="m@example.com" required defaultValue="test@example.com" data-testid="login-email" />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">비밀번호</Label>
-                            <Input id="password" name="password" type="password" required defaultValue="password123" />
+                            <Input id="password" name="password" type="password" required defaultValue="password123" data-testid="login-password" />
                         </div>
                         {state?.error && <p className="text-sm text-red-500">{state.error}</p>}
-                        <Button type="submit" disabled={isPending} className="w-full">
+                        <Button type="submit" disabled={isPending} className="w-full" data-testid="login-submit">
                             {isPending ? '로그인 중...' : '로그인'}
                         </Button>
                     </form>

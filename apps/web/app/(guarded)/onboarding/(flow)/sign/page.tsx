@@ -70,7 +70,7 @@ export default function SignPage() {
                 <h1 className="text-[24px] font-semibold tracking-tight text-[#111111] mb-2">최종 계약 항목 및 서명 기입.</h1>
                 <p className="text-[15px] text-[#555555] mb-8">문서 내용을 숙지하였으며 제출 시 법적 효력이 발생함에 상호 동의합니다. 지정된 영역에 서명하십시오.</p>
 
-                <DocumentViewer text="제 1 조 (목적)\n본 계약은 Beautiful Mind 서비스의 안정적인 제공과 회원의 권리 보호를 목적으로 합니다.\n\n제 2 조 (효력)\n회원이 본 문서 하단에 전자 서명을 기입하고 제출을 완료하는 즉시 계약의 효력이 발생합니다. 이 서명 내역은 영구 보존되는 감사 로그에 안전하게 격리되어 보관됩니다." />
+                <DocumentViewer text="제 1 조 (목적)\n본 계약은 SoulBound 서비스의 안정적인 제공과 회원의 권리 보호를 목적으로 합니다.\n\n제 2 조 (효력)\n회원이 본 문서 하단에 전자 서명을 기입하고 제출을 완료하는 즉시 계약의 효력이 발생합니다. 이 서명 내역은 영구 보존되는 감사 로그에 안전하게 격리되어 보관됩니다." />
 
                 <form onSubmit={handleSubmit}>
                     <SignaturePad onSign={(data) => setSignatureData(data)} />

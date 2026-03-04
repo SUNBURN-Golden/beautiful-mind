@@ -12,9 +12,9 @@ setup('authenticate', async ({ page }) => {
     // Perform login
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
-    await page.getByTestId('login-email').locator('input').fill(email);
-    await page.getByTestId('login-password').locator('input').fill(password);
-    await page.getByTestId('login-submit').locator('button').click({ force: true });
+    await page.getByTestId('login-email').fill(email);
+    await page.getByTestId('login-password').fill(password);
+    await page.getByTestId('login-submit').click({ force: true });
 
     // Debug: capture state after click
     await page.waitForTimeout(5000);
