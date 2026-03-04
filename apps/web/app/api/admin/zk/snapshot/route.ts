@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+function getAdminClient(req?: Request) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceRoleKey) throw new Error("Missing Supabase Admin Env");
 
-function getAdminClient(req: Request) {
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req?.headers.get('Authorization');
     return createClient(supabaseUrl, serviceRoleKey, {
         global: { headers: { Authorization: authHeader || '' } }
     });
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         }
 
         // 2. Fetch Allowlist
-        const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
+        const adminSupabase = getAdminClient();
         const { data: registry, error: regErr } = await adminSupabase.from('zk_event_registry').select('*');
         if (regErr) throw regErr;
 
