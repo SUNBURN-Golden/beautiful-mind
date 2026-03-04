@@ -7,6 +7,8 @@
     "lint": "pnpm -r lint"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "dotenv": "^17.3.1",
     "typescript": "^5.0.0"
   }
 }
