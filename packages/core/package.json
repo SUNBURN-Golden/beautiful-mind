@@ -1,0 +1,14 @@
+{
+    "name": "@beautiful-mind/core",
+    "version": "0.1.0",
+    "main": "src/index.ts",
+    "types": "src/index.ts",
+    "scripts": {
+        "lint": "eslint \"src/**/*.ts*\""
+    },
+    "devDependencies": {
+        "@types/node": "^20.19.33",
+        "typescript": "^5.0.0",
+        "vitest": "^4.0.18"
+    }
+}
