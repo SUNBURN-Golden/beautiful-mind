@@ -25,7 +25,7 @@ async function simulateAirdrop() {
     let claimNo = null;
 
     // 1. Claim Airdrop Slot (Race Condition Safe)
-    const { data: claim, error: claimErr } = await s.from('mind_airdrop_claims').insert({
+    const { data: claim, error: claimErr } = await s.from('soul_airdrop_claims').insert({
         user_id: user.id,
         airdrop_amount: 0, // Placeholder
         idempotency_key: idempotencyKey
@@ -50,7 +50,7 @@ async function simulateAirdrop() {
     else if (claimNo <= 1000) { airdropAmount = 50; tier = 'TOP1000'; }
 
     // Update claim amount
-    await s.from('mind_airdrop_claims').update({ airdrop_amount: airdropAmount }).eq('claim_no', claimNo);
+    await s.from('soul_airdrop_claims').update({ airdrop_amount: airdropAmount }).eq('claim_no', claimNo);
 
     // 2. Insert into Ledger
     const { data: ledger, error: ledgerErr } = await s.from('token_ledger').insert({
@@ -65,12 +65,12 @@ async function simulateAirdrop() {
         console.error('Failed to insert ledger for airdrop:', ledgerErr);
         return;
     }
-    console.log(`2) PortOne verified 후 Airdrop 지급 ledger 기록: +${ledger.amount} MIND (Tier: ${tier})`);
+    console.log(`2) PortOne verified 후 Airdrop 지급 ledger 기록: +${ledger.amount} SOUL (Tier: ${tier})`);
 
     // 3. Check Wallet
     const { data: wallet, error: walletErr } = await s.from('user_wallets').select('*').eq('user_id', user.id).single();
     if (walletErr) console.error('Wallet fetch error:', walletErr);
-    else console.log(`3) user_wallet 반영 완료. Balance: ${wallet.balance} MIND`);
+    else console.log(`3) user_wallet 반영 완료. Balance: ${wallet.balance} SOUL`);
 
     console.log('--- AIRDROP SIMULATION DONE ---');
 }

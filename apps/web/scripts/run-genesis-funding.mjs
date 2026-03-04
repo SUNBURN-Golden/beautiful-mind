@@ -9,7 +9,7 @@ const s = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABAS
 async function runGenesisFunding() {
     console.log('--- STARTING GENESIS FUNDING ---');
 
-    const GENESIS_AMOUNT = 10000000; // 10,000,000 MIND
+    const GENESIS_AMOUNT = 10000000; // 10,000,000 SOUL
 
     // 1. Insert into token_ledger as Treasury (user_id = null)
     const { data: ledger, error: ledgerErr } = await s.from('token_ledger').insert({

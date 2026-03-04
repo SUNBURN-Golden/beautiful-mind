@@ -22,8 +22,8 @@ async function simulateGasFee() {
 
     console.log(`Matching ${userA.id} <-> ${userB.id}`);
 
-    const baseFee = 4; // 4 MIND BURN
-    const tipFee = 1;  // 1 MIND TIP to Treasury
+    const baseFee = 4; // 4 SOUL BURN
+    const tipFee = 1;  // 1 SOUL TIP to Treasury
     const totalFee = baseFee + tipFee;
 
     // 1. Check User A Wallet

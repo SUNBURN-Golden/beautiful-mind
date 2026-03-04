@@ -15,7 +15,7 @@ async function simulateHolds() {
 
     const reviewer = users[0];
     const target = users[1];
-    const rewardAmount = 5; // 5 MIND
+    const rewardAmount = 5; // 5 SOUL
     const reviewId = `REV_SIM_${Date.now()}`;
 
     console.log(`Reviewer: ${reviewer.id} wrote review for ${target.id}`);

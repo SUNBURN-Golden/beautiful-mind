@@ -6,7 +6,7 @@ BEGIN;
 
 -- 1) Enums (Safe Enum Creation via DO Block)
 DO $$ BEGIN
-  CREATE TYPE public.mind_tx_type AS ENUM (
+  CREATE TYPE public.soul_tx_type AS ENUM (
     'AIRDROP',
     'GAS_FEE_BURN',
     'GAS_FEE_TIP',
@@ -20,7 +20,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE public.mind_hold_state AS ENUM ('PENDING','RELEASED','SLASHED','CANCELLED','DISPUTED');
+  CREATE TYPE public.soul_hold_state AS ENUM ('PENDING','RELEASED','SLASHED','CANCELLED','DISPUTED');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.token_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   amount BIGINT NOT NULL,                    -- + issuance, - deduction
-  type public.mind_tx_type NOT NULL,
+  type public.soul_tx_type NOT NULL,
   related_id UUID,                           -- match_id/review_id/dispute_id
   idempotency_key TEXT UNIQUE,               -- Prevents double spending
   meta JSONB NOT NULL DEFAULT '{}'::jsonb,   -- Structured metadata (rules, tags)
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.token_holds (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   amount BIGINT NOT NULL CHECK (amount > 0),
   reason TEXT NOT NULL,
-  state public.mind_hold_state NOT NULL DEFAULT 'PENDING',
+  state public.soul_hold_state NOT NULL DEFAULT 'PENDING',
   release_at TIMESTAMPTZ NOT NULL,
   related_id UUID,
   idempotency_key TEXT UNIQUE,
@@ -83,7 +83,7 @@ CREATE INDEX IF NOT EXISTS token_holds_user_time_idx ON public.token_holds(user_
 CREATE INDEX IF NOT EXISTS token_holds_state_release_idx ON public.token_holds(state, release_at);
 
 -- 3.4) Airdrop Claims (Race Condition Defense via BIGSERIAL)
-CREATE TABLE IF NOT EXISTS public.mind_airdrop_claims (
+CREATE TABLE IF NOT EXISTS public.soul_airdrop_claims (
   claim_no BIGSERIAL PRIMARY KEY,
   user_id UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -97,7 +97,7 @@ ALTER TABLE public.treasury_wallet ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.token_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.token_holds ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.mind_airdrop_claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.soul_airdrop_claims ENABLE ROW LEVEL SECURITY;
 
 -- Reads (Self reads for users, Admin config for Treasury)
 DROP POLICY IF EXISTS "wallet self read" ON public.user_wallets;
@@ -109,8 +109,8 @@ CREATE POLICY "ledger self read" ON public.token_ledger FOR SELECT USING (auth.u
 DROP POLICY IF EXISTS "holds self read" ON public.token_holds;
 CREATE POLICY "holds self read" ON public.token_holds FOR SELECT USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "airdrop_claim self read" ON public.mind_airdrop_claims;
-CREATE POLICY "airdrop_claim self read" ON public.mind_airdrop_claims FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "airdrop_claim self read" ON public.soul_airdrop_claims;
+CREATE POLICY "airdrop_claim self read" ON public.soul_airdrop_claims FOR SELECT USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "treasury admin read" ON public.treasury_wallet;
 CREATE POLICY "treasury admin read" ON public.treasury_wallet 
@@ -129,29 +129,29 @@ CREATE POLICY "holds no client write" ON public.token_holds FOR ALL USING (false
 DROP POLICY IF EXISTS "treasury no client write" ON public.treasury_wallet;
 CREATE POLICY "treasury no client write" ON public.treasury_wallet FOR ALL USING (false) WITH CHECK (false);
 
-DROP POLICY IF EXISTS "airdrop_claim no client write" ON public.mind_airdrop_claims;
-CREATE POLICY "airdrop_claim no client write" ON public.mind_airdrop_claims FOR ALL USING (false) WITH CHECK (false);
+DROP POLICY IF EXISTS "airdrop_claim no client write" ON public.soul_airdrop_claims;
+CREATE POLICY "airdrop_claim no client write" ON public.soul_airdrop_claims FOR ALL USING (false) WITH CHECK (false);
 
 -- Grant appropriate permissions to service_role and authenticated
 REVOKE ALL ON TABLE public.user_wallets FROM anon, authenticated;
 REVOKE ALL ON TABLE public.token_ledger FROM anon, authenticated;
 REVOKE ALL ON TABLE public.token_holds FROM anon, authenticated;
 REVOKE ALL ON TABLE public.treasury_wallet FROM anon, authenticated;
-REVOKE ALL ON TABLE public.mind_airdrop_claims FROM anon, authenticated;
+REVOKE ALL ON TABLE public.soul_airdrop_claims FROM anon, authenticated;
 
 -- Authenticated (Read Only where RLS permits)
 GRANT SELECT ON TABLE public.user_wallets TO authenticated;
 GRANT SELECT ON TABLE public.token_ledger TO authenticated;
 GRANT SELECT ON TABLE public.token_holds TO authenticated;
 GRANT SELECT ON TABLE public.treasury_wallet TO authenticated;
-GRANT SELECT ON TABLE public.mind_airdrop_claims TO authenticated;
+GRANT SELECT ON TABLE public.soul_airdrop_claims TO authenticated;
 
 -- Service Role (Backend Server Access)
 GRANT SELECT ON TABLE public.user_wallets TO service_role;
 GRANT SELECT, INSERT ON TABLE public.token_ledger TO service_role;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.token_holds TO service_role;
 GRANT SELECT, UPDATE ON TABLE public.treasury_wallet TO service_role;
-GRANT ALL ON TABLE public.mind_airdrop_claims TO service_role;
+GRANT ALL ON TABLE public.soul_airdrop_claims TO service_role;
 
 
 -- 5) Database Enforcement Mechanisms (MUST)
@@ -271,8 +271,8 @@ DROP TRIGGER IF EXISTS audit_treasury_wallet_trigger ON public.treasury_wallet;
 CREATE TRIGGER audit_treasury_wallet_trigger AFTER INSERT OR UPDATE OR DELETE ON public.treasury_wallet
 FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
 
-DROP TRIGGER IF EXISTS audit_mind_airdrop_claims_trigger ON public.mind_airdrop_claims;
-CREATE TRIGGER audit_mind_airdrop_claims_trigger AFTER INSERT ON public.mind_airdrop_claims
+DROP TRIGGER IF EXISTS audit_soul_airdrop_claims_trigger ON public.soul_airdrop_claims;
+CREATE TRIGGER audit_soul_airdrop_claims_trigger AFTER INSERT ON public.soul_airdrop_claims
 FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();
 
 COMMIT;

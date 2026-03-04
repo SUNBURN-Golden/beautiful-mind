@@ -64,7 +64,7 @@ function determineEventType(log: any, newData: any): string {
         const idempotency = newData?.idempotency_key || '';
 
         // --- Event Type ETL Normalization Rules ---
-        // To maintain unified enums (mind_tx_type) at the DB level but guarantee 
+        // To maintain unified enums (soul_tx_type) at the DB level but guarantee 
         // high-resolution observability on-chain, event_receipts remap their `event_type` 
         // based on strict strict prefix matching inside the idempotency_key.
 

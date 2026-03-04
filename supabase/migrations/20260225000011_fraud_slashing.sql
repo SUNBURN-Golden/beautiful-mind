@@ -1,7 +1,7 @@
 -- Phase 1.2 Additive Patch: Fraud Docs Liquidated Damages Scaffold (Refined)
 
--- 1. Extend mind_tx_type Enum for the 2-legged accounting
-ALTER TYPE public.mind_tx_type ADD VALUE IF NOT EXISTS 'INSURANCE_CREDIT';
+-- 1. Extend soul_tx_type Enum for the 2-legged accounting
+ALTER TYPE public.soul_tx_type ADD VALUE IF NOT EXISTS 'INSURANCE_CREDIT';
 
 -- 2. Alter verifications to add adjudication_reason (status remains 'REJECTED')
 ALTER TABLE public.verifications ADD COLUMN IF NOT EXISTS adjudication_reason TEXT;

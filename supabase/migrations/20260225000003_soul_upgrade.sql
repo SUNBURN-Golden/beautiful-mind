@@ -42,7 +42,7 @@ GRANT ALL ON TABLE public.economy_config TO service_role;
 
 -- -----------------------------------------------------------------------------
 -- [2] Anti-Farming Airdrop Gating + Tiered Launch Cohorts
--- Note: mind_airdrop_claims table from step 0 is superseded/renamed by soul_airdrop_claims
+-- Note: soul_airdrop_claims table from step 0 is superseded/renamed by soul_airdrop_claims
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.soul_airdrop_claims (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -69,10 +69,10 @@ REVOKE ALL ON TABLE public.soul_airdrop_claims FROM anon, authenticated;
 GRANT SELECT ON TABLE public.soul_airdrop_claims TO authenticated;
 GRANT ALL ON TABLE public.soul_airdrop_claims TO service_role;
 
--- Remove old mind_airdrop_claims if it's empty to clean up schema
+-- Remove old soul_airdrop_claims if it's empty to clean up schema
 -- DO $$ BEGIN
---   IF NOT EXISTS (SELECT 1 FROM public.mind_airdrop_claims) THEN
---     DROP TABLE IF EXISTS public.mind_airdrop_claims CASCADE;
+--   IF NOT EXISTS (SELECT 1 FROM public.soul_airdrop_claims) THEN
+--     DROP TABLE IF EXISTS public.soul_airdrop_claims CASCADE;
 --   END IF;
 -- END $$;
 
