@@ -1,21 +1,38 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getPublicSupabaseEnv } from './env'
 
 export async function updateSession(request: NextRequest) {
+    const protectedRoutes = ['/dashboard', '/onboarding', '/contract', '/consent', '/osint', '/interview', '/match', '/chat', '/review', '/banned']
+    const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
+    const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+
+    const publicEnv = getPublicSupabaseEnv()
+    if (!publicEnv) {
+        // Fail closed for protected/admin paths when auth backend is misconfigured.
+        if (isProtectedRoute || isAdminRoute) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('error', 'SERVER_MISCONFIG')
+            return NextResponse.redirect(url)
+        }
+        return NextResponse.next({ request })
+    }
+
     let supabaseResponse = NextResponse.next({
         request,
     })
 
     const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        publicEnv.url,
+        publicEnv.anonKey,
         {
             cookies: {
                 getAll() {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
                     supabaseResponse = NextResponse.next({
                         request,
                     })
@@ -35,11 +52,6 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // 보호할 라우트 확인
-    const protectedRoutes = ['/dashboard', '/onboarding', '/contract', '/consent', '/osint', '/interview', '/match', '/chat', '/review']
-    const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))
-    const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-
     if (!user && (isProtectedRoute || isAdminRoute)) {
         // no user, potentially respond by redirecting the user to the login page
         const url = request.nextUrl.clone()
@@ -51,7 +63,7 @@ export async function updateSession(request: NextRequest) {
         // check profile metadata (admin & ban status)
         const { data: profile } = await supabase
             .from('profiles')
-            .select('is_admin, banned')
+            .select('is_admin, banned, is_frozen')
             .eq('id', user.id)
             .single()
 
@@ -61,6 +73,18 @@ export async function updateSession(request: NextRequest) {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             url.searchParams.set('error', 'Account has been banned.')
+            return NextResponse.redirect(url)
+        }
+
+        if (profile?.is_frozen && request.nextUrl.pathname !== '/banned') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/banned'
+            return NextResponse.redirect(url)
+        }
+
+        if (!profile?.is_frozen && request.nextUrl.pathname === '/banned') {
+            const url = request.nextUrl.clone()
+            url.pathname = '/dashboard'
             return NextResponse.redirect(url)
         }
 
