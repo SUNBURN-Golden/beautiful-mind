@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/utils/supabase/server';
 
@@ -17,9 +16,7 @@ async function hasActiveSession(): Promise<boolean> {
 }
 
 export default async function HomePage() {
-    if (await hasActiveSession()) {
-        redirect('/onboarding');
-    }
+    const isSignedIn = await hasActiveSession();
 
     return (
         <main className="liquid-shell px-4 pb-16 pt-12 sm:px-8 sm:pt-16">
@@ -36,12 +33,25 @@ export default async function HomePage() {
                         모든 상태 전이는 감사 로그와 원장 이벤트로 추적됩니다.
                     </p>
                     <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
-                        <Button asChild className="h-12 px-6">
-                            <Link href="/signup">시작하기</Link>
-                        </Button>
-                        <Button asChild variant="outline" className="h-12 px-6">
-                            <Link href="/login">로그인</Link>
-                        </Button>
+                        {isSignedIn ? (
+                            <>
+                                <Button asChild className="h-12 px-6">
+                                    <Link href="/dashboard">대시보드로 이동</Link>
+                                </Button>
+                                <Button asChild variant="outline" className="h-12 px-6">
+                                    <Link href="/onboarding">온보딩 상태 확인</Link>
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button asChild className="h-12 px-6">
+                                    <Link href="/signup">시작하기</Link>
+                                </Button>
+                                <Button asChild variant="outline" className="h-12 px-6">
+                                    <Link href="/login">로그인</Link>
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </header>
 
