@@ -79,7 +79,7 @@ export default async function HomePage() {
                 </section>
 
                 <footer className="pb-2 text-xs text-[#6e6e73]">
-                    build: soulbound-launch-ui-v2 · commit: {commitShort}
+                    build: soulbound-launch-ui-v3 · commit: {commitShort}
                 </footer>
             </div>
         </main>
