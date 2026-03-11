@@ -1,0 +1,574 @@
+{
+  "version": "hybrid-match-offline-v1",
+  "description": "Frozen synthetic offline fixture for hybrid-match island regression/optimization. Local-only, no DB.",
+  "min_grounding_score": 0.45,
+  "ranking_cases": [
+    {
+      "id": "rank_01_strong_local_and_overlap",
+      "label_score": 4.8,
+      "viewer": {
+        "absolute_score": 84,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["hiking", "museum"],
+            "communication": "warm"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "GANGNAM"
+          },
+          "numeric": {
+            "birth_year": 1993,
+            "height_cm": 172
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["성실", "대화밀도", "책임감"],
+          "friction_tags": ["회피"]
+        }
+      },
+      "target": {
+        "absolute_score": 81,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["museum", "hiking"],
+            "communication": "warm"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "GANGNAM"
+          },
+          "numeric": {
+            "birth_year": 1994,
+            "height_cm": 169
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["성실", "공감", "대화밀도"],
+          "friction_tags": []
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 4.7,
+        "confidence": 0.84,
+        "evidence": [
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "SEOUL",
+            "why_tag": "REGION_MATCH"
+          },
+          {
+            "field_path": "verified_feature.categorical.location_city",
+            "value": "GANGNAM",
+            "why_tag": "CITY_MATCH"
+          },
+          {
+            "field_path": "traits_json.profile.communication",
+            "value": "warm",
+            "why_tag": "COMM_STYLE"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank_02_good_region_moderate_age_gap",
+      "label_score": 4.0,
+      "viewer": {
+        "absolute_score": 77,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["travel", "reading"],
+            "communication": "direct"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "MAPO"
+          },
+          "numeric": {
+            "birth_year": 1990
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["진정성", "자기관리"],
+          "friction_tags": []
+        }
+      },
+      "target": {
+        "absolute_score": 74,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["reading", "film"],
+            "communication": "direct"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "JONGNO"
+          },
+          "numeric": {
+            "birth_year": 1986
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["자기관리"],
+          "friction_tags": ["지각"]
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 4.1,
+        "confidence": 0.68,
+        "evidence": [
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "SEOUL",
+            "why_tag": "REGION_MATCH"
+          },
+          {
+            "field_path": "verified_feature.numeric.birth_year",
+            "value": "1986",
+            "why_tag": "AGE_COMPAT"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank_03_mixed_signals_with_friction",
+      "label_score": 2.7,
+      "viewer": {
+        "absolute_score": 69,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["game", "nightlife"],
+            "communication": "impulsive"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "BUSAN",
+            "location_city": "SUYEONG"
+          },
+          "numeric": {
+            "birth_year": 1989
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["유머"],
+          "friction_tags": ["회피", "충동"]
+        }
+      },
+      "target": {
+        "absolute_score": 73,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["game", "fitness"],
+            "communication": "calm"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "BUSAN",
+            "location_city": "HAEUNDAE"
+          },
+          "numeric": {
+            "birth_year": 1990
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["유머", "규칙성"],
+          "friction_tags": []
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 3.1,
+        "confidence": 0.56,
+        "evidence": [
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "BUSAN",
+            "why_tag": "REGION_MATCH"
+          },
+          {
+            "field_path": "traits_json.profile.hobbies",
+            "value": "game",
+            "why_tag": "HOBBY_OVERLAP"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank_04_strong_traits_but_distance",
+      "label_score": 3.3,
+      "viewer": {
+        "absolute_score": 88,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["classical", "art"],
+            "communication": "reflective"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "DAEGU",
+            "location_city": "SUSEONG"
+          },
+          "numeric": {
+            "birth_year": 1988
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["공감", "성실"],
+          "friction_tags": []
+        }
+      },
+      "target": {
+        "absolute_score": 87,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["art", "classical"],
+            "communication": "reflective"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "YONGSAN"
+          },
+          "numeric": {
+            "birth_year": 1987
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["공감", "성실"],
+          "friction_tags": ["지각"]
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 3.5,
+        "confidence": 0.62,
+        "evidence": [
+          {
+            "field_path": "traits_json.profile.communication",
+            "value": "reflective",
+            "why_tag": "COMM_STYLE"
+          },
+          {
+            "field_path": "traits_json.profile.hobbies",
+            "value": "art, classical",
+            "why_tag": "HOBBY_OVERLAP"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank_05_large_age_gap_low_alignment",
+      "label_score": 1.9,
+      "viewer": {
+        "absolute_score": 65,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["party"],
+            "communication": "rapid"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "GANGSEO"
+          },
+          "numeric": {
+            "birth_year": 2001
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["에너지"],
+          "friction_tags": ["충동", "무계획"]
+        }
+      },
+      "target": {
+        "absolute_score": 89,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["meditation"],
+            "communication": "slow"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "SEOUL",
+            "location_city": "GANGNAM"
+          },
+          "numeric": {
+            "birth_year": 1979
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["규칙성", "성찰"],
+          "friction_tags": []
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 2.2,
+        "confidence": 0.5,
+        "evidence": [
+          {
+            "field_path": "verified_feature.numeric.birth_year",
+            "value": "1979",
+            "why_tag": "AGE_COMPAT"
+          },
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "SEOUL",
+            "why_tag": "REGION_MATCH"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rank_06_cross_region_high_friction",
+      "label_score": 1.4,
+      "viewer": {
+        "absolute_score": 58,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["nightlife"],
+            "communication": "aggressive"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "JEJU",
+            "location_city": "JEJU"
+          },
+          "numeric": {
+            "birth_year": 1996
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["직진"],
+          "friction_tags": ["공격성", "회피"]
+        }
+      },
+      "target": {
+        "absolute_score": 82,
+        "traits_json": {
+          "profile": {
+            "hobbies": ["reading"],
+            "communication": "gentle"
+          }
+        },
+        "verified_feature": {
+          "categorical": {
+            "location_region": "BUSAN",
+            "location_city": "DONGNAE"
+          },
+          "numeric": {
+            "birth_year": 1994
+          }
+        },
+        "self_dev": {
+          "positive_tags": ["공감", "대화밀도"],
+          "friction_tags": []
+        }
+      },
+      "llm_prediction": {
+        "predicted_score": 1.8,
+        "confidence": 0.42,
+        "evidence": [
+          {
+            "field_path": "traits_json.profile.communication",
+            "value": "gentle",
+            "why_tag": "COMM_STYLE"
+          },
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "BUSAN",
+            "why_tag": "REGION_MISMATCH"
+          }
+        ]
+      }
+    }
+  ],
+  "evidence_cases": [
+    {
+      "id": "evidence_01_valid_strong",
+      "target_traits": {
+        "profile": {
+          "communication": "warm",
+          "hobbies": ["museum", "hiking"]
+        }
+      },
+      "target_verified": {
+        "categorical": {
+          "location_region": "SEOUL",
+          "location_city": "GANGNAM"
+        },
+        "numeric": {
+          "birth_year": 1994
+        }
+      },
+      "prediction": {
+        "predicted_score": 4.5,
+        "confidence": 0.8,
+        "evidence": [
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "SEOUL",
+            "why_tag": "REGION_MATCH"
+          },
+          {
+            "field_path": "traits_json.profile.communication",
+            "value": "warm",
+            "why_tag": "COMM_STYLE"
+          }
+        ]
+      },
+      "threshold": 0.55,
+      "expected_valid": true
+    },
+    {
+      "id": "evidence_02_invalid_wrong_paths",
+      "target_traits": {
+        "profile": {
+          "communication": "calm"
+        }
+      },
+      "target_verified": {
+        "categorical": {
+          "location_region": "BUSAN"
+        }
+      },
+      "prediction": {
+        "predicted_score": 4.0,
+        "confidence": 0.9,
+        "evidence": [
+          {
+            "field_path": "verified_feature.categorical.non_existing",
+            "value": "BUSAN",
+            "why_tag": "HALLUCINATION"
+          },
+          {
+            "field_path": "traits_json.profile.nope",
+            "value": "none",
+            "why_tag": "HALLUCINATION"
+          }
+        ]
+      },
+      "threshold": 0.5,
+      "expected_valid": false
+    },
+    {
+      "id": "evidence_03_partial_value_mismatch",
+      "target_traits": {
+        "profile": {
+          "communication": "direct",
+          "hobbies": ["film"]
+        }
+      },
+      "target_verified": {
+        "categorical": {
+          "location_region": "SEOUL"
+        },
+        "numeric": {
+          "birth_year": 1986
+        }
+      },
+      "prediction": {
+        "predicted_score": 3.9,
+        "confidence": 0.7,
+        "evidence": [
+          {
+            "field_path": "verified_feature.numeric.birth_year",
+            "value": "1999",
+            "why_tag": "AGE_COMPAT"
+          },
+          {
+            "field_path": "verified_feature.categorical.location_region",
+            "value": "SEOUL",
+            "why_tag": "REGION_MATCH"
+          }
+        ]
+      },
+      "threshold": 0.5,
+      "expected_valid": false
+    },
+    {
+      "id": "evidence_04_valid_array_match",
+      "target_traits": {
+        "profile": {
+          "hobbies": ["art", "classical"]
+        }
+      },
+      "target_verified": {
+        "categorical": {
+          "location_city": "YONGSAN"
+        }
+      },
+      "prediction": {
+        "predicted_score": 3.7,
+        "confidence": 0.62,
+        "evidence": [
+          {
+            "field_path": "traits_json.profile.hobbies",
+            "value": "art",
+            "why_tag": "HOBBY_OVERLAP"
+          },
+          {
+            "field_path": "verified_feature.categorical.location_city",
+            "value": "YONGSAN",
+            "why_tag": "CITY_MATCH"
+          }
+        ]
+      },
+      "threshold": 0.45,
+      "expected_valid": true
+    }
+  ],
+  "exploration_cases": [
+    {
+      "id": "explore_01_low_signal_high_need",
+      "self_dev": {
+        "confidence": 0.3,
+        "sample_size": 2,
+        "stale_days": 92,
+        "match_adjustment_hints": {
+          "exploration_bias": "HIGH"
+        }
+      },
+      "expected_min": 0.72,
+      "expected_max": 0.95
+    },
+    {
+      "id": "explore_02_stable_low_need",
+      "self_dev": {
+        "confidence": 0.84,
+        "sample_size": 22,
+        "stale_days": 7,
+        "match_adjustment_hints": {
+          "exploration_bias": "LOW"
+        }
+      },
+      "expected_min": 0.0,
+      "expected_max": 0.22
+    },
+    {
+      "id": "explore_03_mid_signal_mid_need",
+      "self_dev": {
+        "confidence": 0.57,
+        "sample_size": 9,
+        "stale_days": 28,
+        "match_adjustment_hints": {
+          "exploration_bias": "NORMAL"
+        }
+      },
+      "expected_min": 0.2,
+      "expected_max": 0.5
+    }
+  ]
+}
