@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/utils/supabase/server';
-
-function getGeminiClient() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error('GEMINI_API_KEY environment variable is not set.');
-    }
-    return new GoogleGenAI({ apiKey });
-}
+import { getGeminiClient } from '@/lib/gemini';
+import { isLegacyFlowEnabled } from '@/lib/server/trust';
 
 type InterviewResult = {
     decision: 'PASS' | 'REVIEW' | 'REJECT';
@@ -43,6 +36,13 @@ function isInterviewResult(value: unknown): value is InterviewResult {
  */
 export async function POST(request: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: 'LEGACY_FLOW_DISABLED', message: 'Interview hot path is disabled for admission-first mode.' },
+                { status: 410 },
+            );
+        }
+
         const ai = getGeminiClient();
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();

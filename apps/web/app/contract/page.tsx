@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function LegacyContractRedirectPage() {
-    redirect('/onboarding/sign');
+    redirect('/apply/status');
 }

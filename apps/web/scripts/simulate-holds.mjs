@@ -56,23 +56,40 @@ async function simulateHolds() {
     }
 
     // 3. Ledger Minting from Treasury
-    // (1) Take from Treasury
-    await s.from('token_ledger').insert({
-        user_id: null,
-        amount: -rewardAmount,
-        type: 'TREASURY_SPEND',
-        idempotency_key: `TREASURY:REWARD:${hold.id}`,
-        meta: { hold_id: hold.id }
+    // (1) Spend from treasury via official budget RPC
+    const { data: treasurySpendResult, error: treasurySpendError } = await s.rpc('treasury_spend_with_budget', {
+        p_vault: 'REWARD',
+        p_amount: rewardAmount,
+        p_related_id: hold.related_id,
+        p_idempotency_key: `TREASURY:REWARD:${hold.id}`,
+        p_meta: { hold_id: hold.id, source: 'scripts/simulate-holds' }
     });
+    if (treasurySpendError) {
+        console.error('treasury_spend_with_budget failed:', treasurySpendError);
+        return;
+    }
+    if (!['SPENT', 'IDEMPOTENT_SKIPPED'].includes(String(treasurySpendResult?.status || ''))) {
+        console.error('Unexpected treasury spend status:', treasurySpendResult);
+        return;
+    }
 
-    // (2) Give to User
-    await s.from('token_ledger').insert({
-        user_id: reviewer.id,
-        amount: rewardAmount,
-        type: 'REWARD_MINT',
-        idempotency_key: `REWARD:${hold.id}`,
-        meta: { hold_id: hold.id }
+    // (2) Give to User via internal canonical RPC
+    const { data: rewardMintResult, error: rewardMintError } = await s.rpc('append_soul_ledger_internal', {
+        p_user_id: reviewer.id,
+        p_amount: rewardAmount,
+        p_type: 'REWARD_MINT',
+        p_related_id: hold.related_id,
+        p_idempotency_key: `REWARD:${hold.id}`,
+        p_meta: { hold_id: hold.id, source: 'scripts/simulate-holds' }
     });
+    if (rewardMintError) {
+        console.error('append_soul_ledger_internal(REWARD_MINT) failed:', rewardMintError);
+        return;
+    }
+    if (!['INSERTED', 'IDEMPOTENT_SKIPPED'].includes(String(rewardMintResult?.status || ''))) {
+        console.error('Unexpected reward mint status:', rewardMintResult);
+        return;
+    }
 
     console.log(`2) 정산 후 REWARD 지급: Treasury (-${rewardAmount}) -> User (+${rewardAmount})`);
 

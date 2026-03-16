@@ -117,7 +117,7 @@ BEGIN
   WITH ordered AS (
     SELECT
       ROW_NUMBER() OVER (ORDER BY created_at, id) AS rn,
-      digest(
+      extensions.digest(
         concat_ws(
           '|',
           id::text,
@@ -146,7 +146,7 @@ BEGIN
     UNION ALL
     SELECT
       o.rn,
-      digest(r.h || o.leaf, 'sha256') AS h
+      extensions.digest(r.h || o.leaf, 'sha256') AS h
     FROM recur r
     JOIN ordered o ON o.rn = r.rn + 1
   )

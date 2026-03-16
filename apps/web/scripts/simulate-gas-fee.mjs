@@ -38,30 +38,33 @@ async function simulateGasFee() {
     console.log(`User A Balance before: ${walletA.balance}`);
 
     // 2. Insert Base Fee Burn
-    await s.from('token_ledger').insert({
-        user_id: userA.id,
-        amount: -baseFee,
-        type: 'GAS_FEE_BURN',
-        idempotency_key: `GAS:BURN:${requestId}`,
-        meta: { target_id: userB.id }
+    await s.rpc('append_soul_ledger_internal', {
+        p_user_id: userA.id,
+        p_amount: -baseFee,
+        p_type: 'GAS_FEE_BURN',
+        p_related_id: null,
+        p_idempotency_key: `GAS:BURN:${requestId}`,
+        p_meta: { target_id: userB.id, source: 'scripts/simulate-gas-fee' }
     });
 
     // 3. Insert Tip Fee
-    await s.from('token_ledger').insert({
-        user_id: userA.id,
-        amount: -tipFee,
-        type: 'GAS_FEE_TIP',
-        idempotency_key: `GAS:TIP:${requestId}`,
-        meta: { target_id: userB.id }
+    await s.rpc('append_soul_ledger_internal', {
+        p_user_id: userA.id,
+        p_amount: -tipFee,
+        p_type: 'GAS_FEE_TIP',
+        p_related_id: null,
+        p_idempotency_key: `GAS:TIP:${requestId}`,
+        p_meta: { target_id: userB.id, source: 'scripts/simulate-gas-fee' }
     });
 
     // 4. Insert Treasury Tip
-    await s.from('token_ledger').insert({
-        user_id: null,
-        amount: tipFee,
-        type: 'TREASURY_GRANT',
-        idempotency_key: `TREASURY:TIP:${requestId}`,
-        meta: { source_id: userA.id }
+    await s.rpc('append_soul_ledger_internal', {
+        p_user_id: null,
+        p_amount: tipFee,
+        p_type: 'TREASURY_GRANT',
+        p_related_id: null,
+        p_idempotency_key: `TREASURY:TIP:${requestId}`,
+        p_meta: { source_id: userA.id, source: 'scripts/simulate-gas-fee' }
     });
 
     console.log(`3) 매칭 요청 시 GAS_FEE_BURN/GAS_FEE_TIP 차감 완료`);

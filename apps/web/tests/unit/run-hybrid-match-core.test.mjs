@@ -1,16 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co';
-process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-test-key';
-
+const { buildEvidenceAllowlist, valueMatchScore } = await import('../../scripts/lib/hybrid-match/evidence.mjs');
 const {
-    buildEvidenceAllowlist,
-    valueMatchScore,
     deterministicDirectionalPrediction,
     blendDirectionalPrediction,
     computeOutcomeCalibration,
-} = await import('../../scripts/run-hybrid-match.mjs');
+} = await import('../../scripts/lib/hybrid-match/scoring.mjs');
 
 test('buildEvidenceAllowlist includes expected leaf paths', () => {
     const allowlist = buildEvidenceAllowlist(

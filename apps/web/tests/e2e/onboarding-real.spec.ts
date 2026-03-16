@@ -1,8 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page, APIRequestContext } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+import { STATUS_BLOCKER_CODES } from '../../lib/contracts/status-codes';
+import { ADMISSION_STAGES } from '../../lib/contracts/status-stages';
 
 dotenv.config({ path: '.env.test.local' });
 dotenv.config({ path: '.env.local' });
@@ -10,6 +12,25 @@ dotenv.config({ path: '.env.local' });
 type E2ECreds = {
     user_id: string;
 };
+
+function escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function exactNames(...names: string[]) {
+    return new RegExp(`^(?:${names.map(escapeRegExp).join('|')})$`);
+}
+
+const CONSENT_PHRASES = [
+    'I ACKNOWLEDGE IDENTITY HANDLING',
+    'I ACKNOWLEDGE LIVENESS HANDLING',
+    'I ACKNOWLEDGE EDUCATION DOCUMENT HANDLING',
+    'I ACKNOWLEDGE INCOME DOCUMENT HANDLING',
+    'I ACKNOWLEDGE MARITAL FAMILY DOCUMENT HANDLING',
+    'I ACKNOWLEDGE AI ASSISTED ANALYSIS',
+    'I ACKNOWLEDGE HUMAN EXCEPTION AUDIT APPEAL REVIEW',
+    'I ACKNOWLEDGE IMMEDIATE PURGE AND MINIMAL RETENTION',
+];
 
 function getAdminClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,438 +44,518 @@ function getAdminClient() {
 }
 
 function readE2ECreds(): E2ECreds {
-    const credsPath = path.resolve(process.cwd(), '.e2e/creds.json');
+    const credsPath = path.resolve(process.cwd(), '.e2e/creds.auth.stateful.json');
+    if (!fs.existsSync(credsPath)) {
+        throw new Error(
+            [
+                '[E2E_STATEFUL_CREDS_MISSING] Missing stateful auth creds.',
+                `Expected file: ${credsPath}`,
+                'Run scripts/remote_e2e_seed.mjs to generate isolated auth-lane users.',
+            ].join('\n'),
+        );
+    }
     const raw = fs.readFileSync(credsPath, 'utf8');
     return JSON.parse(raw) as E2ECreds;
 }
 
-async function ensureDashboardReadyState(userId: string) {
+async function resetAdmissionState(userId: string) {
     const admin = getAdminClient();
     const nowIso = new Date().toISOString();
 
-    await admin
-        .from('feature_flags')
-        .upsert([
-            { flag_key: 'COLLATERAL_REQUIRED_ON_SIGNUP', enabled: false },
-            { flag_key: 'COLLATERAL_REQUIRED_FOR_HIGH_TRUST', enabled: false }
-        ], { onConflict: 'flag_key' });
+    const assertNoError = (label: string, error: { message?: string } | null) => {
+        if (error) {
+            throw new Error(`${label} failed: ${error.message || 'unknown error'}`);
+        }
+    };
 
-    await admin
+    const { data: caseRows } = await admin
+        .from('review_cases')
+        .select('id')
+        .eq('user_id', userId);
+
+    const reviewCaseIds = (caseRows || []).map((row) => row.id);
+    if (reviewCaseIds.length > 0) {
+        const { error } = await admin
+            .from('review_case_events')
+            .delete()
+            .in('review_case_id', reviewCaseIds);
+        assertNoError('delete review_case_events', error);
+    }
+
+    {
+        const { error } = await admin.from('review_cases').delete().eq('user_id', userId);
+        assertNoError('delete review_cases', error);
+    }
+    {
+        const { error } = await admin.from('consent_events').delete().eq('user_id', userId);
+        assertNoError('delete consent_events', error);
+    }
+    {
+        const { error } = await admin.from('verified_claims').delete().eq('user_id', userId);
+        assertNoError('delete verified_claims', error);
+    }
+    {
+        const { error } = await admin.from('admission_decision_runs').delete().eq('user_id', userId);
+        assertNoError('delete admission_decision_runs', error);
+    }
+    {
+        const { error } = await admin.from('appeals').delete().eq('user_id', userId);
+        assertNoError('delete appeals', error);
+    }
+    {
+        const { error } = await admin.from('exception_cases').delete().eq('user_id', userId);
+        assertNoError('delete exception_cases', error);
+    }
+    {
+        const { error } = await admin.from('audit_samples').delete().eq('user_id', userId);
+        assertNoError('delete audit_samples', error);
+    }
+    {
+        const { error } = await admin.from('admission_document_submissions').delete().eq('user_id', userId);
+        assertNoError('delete admission_document_submissions', error);
+    }
+    {
+        const { error } = await admin
+            .from('admission_applications')
+            .update({
+                status: 'IN_PROGRESS',
+                current_step: 'APPLY_START',
+                submitted_at: null,
+                ai_review_started_at: null,
+                ai_review_completed_at: null,
+                human_review_started_at: null,
+                human_review_completed_at: null,
+                approved_at: null,
+                rejected_at: null,
+                rejection_reason_code: null,
+                liveness_verified_at: null,
+                soul_issued_at: null,
+                activated_at: null,
+                updated_at: nowIso,
+            })
+            .eq('user_id', userId);
+        assertNoError('reset admission_applications', error);
+    }
+    {
+        const { error } = await admin.from('identity_claims').delete().eq('user_id', userId);
+        assertNoError('delete identity_claims', error);
+    }
+    {
+        const { error } = await admin
+            .from('soul_credentials')
+            .update({
+                status: 'REVOKED',
+                revoked_at: nowIso,
+                updated_at: nowIso,
+            })
+            .eq('user_id', userId);
+        assertNoError('revoke soul_credentials', error);
+    }
+    {
+        const { error } = await admin
+            .from('sbt_claims')
+            .update({
+                status: 'REVOKED',
+                revoked_at: nowIso,
+                updated_at: nowIso,
+            })
+            .eq('user_id', userId)
+            .in('claim_type', ['ADMISSION_SOUL', 'SOUL_TRUST']);
+        assertNoError('revoke sbt_claims', error);
+    }
+
+    {
+        const { error } = await admin
         .from('profiles')
         .update({
-            verified: true,
+            verified: false,
             banned: false,
             is_frozen: false,
             freeze_reason: null,
-            freeze_updated_at: nowIso
+            is_admin: false,
         })
         .eq('id', userId);
-
-    const requiredVerificationTypes = ['RESIDENCE', 'PHYSICAL', 'CAREER'];
-    const { data: verifiedDocs } = await admin
-        .from('verifications')
-        .select('type')
-        .eq('user_id', userId)
-        .eq('status', 'VERIFIED');
-
-    const existingTypes = new Set((verifiedDocs || []).map((row) => row.type));
-    const missingTypes = requiredVerificationTypes.filter((type) => !existingTypes.has(type));
-
-    if (missingTypes.length > 0) {
-        await admin
-            .from('verifications')
-            .insert(missingTypes.map((type) => ({
-                user_id: userId,
-                type,
-                status: 'VERIFIED',
-                reviewed_at: nowIso
-            })));
-    }
-
-    const modules = ['OSINT', 'LOCATION', 'DEVICE'];
-    await admin
-        .from('consents')
-        .upsert(
-            modules.map((module) => ({
-                user_id: userId,
-                module,
-                is_granted: true,
-                granted_at: nowIso,
-                terms_accepted: true,
-                privacy_accepted: true,
-                deep_profiling: true
-            })),
-            { onConflict: 'user_id,module' }
-        );
-
-    const { data: existingContract } = await admin
-        .from('contracts')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
-
-    if (!existingContract) {
-        await admin
-            .from('contracts')
-            .insert({
-                user_id: userId,
-                signature_base64: 'e2e-signature',
-                agreed_to_terms: true
-            });
-    }
-
-    const { data: latestInterview } = await admin
-        .from('interviews')
-        .select('id')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (latestInterview) {
-        await admin
-            .from('interviews')
-            .update({
-                status: 'DONE',
-                decision: 'PASS',
-                score: 95,
-                absolute_score: 95,
-                summary: 'E2E ready'
-            })
-            .eq('id', latestInterview.id);
-    } else {
-        await admin
-            .from('interviews')
-            .insert({
-                user_id: userId,
-                status: 'DONE',
-                decision: 'PASS',
-                score: 95,
-                absolute_score: 95,
-                summary: 'E2E ready',
-                transcript_json: []
-            });
+        assertNoError('reset profiles', error);
     }
 }
 
-// These tests require a local environment with the seed script executed beforehand so the DB state matches expectations.
-
-test.describe('Unauthenticated Flow', () => {
-    // Override storageState to run without the auth context
-    test.use({ storageState: { cookies: [], origins: [] } });
-
-    test('Unauthorized access and random URL redirect', async ({ page }) => {
-        // Unauthenticated user going to a random protected page
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/login$/);
-
-        // Unauthenticated user going to KYC page
-        await page.goto('/onboarding/verify');
-        await expect(page).toHaveURL(/.*\/login$/);
+async function fetchStatus(page: Page) {
+    return await page.evaluate(async () => {
+        const res = await fetch('/api/me/status', { cache: 'no-store' });
+        return await res.json();
     });
-});
+}
 
-test.describe('Real E2E Onboarding Flow (Local Backend Integration)', () => {
+async function waitForAuthoritativeActiveStatus(page: Page) {
+    await expect.poll(async () => {
+        const status = await fetchStatus(page);
+        return {
+            step: status?.step ?? null,
+            blockerCount: Array.isArray(status?.blockers) ? status.blockers.length : -1,
+            soulCredentialIssued: status?.meta?.soul_credential_issued === true,
+        };
+    }, {
+        timeout: 120000,
+        intervals: [1000, 2000, 5000],
+    }).toEqual({
+        step: ADMISSION_STAGES.ACTIVE,
+        blockerCount: 0,
+        soulCredentialIssued: true,
+    });
+}
 
-    test('Complete Flow: KYC -> Qual -> Consent -> Sign -> Interview', async ({ page }) => {
+async function expectDashboardActiveSurface(page: Page) {
+    await page.goto('/dashboard');
 
-        // We are already authenticated via auth.setup.ts.
-        // The GuardedLayout will push us to the current stage (E_SIGN because of deep seeded state)
-        await page.goto('/onboarding/verify');
+    await expect.poll(async () => {
+        const status = await fetchStatus(page);
+        const headingVisible = await page.getByRole('heading', { name: 'Trust Network Home' }).isVisible().catch(() => false);
+        const badgeText = await page.getByTestId('sbt-status-badge').textContent().catch(() => null);
 
-        // 1. Determine starting stage from backend SSOT
-        const statusRes = await page.evaluate(async () => {
-            const res = await fetch('/api/me/status');
-            return res.json();
+        return {
+            urlMatches: /\/dashboard(\?.*)?$/.test(page.url()),
+            headingVisible,
+            apiStep: status?.step ?? null,
+            soulCredentialIssued: status?.meta?.soul_credential_issued === true,
+            badgeText: badgeText?.trim() || null,
+        };
+    }, {
+        timeout: 60000,
+        intervals: [1000, 2000, 5000],
+    }).toEqual({
+        urlMatches: true,
+        headingVisible: true,
+        apiStep: ADMISSION_STAGES.ACTIVE,
+        soulCredentialIssued: true,
+        badgeText: ADMISSION_STAGES.ACTIVE,
+    });
+}
+
+async function completeIdentity(page: Page) {
+    await page.goto('/apply/identity');
+
+    const sessionStartUrlPattern = '**/api/admission/identity/session/start';
+    let sessionStartPayload;
+    const forceIdentityTestRedirect = async (route) => {
+        const upstream = await route.fetch();
+        const upstreamPayload = await upstream.json().catch(() => null);
+
+        if (!upstream.ok || !upstreamPayload || typeof upstreamPayload !== 'object') {
+            await route.fulfill({ response: upstream });
+            return;
+        }
+
+        const payload = upstreamPayload;
+        if (!payload.session || typeof payload.session.redirect_url !== 'string') {
+            await route.fulfill({ response: upstream });
+            return;
+        }
+
+        const backendUrl = new URL(payload.session.redirect_url);
+        const safeHandoffUrl = new URL(backendUrl.pathname, page.url());
+        safeHandoffUrl.searchParams.set('identityVerificationId', 'mock_success');
+
+        sessionStartPayload = {
+            ...upstreamPayload,
+            session: {
+                ...payload.session,
+                mode: 'TEST_REDIRECT',
+                handoff_url: safeHandoffUrl.toString(),
+            },
+        };
+
+        await route.fulfill({
+            status: upstream.status(),
+            headers: {
+                ...upstream.headers(),
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify(sessionStartPayload),
         });
-        console.log(`[PLAYWRIGHT DEBUG] Starting at stage: ${statusRes.step}`);
+    };
 
-        // 2. Navigation & interaction based on current SSOT step
-        if (statusRes.step === 'KYC') {
-            await expect(page).toHaveURL(/.*\/onboarding\/verify$/);
-            await page.getByPlaceholder('홍길동').fill('테스터');
-            await page.getByPlaceholder('010-0000-0000').fill('010-0000-0000');
-            await page.getByRole('button', { name: '인증 시작' }).click();
-            await expect(page).toHaveURL(/.*\/onboarding\/qualification$/, { timeout: 15000 });
-        } else if (statusRes.step === 'QUALIFICATION') {
-            await expect(page).toHaveURL(/.*\/onboarding\/qualification$/, { timeout: 15000 });
-        } else if (statusRes.step === 'CONSENT_HUB') {
-            await expect(page).toHaveURL(/.*\/onboarding\/consent$/, { timeout: 15000 });
-        } else if (statusRes.step === 'E_SIGN') {
-            await expect(page).toHaveURL(/.*\/onboarding\/sign$/, { timeout: 15000 });
-        } else {
-            // Already at interview or dashboard
-            await page.goto('/onboarding/verify'); // Trigger redirect
-        }
+    await page.route(sessionStartUrlPattern, forceIdentityTestRedirect);
+    try {
+        const startSessionResponse = page.waitForResponse((response) => (
+            response.request().method() === 'POST'
+            && response.url().includes('/api/admission/identity/session/start')
+        ), { timeout: 60000 });
 
-        // 3. Complete Qualification if present
-        if (page.url().includes('qualification')) {
-            await page.setInputFiles('input[type="file"]', {
-                name: 'qualification-proof.pdf',
-                mimeType: 'application/pdf',
-                buffer: Buffer.from('qualification-proof'),
-            });
-            await page.getByRole('button', { name: '서류 제출' }).click();
+        await page.locator('form button[type="submit"]').click();
 
-            await expect.poll(async () => {
-                const res = await page.evaluate(async () => {
-                    const r = await fetch('/api/me/status');
-                    return r.json();
-                });
-                return res.step;
-            }, {
-                timeout: 60000,
-                intervals: [1000, 2000, 5000]
-            }).not.toBe('QUALIFICATION');
+        const sessionStartResult = await startSessionResponse;
+        expect(sessionStartResult.ok()).toBeTruthy();
+        
+        // Wait briefly for the route handler to finish populating sessionStartPayload
+        await expect.poll(() => sessionStartPayload, { timeout: 10000 }).toBeTruthy();
 
-            await page.waitForLoadState('networkidle');
-        }
+        expect(sessionStartPayload?.session?.mode).toBe('TEST_REDIRECT');
+        expect(typeof sessionStartPayload?.session?.handoff_url).toBe('string');
 
-        // 4. Complete Consent if present
-        if (page.url().includes('consent')) {
-            const checkbox1 = page.locator('input[type="checkbox"]').nth(0);
-            const checkbox2 = page.locator('input[type="checkbox"]').nth(1);
-            await checkbox1.check();
-            await checkbox2.check();
-            await page.click('button:has-text("동의하고 넘어가기")');
-            await expect(page).toHaveURL(/.*\/onboarding\/sign$/, { timeout: 30000 });
-        }
+        await expect.poll(() => page.url(), {
+            timeout: 60000,
+            intervals: [500, 1000, 2000],
+        }).toMatch(/\/apply\/(identity\/callback|liveness)(\?.*)?$/);
 
-        // 5. Signature Phase
-        if (page.url().includes('sign')) {
-            console.log('[PLAYWRIGHT DEBUG] In Signature Phase');
+        await expect.poll(async () => {
+            const status = await fetchStatus(page);
+            return status.step;
+        }, {
+            timeout: 60000,
+            intervals: [1000, 2000, 5000],
+        }).toBe(ADMISSION_STAGES.LIVENESS);
+    } finally {
+        await page.unroute(sessionStartUrlPattern, forceIdentityTestRedirect);
+    }
+}
 
-            // Set up listener for the signature API
-            const responsePromise = page.waitForResponse(response =>
-                response.url().includes('/api/contract/sign') &&
-                response.request().method() === 'POST',
-                { timeout: 30000 }
-            );
+async function completeLiveness(page: Page) {
+    await page.goto('/apply/liveness');
 
-            // Trigger signature mock
-            await page.click('button:has-text("서명 인식 테스트")');
+    const startSessionResponse = page.waitForResponse((response) => (
+        response.request().method() === 'POST'
+        && response.url().includes('/api/admission/liveness/session/start')
+    ), { timeout: 60000 });
 
-            // Wait for submit button to be enabled
-            const submitBtn = page.getByRole('button', { name: '서명 제출' });
-            await expect(submitBtn).toBeEnabled({ timeout: 10000 });
+    await page.locator('form button[type="submit"]').click();
+    const startedSessionResult = await startSessionResponse;
+    expect(startedSessionResult.ok()).toBeTruthy();
 
-            console.log('[PLAYWRIGHT DEBUG] Clicking submit signature');
-            await submitBtn.click();
+    const startedPayload = await startedSessionResult.json();
+    const sessionId = typeof startedPayload?.session?.session_id === 'string'
+        ? startedPayload.session.session_id
+        : null;
+    expect(sessionId).toBeTruthy();
+    if (!sessionId) {
+        throw new Error('LIVENESS_SESSION_ID_MISSING');
+    }
 
-            const response = await responsePromise;
-            console.log(`[PLAYWRIGHT DEBUG] Signature API Response: ${response.status()}`);
-            expect(response.status()).toBe(200);
+    const completeResponse = await page.request.post('/api/admission/liveness/session/complete', {
+        data: {
+            session_id: sessionId,
+            capture_hash: 'f'.repeat(64),
+            capture_width: 1280,
+            capture_height: 720,
+            immediate_purge_confirmed: true,
+        },
+    });
+    expect(completeResponse.ok()).toBeTruthy();
 
-            // (b) Poll SSOT until state is confirmed (eliminates race with GuardedLayout)
-            console.log('[PLAYWRIGHT DEBUG] Polling for AI_INTERVIEW state...');
-            await expect.poll(async () => {
-                const res = await page.evaluate(async () => {
-                    const r = await fetch('/api/me/status');
-                    return r.json();
-                });
-                console.log(`[PLAYWRIGHT DEBUG] Current Polled Step: ${res.step}`);
-                return res.step;
-            }, {
-                timeout: 60000,
-                intervals: [1000, 2000, 5000]
-            }).toBe('AI_INTERVIEW');
+    await page.goto(`/apply/liveness/callback?session_id=${encodeURIComponent(sessionId)}`);
 
-            // (c) Now wait for the URL to follow the confirmed state
-            console.log('[PLAYWRIGHT DEBUG] State confirmed. Waiting for /interview URL...');
-            await expect(page).toHaveURL(/.*\/interview$/, { timeout: 30000 });
-        }
+    await expect.poll(async () => {
+        const status = await fetchStatus(page);
+        return status.step;
+    }, {
+        timeout: 30000,
+        intervals: [1000, 2000, 5000],
+    }).toBe(ADMISSION_STAGES.CONSENTS);
+}
 
-        // 6. Interview Phase
-        if (page.url().includes('interview')) {
-            console.log('[PLAYWRIGHT DEBUG] In Interview Phase');
+async function completeConsents(page: Page) {
+    await page.goto('/apply/consents');
 
-            // (a) Submit iterative answers until finalize button appears.
-            const answerInput = page.getByPlaceholder('답변을 입력해주세요...');
-            const finalizeButton = page.getByRole('button', { name: '인터뷰 완료 및 제출' });
+    for (let i = 0; i < CONSENT_PHRASES.length; i += 1) {
+        await page.locator('input[type="checkbox"]').nth(i).check();
+        await page.locator('form input.liquid-input').nth(i).fill(CONSENT_PHRASES[i]);
+    }
 
-            await expect(answerInput).toBeVisible({ timeout: 30000 });
-            for (let i = 0; i < 8; i += 1) {
-                if (await finalizeButton.isVisible().catch(() => false)) {
-                    break;
-                }
+    await page.locator('form button[type="submit"]').click();
 
-                await answerInput.fill(`이것은 인터뷰 답변입니다. #${i + 1}`);
-                await page.locator('form button[type="submit"]').click();
-                await page.waitForTimeout(1200);
-            }
+    await expect.poll(async () => {
+        const status = await fetchStatus(page);
+        return status.step;
+    }, {
+        timeout: 60000,
+        intervals: [1000, 2000, 5000],
+    }).toBe(ADMISSION_STAGES.DOCUMENTS);
+}
 
-            // (b) Wait for finalize request and submit
-            const finalizePromise = page.waitForResponse((r) =>
-                r.url().includes('/api/interview/finalize')
-                && r.request().method() === 'POST',
-                { timeout: 90000 }
-            );
+async function uploadAndScanDocument(page: Page, index: number, name: string, content: string) {
+    const fileBuffer = Buffer.from(content);
+    const fileInput = page.locator('input[type="file"]').nth(index);
+    await fileInput.setInputFiles({
+        name,
+        mimeType: 'application/pdf',
+        buffer: fileBuffer,
+    });
+    const button = fileInput.locator('xpath=ancestor::section[1]').locator('button[type="button"]').last();
+    await expect(button).toBeEnabled({ timeout: 60000 });
+    const submitResponse = page.waitForResponse((response) => (
+        response.request().method() === 'POST'
+        && response.url().includes('/api/admission/document/submit')
+    ), { timeout: 60000 });
+    await button.click();
+    const result = await submitResponse;
+    expect(result.ok()).toBeTruthy();
+}
 
-            await expect(finalizeButton).toBeVisible({ timeout: 60000 });
-            console.log('[PLAYWRIGHT DEBUG] Clicking Finalize Interview');
-            await finalizeButton.click();
-            console.log('[PLAYWRIGHT DEBUG] Waiting for Finalize API response (90s timeout)...');
+async function completeDocumentsForAiDecision(page: Page) {
+    await page.goto('/apply/documents');
 
-            const finalizeRes = await finalizePromise;
-            console.log(`[PLAYWRIGHT DEBUG] Interview Finalize API Response: ${finalizeRes.status()}`);
-            expect(finalizeRes.status()).toBe(200);
+    await uploadAndScanDocument(page, 0, 'graduation.pdf', 'graduation-certificate-sample');
+    await uploadAndScanDocument(page, 1, 'income.pdf', 'income-certificate-100000000-2025');
+    await uploadAndScanDocument(page, 2, 'marriage.pdf', 'marriage-certificate-married');
+    await uploadAndScanDocument(page, 3, 'family.pdf', 'family-certificate-has-children');
 
-            // (c) Poll SSOT until DASHBOARD_READY (eliminates race with GuardedLayout)
-            console.log('[PLAYWRIGHT DEBUG] Interview finalized successfully. Polling for DASHBOARD_READY state...');
-            await expect.poll(async () => {
-                const res = await page.evaluate(async () => {
-                    const r = await fetch('/api/me/status');
-                    return r.json();
-                });
-                console.log(`[PLAYWRIGHT DEBUG] Current Polled Step: ${res.step}`);
-                return res.step;
-            }, {
-                timeout: 60000,
-                intervals: [1000, 2000, 5000]
-            }).toBe('DASHBOARD_READY');
+    await waitForAuthoritativeActiveStatus(page);
+}
 
-            // (d) Finally wait for /dashboard URL
-            console.log('[PLAYWRIGHT DEBUG] State confirmed. Waiting for /dashboard URL...');
-            await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
-        }
-        await expect(page.locator('text=온보딩 통합 결과')).toBeVisible({ timeout: 15000 });
+async function startAdmissionIfNeeded(page: Page) {
+    await page.goto('/apply');
+    const startButton = page.getByRole('button', { name: exactNames('Start admission', 'Admission 시작') });
+    const canStartFromLanding = await startButton.isVisible().catch(() => false);
+    if (canStartFromLanding) {
+        await startButton.click();
+    }
+}
+
+async function decideColdPathByAdmin(
+    request: APIRequestContext,
+    page: Page,
+    decision: 'APPROVE' | 'REJECT' | 'RESUBMIT' = 'APPROVE',
+) {
+    const status = await fetchStatus(page);
+    const reviewCaseId = typeof status?.meta?.review_case_id === 'string' ? status.meta.review_case_id : null;
+    expect(reviewCaseId).toBeTruthy();
+
+    const cronSecret = process.env.CRON_SECRET || '';
+    expect(cronSecret.length).toBeGreaterThan(0);
+
+    const decideRes = await request.post('/api/admin/admissions/decide', {
+        headers: { 'x-cron-secret': cronSecret },
+        data: {
+            review_case_id: reviewCaseId,
+            decision,
+            reviewer_notes: `playwright cold path ${decision}`,
+        },
     });
 
-    test('Revoke consent kicks user back to CONSENT_HUB', async () => {
-        // ... Logic for revoke consent test
-    });
-});
+    expect(decideRes.status()).toBe(200);
+}
 
-test.describe('Trust SBT Flow (fcqs-backed)', () => {
+test.describe('Admission E2E Flow (cjmn only) @auth-stateful', () => {
     test.describe.configure({ mode: 'serial' });
 
-    test('self-claim -> low-trust issuance -> dashboard reflection', async ({ page }) => {
+    test('happy path: login -> identity -> liveness -> consents -> docs -> AI auto approve -> soul issued -> active', async ({ page }) => {
         const { user_id: userId } = readE2ECreds();
-        await ensureDashboardReadyState(userId);
+        await resetAdmissionState(userId);
 
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
+        await startAdmissionIfNeeded(page);
 
-        const claimType = `income_over_100m_e2e_${Date.now()}`;
-        const selfClaimResult = await page.evaluate(async (nextClaimType) => {
-            const res = await fetch('/api/sbt/self-claim', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    claim_type: nextClaimType,
-                    claim_payload: { source: 'playwright-e2e' }
-                })
-            });
-            return { status: res.status, body: await res.json() };
-        }, claimType);
+        await completeIdentity(page);
+        await completeLiveness(page);
+        await completeConsents(page);
+        await completeDocumentsForAiDecision(page);
 
-        expect(selfClaimResult.status).toBe(200);
-
-        await expect.poll(async () => {
-            const status = await page.evaluate(async () => {
-                const r = await fetch('/api/me/status', { cache: 'no-store' });
-                return r.json();
-            });
-            return {
-                trust: status.meta?.trust_level,
-                sbt: status.meta?.sbt_status
-            };
-        }, {
-            timeout: 60000,
-            intervals: [1000, 2000, 5000]
-        }).toEqual({ trust: 'LOW', sbt: 'ACTIVE' });
-
-        await page.reload();
-        await expect(page.getByTestId('trust-level-badge')).toHaveText('LOW', { timeout: 10000 });
-        await expect(page.getByTestId('sbt-status-badge')).toHaveText('ACTIVE', { timeout: 10000 });
+        await expectDashboardActiveSurface(page);
     });
 
-    test('random audit -> freeze -> decide(pass) -> high-trust promotion', async ({ page, request }) => {
+    test('resubmission path: docs flagged -> resubmit -> AI auto approve', async ({ page }) => {
         const { user_id: userId } = readE2ECreds();
-        await ensureDashboardReadyState(userId);
+        await resetAdmissionState(userId);
 
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
+        await startAdmissionIfNeeded(page);
 
-        const claimType = `degree_verified_e2e_${Date.now()}`;
-        const selfClaimResult = await page.evaluate(async (nextClaimType) => {
-            const res = await fetch('/api/sbt/self-claim', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    claim_type: nextClaimType,
-                    claim_payload: { source: 'playwright-e2e' }
-                })
-            });
-            return { status: res.status, body: await res.json() };
-        }, claimType);
+        await completeIdentity(page);
+        await completeLiveness(page);
+        await completeConsents(page);
 
-        expect(selfClaimResult.status).toBe(200);
-        const claimId = selfClaimResult.body?.claim?.id as string;
-        expect(typeof claimId).toBe('string');
+        await page.goto('/apply/documents');
 
-        const cronSecret = process.env.CRON_SECRET || '';
-        expect(cronSecret.length).toBeGreaterThan(0);
-
-        const auditOpenRes = await request.post('/api/audit/random/open', {
-            headers: { 'x-cron-secret': cronSecret },
-            data: {
-                subject_user_id: userId,
-                claim_id: claimId,
-                note: 'E2E random audit open'
-            }
-        });
-        expect(auditOpenRes.status()).toBe(200);
-        const auditOpenJson = await auditOpenRes.json();
-        const auditId = auditOpenJson.audit_id as string;
-        expect(typeof auditId).toBe('string');
+        // First try with sensitive PII to force resubmission
+        await uploadAndScanDocument(page, 0, 'graduation-invalid.pdf', 'mock text 900101-1234567');
 
         await expect.poll(async () => {
-            const status = await page.evaluate(async () => {
-                const r = await fetch('/api/me/status', { cache: 'no-store' });
-                return r.json();
-            });
+            const status = await fetchStatus(page);
             return {
-                isFrozen: status.meta?.is_frozen === true,
-                auditInProgress: status.meta?.audit_in_progress === true
+                step: status.step,
+                hasResubmit: Array.isArray(status.blockers) && status.blockers.includes(STATUS_BLOCKER_CODES.RESUBMISSION_REQUIRED),
             };
         }, {
             timeout: 60000,
-            intervals: [1000, 2000, 5000]
-        }).toEqual({ isFrozen: true, auditInProgress: true });
+            intervals: [1000, 2000, 5000],
+        }).toEqual({ step: ADMISSION_STAGES.RESUBMIT_REQUIRED, hasResubmit: true });
 
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/banned$/, { timeout: 30000 });
+        // Resubmit clean docs and continue
+        await uploadAndScanDocument(page, 0, 'graduation-clean.pdf', 'graduation-certificate-clean');
+        await uploadAndScanDocument(page, 1, 'income.pdf', 'income-certificate-100000000-2025');
+        await uploadAndScanDocument(page, 2, 'marriage.pdf', 'marriage-certificate-married');
+        await uploadAndScanDocument(page, 3, 'family.pdf', 'family-certificate-has-children');
 
-        const decideRes = await request.post('/api/audit/decide', {
-            headers: { 'x-cron-secret': cronSecret },
-            data: {
-                audit_id: auditId,
-                decision: 'PASS',
-                note: 'E2E pass decision'
-            }
-        });
-        expect(decideRes.status()).toBe(200);
+        await waitForAuthoritativeActiveStatus(page);
+
+        await expectDashboardActiveSurface(page);
+    });
+
+    test('exception path: anomaly doc -> exception queue -> admin approve', async ({ page, request }) => {
+        const { user_id: userId } = readE2ECreds();
+        await resetAdmissionState(userId);
+
+        await startAdmissionIfNeeded(page);
+
+        await completeIdentity(page);
+        await completeLiveness(page);
+        await completeConsents(page);
+
+        await page.goto('/apply/documents');
+        await uploadAndScanDocument(page, 0, 'graduation-anomaly.pdf', 'graduation ANOMALY suspicious blurry');
+        await uploadAndScanDocument(page, 1, 'income.pdf', 'income-certificate-100000000-2025');
+        await uploadAndScanDocument(page, 2, 'marriage.pdf', 'marriage-certificate-married');
+        await uploadAndScanDocument(page, 3, 'family.pdf', 'family-certificate-has-children');
 
         await expect.poll(async () => {
-            const status = await page.evaluate(async () => {
-                const r = await fetch('/api/me/status', { cache: 'no-store' });
-                return r.json();
-            });
-            return {
-                trust: status.meta?.trust_level,
-                sbt: status.meta?.sbt_status,
-                frozen: status.meta?.is_frozen === true
-            };
+            const status = await fetchStatus(page);
+            return status.step;
         }, {
-            timeout: 60000,
-            intervals: [1000, 2000, 5000]
-        }).toEqual({ trust: 'HIGH', sbt: 'ACTIVE', frozen: false });
+            timeout: 90000,
+            intervals: [1000, 2000, 5000],
+        }).toBe(ADMISSION_STAGES.EXCEPTION_REVIEW);
 
-        await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/dashboard$/, { timeout: 30000 });
-        await expect(page.getByTestId('trust-level-badge')).toHaveText('HIGH', { timeout: 10000 });
-        await expect(page.getByTestId('audit-progress-badge')).toHaveText('NONE', { timeout: 10000 });
+        await decideColdPathByAdmin(request, page, 'APPROVE');
+
+        await waitForAuthoritativeActiveStatus(page);
+    });
+
+    test('appeal path: reject -> appeal -> admin approve', async ({ page, request }) => {
+        const { user_id: userId } = readE2ECreds();
+        await resetAdmissionState(userId);
+
+        await startAdmissionIfNeeded(page);
+
+        await completeIdentity(page);
+        await completeLiveness(page);
+        await completeConsents(page);
+
+        await page.goto('/apply/documents');
+        await uploadAndScanDocument(page, 0, 'graduation-forged.pdf', 'FORGED fake_doc tampered marker');
+        await uploadAndScanDocument(page, 1, 'income.pdf', 'income-certificate-100000000-2025');
+        await uploadAndScanDocument(page, 2, 'marriage.pdf', 'marriage-certificate-married');
+        await uploadAndScanDocument(page, 3, 'family.pdf', 'family-certificate-has-children');
+
+        await expect.poll(async () => {
+            const status = await fetchStatus(page);
+            return status.step;
+        }, {
+            timeout: 90000,
+            intervals: [1000, 2000, 5000],
+        }).toBe(ADMISSION_STAGES.REJECTED);
+
+        await page.goto('/apply/appeal');
+        await page.locator('form select').selectOption('DECISION_DISPUTE');
+        await page.locator('form textarea').fill('문서 진본이며 판독 결과가 잘못되었다고 판단합니다. 재검토를 요청합니다.');
+        await page.locator('form button[type="submit"]').click();
+
+        await expect.poll(async () => {
+            const status = await fetchStatus(page);
+            return status.step;
+        }, {
+            timeout: 90000,
+            intervals: [1000, 2000, 5000],
+        }).toBe(ADMISSION_STAGES.APPEAL_PENDING);
+
+        await decideColdPathByAdmin(request, page, 'APPROVE');
+
+        await waitForAuthoritativeActiveStatus(page);
     });
 });

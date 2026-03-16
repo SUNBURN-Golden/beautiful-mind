@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { ethers } from 'ethers';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { isTestRouteEnabled } from '@/lib/server/trust';
+import { isLegacyFlowEnabled, isTestRouteEnabled } from '@/lib/server/trust';
 
 function getSupabaseEnv() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,6 +18,13 @@ function getSupabaseEnv() {
 
 export async function POST(req: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: 'LEGACY_FLOW_DISABLED', message: 'Use /api/admission/document/upload.' },
+                { status: 410 },
+            );
+        }
+
         const { supabaseUrl, anonKey, serviceKey } = getSupabaseEnv();
         const supabase = createClient(supabaseUrl, serviceKey); // service role for bypassing RLS to insert PENDING verification
         const formData = await req.formData();

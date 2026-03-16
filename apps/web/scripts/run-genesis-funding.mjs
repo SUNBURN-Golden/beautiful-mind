@@ -11,24 +11,28 @@ async function runGenesisFunding() {
 
     const GENESIS_AMOUNT = 10000000; // 10,000,000 SOUL
 
-    // 1. Insert into token_ledger as Treasury (user_id = null)
-    const { data: ledger, error: ledgerErr } = await s.from('token_ledger').insert({
-        user_id: null,
-        amount: GENESIS_AMOUNT,
-        type: 'TREASURY_GRANT',
-        idempotency_key: 'TREASURY:GENESIS',
-        meta: { note: 'initial funding', version: 'p3-step0' }
-    }).select().single();
+    // 1. Insert treasury grant via internal canonical RPC
+    const { data: ledgerResult, error: ledgerErr } = await s.rpc('append_soul_ledger_internal', {
+        p_user_id: null,
+        p_amount: GENESIS_AMOUNT,
+        p_type: 'TREASURY_GRANT',
+        p_related_id: null,
+        p_idempotency_key: 'TREASURY:GENESIS',
+        p_meta: { note: 'initial funding', version: 'p3-step0', source: 'scripts/run-genesis-funding' }
+    });
 
     if (ledgerErr) {
-        if (ledgerErr.code === '23505') {
-            console.log('Genesis funding already applied (Idempotent).');
-        } else {
-            console.error('Ledger error:', ledgerErr);
-            return;
-        }
+        console.error('append_soul_ledger_internal failed:', ledgerErr);
+        return;
+    }
+
+    if (ledgerResult?.status === 'IDEMPOTENT_SKIPPED') {
+        console.log('Genesis funding already applied (Idempotent).');
+    } else if (ledgerResult?.status === 'INSERTED') {
+        console.log('1) Treasury Genesis funding ledger 기록 완료. ledger_id:', ledgerResult.ledger_id);
     } else {
-        console.log('1) Treasury Genesis funding ledger 기록 완료. Amount:', ledger.amount);
+        console.error('Unexpected ledger mutation status:', ledgerResult);
+        return;
     }
 
     // 2. Check treasury_wallet

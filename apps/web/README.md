@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoulBound Web App (`apps/web`)
 
-## Getting Started
+## Validation Gate
 
-First, run the development server:
+Run the validation gate from the repository root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install --frozen-lockfile
+pnpm validate:web:scope
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This repository uses pnpm workspaces as the canonical path for install and validation.
+The `validate:web:scope` command runs unit tests and the production build.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+From repository root:
 
-## Learn More
+```bash
+pnpm --filter web dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Or from `apps/web`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Local E2E Behavior
 
-## Deploy on Vercel
+Default local E2E run (no local auth credentials required):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm --filter web test:e2e
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This default run excludes auth-required scenarios tagged with `@auth`.
+It is the default runnable local E2E lane.
+
+For the canonical auth-required local E2E lane, provide isolated auth-lane credentials:
+
+- `apps/web/.e2e/creds.auth.core.json`
+- `apps/web/.e2e/creds.auth.stateful.json`
+
+Each file must contain:
+
+```json
+{"email":"...","password":"..."}
+```
+
+Then run:
+
+```bash
+pnpm --filter web test:e2e:auth
+```
+
+This auth lane:
+
+- runs product-path auth scenarios only
+- uses isolated core/stateful users rather than `--workers 1`
+- excludes `@auth-simulated` specs from the canonical lane
+
+`onboarding-flow.spec.ts` remains available as a direct, non-canonical route-regression spec when you need to edit that scenario specifically:
+
+```bash
+ALLOW_TEST_API_ROUTES=true PLAYWRIGHT_REQUIRE_AUTH=1 pnpm --filter web exec playwright test tests/e2e/onboarding-flow.spec.ts
+```

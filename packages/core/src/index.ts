@@ -28,5 +28,25 @@ export function getLegalText(fileName: string): string {
 export const getTermsOfService = () => getLegalText('terms.md');
 export const getPrivacyPolicy = () => getLegalText('privacy.md');
 
-// 핵심 비즈니스 로직 Export
-export * from './status';
+export {
+    STATUS_BLOCKER_CODES,
+    isStatusBlockerCode,
+    type StatusBlockerCode,
+} from './contracts/status-codes';
+
+export {
+    ADMISSION_STAGES,
+    LEGACY_ADMISSION_STAGE_ALIASES,
+    LEGACY_ADMISSION_STAGE_CODES,
+    isAdmissionStage,
+    isLegacyAdmissionStageCode,
+    normalizeAdmissionStage,
+    type AdmissionStage,
+    type LegacyAdmissionStageCode,
+} from './contracts/status-stages';
+
+export {
+    STATUS_DECISION_REASON_CODES,
+    isStatusDecisionReasonCode,
+    type StatusDecisionReasonCode,
+} from './contracts/status-reasons';

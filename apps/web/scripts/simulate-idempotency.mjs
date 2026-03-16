@@ -109,12 +109,14 @@ async function runTest() {
         view_fee: 10
     }, { onConflict: 'id' });
 
-    // Pre-fund Target
-    await s.from('token_ledger').insert({
-        user_id: t_uid,
-        amount: 100,
-        type: 'AIRDROP',
-        meta: { description: 'Initial balance' }
+    // Pre-fund Target via internal canonical RPC
+    await s.rpc('append_soul_ledger_internal', {
+        p_user_id: t_uid,
+        p_amount: 100,
+        p_type: 'REWARD_MINT',
+        p_related_id: null,
+        p_idempotency_key: `SIM_PREFUND:${unlockSessionId}:${t_uid}`,
+        p_meta: { description: 'Initial balance for unlock idempotency simulation', source: 'scripts/simulate-idempotency' }
     });
     await new Promise(r => setTimeout(r, 1000));
 
@@ -144,21 +146,21 @@ async function runTest() {
 
     const idempotencyKey = 'UNLOCK_FEE:' + unlockSessionId + ':' + t_uid;
 
-    const chargeQuery1 = s.from('token_ledger').insert({
-        user_id: t_uid,
-        amount: -10,
-        type: 'GAS_FEE_BURN',
-        related_id: unlockSessionId,
-        idempotency_key: idempotencyKey,
-        meta: { description: 'Fee burn' }
+    const chargeQuery1 = s.rpc('append_soul_ledger_internal', {
+        p_user_id: t_uid,
+        p_amount: -10,
+        p_type: 'GAS_FEE_BURN',
+        p_related_id: unlockSessionId,
+        p_idempotency_key: idempotencyKey,
+        p_meta: { description: 'Fee burn', source: 'scripts/simulate-idempotency' }
     });
-    const chargeQuery2 = s.from('token_ledger').insert({
-        user_id: t_uid,
-        amount: -10,
-        type: 'GAS_FEE_BURN',
-        related_id: unlockSessionId,
-        idempotency_key: idempotencyKey,
-        meta: { description: 'Fee burn' }
+    const chargeQuery2 = s.rpc('append_soul_ledger_internal', {
+        p_user_id: t_uid,
+        p_amount: -10,
+        p_type: 'GAS_FEE_BURN',
+        p_related_id: unlockSessionId,
+        p_idempotency_key: idempotencyKey,
+        p_meta: { description: 'Fee burn', source: 'scripts/simulate-idempotency' }
     });
 
     const [cr1, cr2] = await Promise.all([chargeQuery1, chargeQuery2]);

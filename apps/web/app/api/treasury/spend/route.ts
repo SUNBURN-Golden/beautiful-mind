@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient, getSessionUser, hasValidCronSecret, isAdminUser } from '@/lib/server/trust';
 import { mapTreasurySpendStatusToHttp } from '@/lib/server/tokenomics-core';
+import { spendTreasuryWithBudget } from '@/lib/server/soul-ledger';
 import { z } from 'zod';
 
 const TreasurySpendSchema = z.object({
@@ -54,27 +55,24 @@ export async function POST(req: Request) {
 
         const { vault, amount, related_id: relatedId, idempotency_key: idempotencyKey, note } = parsed.data;
         const admin = getServiceRoleClient();
-        const { data, error } = await admin.rpc('treasury_spend_with_budget', {
-            p_vault: vault,
-            p_amount: amount,
-            p_related_id: relatedId,
-            p_idempotency_key: idempotencyKey ?? null,
-            p_meta: {
-                source: 'api/treasury/spend',
-                actor_type: auth.actorType,
-                actor_id: auth.actorId,
-                note: note ?? null
-            }
-        });
-
-        if (error) {
-            return NextResponse.json(
-                { error: 'TREASURY_SPEND_FAILED', message: error.message },
-                { status: 500 }
-            );
+        let result: TreasurySpendRpcResult;
+        try {
+            result = await spendTreasuryWithBudget(admin, {
+                vault,
+                amount,
+                relatedId,
+                idempotencyKey: idempotencyKey ?? null,
+                meta: {
+                    source: 'api/treasury/spend',
+                    actor_type: auth.actorType,
+                    actor_id: auth.actorId,
+                    note: note ?? null,
+                },
+            }) as TreasurySpendRpcResult;
+        } catch (rpcError: unknown) {
+            const message = rpcError instanceof Error ? rpcError.message : 'treasury_spend_with_budget failed';
+            return NextResponse.json({ error: 'TREASURY_SPEND_FAILED', message }, { status: 500 });
         }
-
-        const result = (data ?? {}) as TreasurySpendRpcResult;
         const status = typeof result.status === 'string' ? result.status : 'UNKNOWN';
         const httpStatus = mapTreasurySpendStatusToHttp(status);
 
@@ -88,4 +86,3 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'INTERNAL_ERROR', message }, { status: 500 });
     }
 }
-

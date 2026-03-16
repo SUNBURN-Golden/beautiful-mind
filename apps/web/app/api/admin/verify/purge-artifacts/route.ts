@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isLegacyFlowEnabled } from '@/lib/server/trust';
 
 function getSupabaseAdmin() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +13,13 @@ function getSupabaseAdmin() {
 
 export async function POST(req: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: { code: 'LEGACY_FLOW_DISABLED', message: 'Use /api/admin/admissions/purge-orphans.' }, details: {} },
+                { status: 410 },
+            );
+        }
+
         const supabase = getSupabaseAdmin();
         const allowBackdoor = process.env.ALLOW_DANGEROUS_BACKDOOR === 'true';
         const devSecret = req.headers.get('x-dev-secret');

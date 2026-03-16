@@ -1,33 +1,60 @@
----FILE: docs/uiux/wireflow.md ---
-# Wireflow & Edge Case Handling
+# Wireflow & Recovery Handling (Admission-First)
 
-## 1. 정상 흐름 (Happy Path)
-1. `/login` 진입 -> 이메일/소셜 로그인 성공 시 `/api/me/status` 1차 호출 -> `KYC` 강제 리다이렉트.
-2. `/onboarding/verify` 진입 -> 본인 인증 절차 완료 -> `POST /api/verify/complete` 200 OK -> 상태 호출 -> `QUALIFICATION` 강제 이동.
-3. `/onboarding/qualification` 진입 -> 서류 업로드 API 200 OK -> 상태 호출 -> `CONSENT_HUB` 강제 이동.
-4. `/onboarding/consent` 진입 -> 필수 동의 클릭 -> 저장 API 200 OK -> 상태 호출 -> `E_SIGN` 강제 이동.
-5. `/onboarding/sign` 진입 -> 서명 완료 -> 제출 API 200 OK -> 상태 호출 -> `AI_INTERVIEW` 강제 이동.
-6. `/interview` 진입 -> 대화 종료 API (`/api/interview/finalize`) 200 OK -> 상태 호출 -> `/dashboard` 진입 완료.
+## 1. Happy Path (Current)
+1. `/login` 성공 -> middleware가 `/apply/status`로 이동
+2. `/apply` -> `POST /api/admission/start` -> `IDENTITY`
+3. `/apply/identity` -> `POST /api/verify/complete` -> `LIVENESS`
+4. `/apply/liveness` -> `POST /api/admission/liveness/verify` -> `CONSENTS`
+5. `/apply/consents` -> `POST /api/consent/submit` -> `DOCUMENTS`
+6. `/apply/documents` ->
+   - `POST /api/admission/document/upload`
+   - `POST /api/admission/document/submit`
+   -> `AI_DECISION`
+7. `/apply/review` -> `POST /api/admission/review/submit` ->
+   - `APPROVED` / `SOUL_ISSUED` / `ACTIVE` 또는
+   - `RESUBMIT_REQUIRED` / `REJECTED` / `EXCEPTION_REVIEW`
+8. `/apply/status`에서 결과 확인
+9. 승인 + SOUL 발급 완료 시 `ACTIVE` -> `/dashboard`
 
-## 2. 엣지케이스 핸들링 필수 요건
+## 2. Recovery Paths
 
-### 2.1 새로고침 / 뒤로가기 / 다기기 병렬 로그인 방어 (Resume)
-- **상황**: 유저가 `E_SIGN` 화면에서 브라우저 뒤로가기를 눌러 `CONSENT_HUB`로 이동 시도.
-- **방어**: Layout Provider가 페이지 마운트 시 무조건 `GET /api/me/status`를 fetch. DB 기준 Status가 여전히 `E_SIGN`이므로 프론트엔드는 `CONSENT_HUB` 렌더커링 직전 `E_SIGN`으로 다시 튕겨냅니다. 기기가 달라도 DB SSOT를 따르므로 Resume이 항상 보장됩니다.
+### 2.1 Back/Refresh/Deep-Link Resume
+- 브라우저 뒤로가기/새로고침/직접 URL 진입은 허용되지만 canonical stage가 아니면 즉시 교정됩니다.
+- 교정 순서:
+  1) middleware coarse gate
+  2) client guard fine gate (`/api/me/status` 기반)
 
-### 2.2 KYC 취소 vs 에러 분기
-- **상황**: 통신사 팝업 창을 유저가 스스로 닫음 vs 통신사 연동 서버 내부 500 장애.
-- **방어**: 유저 취소 이벤트는 "사용자가 인증을 취소했습니다" 토스트를 띄우고 상태 유지. 서버 수신 오류(`PORTONE_ERROR`) 시에는 에러 UX를 표출하고 3초 뒤 Retry를 유도합니다.
+### 2.2 Unauthorized / Session Expired
+- 보호 경로에서 세션 없음 -> `/login`
+- 로그인 성공 후 항상 `/apply/status`를 거쳐 현재 stage로 정렬
 
-### 2.3 대시보드 강제 튕김 시나리오 (동의 철회/서명 무효화/Ban)
-- **상황**: 대시보드 진입 후 유저가 동의 항목을 철회하거나, 관리자가 Ban 처리함.
-- **방어**: Status 재조회 로직에 의존합니다. 페이지간 이동 또는 백그라운드 폴링 시점의 `GET /api/me/status` 결과가 `<이전 Stage>` 혹은 블록을 리턴하면, 프론트엔드 라우터는 대시보드 렌더링을 중단하고 **즉시 해당 Stage(예: `/onboarding/consent`) 또는 Error Page로 강제 리다이렉트** 합니다. 화면 탈출구는 철회 복구밖에 없습니다.
+### 2.3 Active-Only Route Access Before Approval
+- `/dashboard`, `/match`, `/chat`, `/review`, `/report`, `/revoke` 접근 시 ACTIVE 미충족이면 `/apply/status`로 회수
 
-### 2.4 서명 중 문서 버전 업데이트 충돌
-- **상황**: 서명 화면 진입 후 제출 직전 서버 측 약관 업데이트 발생(버전 불일치).
-- **방어**: `POST /contract/sign (TBD)` 호출이 `VERSION_MISMATCH` (409) 리턴. UI는 문서를 최신 버전으로 강제 리로드하고 서명 패드를 빈 상태로 초기화하여 재서명을 요구합니다.
+### 2.4 Freeze / Ban
+- `meta.is_frozen=true` -> `/banned`
+- `profiles.banned=true` -> 강제 로그아웃 + `/login?error=ACCOUNT_BANNED`
 
-### 2.5 인터뷰 중 이탈/오프라인 (마지막 저장 지점 재개)
-- **상황**: 챗봇 인터뷰의 3번 질문 직후 네트워크 단절 또는 앱 종료.
-- **방어**: 인터뷰 중간 과정(History)은 API에 지속 저장됨. 새로고침 후 진입 시 상태가 여전히 `AI_INTERVIEW`이고, 인터뷰 컴포넌트 마운트 시 `GET /api/interview/next` 또는 History를 호출하여 **가장 마지막 저장 지점부터 단절 없이 재개**합니다.
----END FILE---
+### 2.5 Resubmit / Reject / Exception / Appeal
+- 재제출: `/apply/documents`로 복귀
+- 거절: `/apply/status`에서 사유 확인 후 `/apply/appeal`
+- 예외/항소/감사: `/apply/status`에서 큐 상태 추적
+
+## 3. Legacy Entry Handling
+다음 경로는 핵심 흐름이 아니며 호환성 redirect만 수행합니다.
+- `/onboarding/*`
+- `/interview`
+- `/contract`
+- `/consent`
+- `/osint`
+- `/admin-verify`
+
+## 4. UX Continuity Rules
+- dead-end 금지: 오류 화면에는 항상 `재시도` + `현재 단계 이동` 제공
+- 용어 일관성: onboarding 대신 admission, review 대신 AI 결정/콜드패스
+- 상태 표시는 SSOT 기준 필드(`stage`, `blockers`, `meta`)만 사용
+
+## 5. ACTIVE Surface Contract Boundary
+- `/dashboard`는 ACTIVE 상태 요약의 canonical entry다.
+- `/match`, `/chat`, `/review`, `/report`, `/revoke`는 ACTIVE 전용이며 page-level에서도 `status.step === ACTIVE`를 재확인한다.
+- 하위 도메인 API가 아직 완성되지 않은 영역은 `active-contract` adapter를 통해 mock/API 경계를 명시한다.

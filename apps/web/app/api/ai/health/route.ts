@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { getGeminiClient } from '@/lib/gemini';
 
 export async function GET() {
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            return NextResponse.json({ status: 500, message: 'GEMINI_API_KEY is not set in environment variables.' }, { status: 500 });
-        }
-
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = getGeminiClient();
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',

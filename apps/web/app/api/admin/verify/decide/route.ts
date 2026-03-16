@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-type ProfileUpdates = {
-    height_cm?: number;
-    weight_band?: string;
-    location_region?: string;
-    location_city?: string;
-};
+import { isLegacyFlowEnabled } from '@/lib/server/trust';
+import { applyLegacyVerificationDecision } from '@/lib/server/admin-legacy-verification';
+import { isRouteServiceError } from '@/lib/server/route-service-error';
 
 const getAdminClient = () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,6 +13,13 @@ const getAdminClient = () => {
 
 export async function POST(req: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: { code: 'LEGACY_FLOW_DISABLED', message: 'Use /api/admin/admissions/decide.' }, details: {} },
+                { status: 410 },
+            );
+        }
+
         const supabase = getAdminClient();
         const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
         if (!authHeader) return NextResponse.json({ error: { code: 'UNAUTHORIZED', message: 'Auth required' }, details: {} }, { status: 401 });
@@ -35,63 +38,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: { code: 'BAD_REQUEST', message: 'Invalid decision' }, details: {} }, { status: 400 });
         }
 
-        const { data: verification } = await supabase.from('verifications').select('*').eq('id', verification_id).single();
-        if (!verification) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Verification not found' }, details: {} }, { status: 404 });
+        const result = await applyLegacyVerificationDecision(supabase, {
+            verificationId: verification_id,
+            decision,
+            tier,
+            band,
+            adminNote: admin_note,
+            reviewerUserId: user.id,
+        });
 
-        let extracted_value: Record<string, unknown> =
-            verification.extracted_value && typeof verification.extracted_value === 'object'
-                ? verification.extracted_value
-                : {};
-        if (tier || band) {
-            extracted_value = { ...extracted_value, tier, band };
-        }
-
-        // Determine DB Status & Reason
-        const finalStatus = decision === 'FRAUD_DOCS' ? 'REJECTED' : decision;
-        const finalReason = decision === 'FRAUD_DOCS' ? 'FRAUD_DOCS' : null;
-
-        await supabase.from('verifications').update({
-            status: finalStatus,
-            adjudication_reason: finalReason,
-            extracted_value,
-            admin_note,
-            reviewed_by: user.id,
-            reviewed_at: new Date().toISOString()
-        }).eq('id', verification_id);
-
-        if (decision === 'VERIFIED') {
-            // Derive profiles updates
-            const updates: ProfileUpdates = {};
-            if (verification.type === 'PHYSICAL') {
-                if (typeof extracted_value.height_cm === 'number') updates.height_cm = extracted_value.height_cm;
-                if (typeof extracted_value.band === 'string') updates.weight_band = extracted_value.band;
-            } else if (verification.type === 'RESIDENCE') {
-                if (typeof extracted_value.region === 'string') updates.location_region = extracted_value.region;
-                if (typeof extracted_value.city === 'string') updates.location_city = extracted_value.city;
-            }
-            if (Object.keys(updates).length > 0) {
-                await supabase.from('profiles').update(updates).eq('id', verification.user_id);
-            }
-        } else if (decision === 'FRAUD_DOCS') {
-            // Immediate ban
-            await supabase.from('profiles').update({ banned: true }).eq('id', verification.user_id);
-            // Liquidated Damages via atomic RPC
-            const { error: slashErr, data: slashData } = await supabase.rpc('slash_fraud_docs', {
-                p_verification_id: verification_id,
-                p_user_id: verification.user_id,
-                p_slash_amount: 1000
-            });
-            if (slashErr) console.error('Fraud Slashing Error:', slashErr);
-            else console.log('Fraud Slashing SUCCESS:', slashData);
-        }
-
-        // Strictly purge artifact from storage
-        if (verification.artifact_object_key) {
-            await supabase.storage.from('verification-artifacts').remove([verification.artifact_object_key]);
-        }
-
-        return NextResponse.json({ success: true, message: `Verification marked as ${decision}, artifact permanently purged.` });
+        return NextResponse.json(result);
     } catch (e: unknown) {
+        if (isRouteServiceError(e)) {
+            return NextResponse.json(
+                { error: { code: e.code, message: e.message }, details: {} },
+                { status: e.status },
+            );
+        }
         const message = e instanceof Error ? e.message : 'INTERNAL_ERROR';
         return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message }, details: {} }, { status: 500 });
     }

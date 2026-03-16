@@ -1,51 +1,109 @@
----FILE: docs/uiux/stage_spec.md ---
 # Stage Specification (SSOT)
 
-## 1. Stage Enum Definition
-서버(`/api/me/status`)에서 내려오는 불변의 진실 데이터 상수.
-- `LOGIN`: 미인증 상태. Auth Token 부재.
-- `KYC`: 로그인 완료. 본인확인(통신사 실명 인증 등) 미완료.
-- `QUALIFICATION`: 본인확인 완료. 자격 증명(거주지, 신체, 경력/학력) 미완료.
-- `CONSENT_HUB`: 자격 증명 완료. 프라이버시 및 이용약관 동의 미완료.
-- `E_SIGN`: 동의 완료. 전자 서명 절차 미완료.
-- `AI_INTERVIEW`: 서명 완료. AI 면접 진행 중 혹은 대기.
-- `DASHBOARD_READY`: 모든 온보딩/인터뷰 절차 완료. 메인 서비스 진입 가능.
+## 1. Authoritative Stage Model
+서버 `GET /api/me/status`가 유일한 상태 진실(SSOT)이며, 클라이언트는 이 응답만 소비합니다.
 
-## 2. Stage -> Route Mapping (Next.js App Router 기준)
-모든 컴포넌트는 최상위 Layout이나 Middleware 단계에서 `GET /api/me/status`를 fetch 후 일치하지 않는 Route 접근 시 올바른 Route로 강제 Redirect 처리됨.
-- `LOGIN` -> `/login`
-- `KYC` -> `/onboarding/verify`
-- `QUALIFICATION` -> `/onboarding/qualification`
-- `CONSENT_HUB` -> `/onboarding/consent`
-- `E_SIGN` -> `/onboarding/sign`
-- `AI_INTERVIEW` -> `/interview`
-- `DASHBOARD_READY` -> `/dashboard`
+### Active Stage Vocabulary
+- `LOGIN`: 인증 없음
+- `APPLY_START`: admission 신청 미시작
+- `IDENTITY`: 신원 검증 필요
+- `LIVENESS`: 실재 인물 검증 필요
+- `CONSENTS`: 분리 동의/확인문구 필요
+- `DOCUMENTS`: 공식 문서 4종 제출/검증 필요
+- `AI_DECISION`: AI 자동결정 실행/대기
+- `RESUBMIT_REQUIRED`: 재제출 필요
+- `REJECTED`: 거절 확정
+- `EXCEPTION_REVIEW`: 예외 검토 큐
+- `APPEAL_PENDING`: 항소 처리 큐
+- `AUDIT_REVIEW`: 감사 검토 큐
+- `APPROVED`: 승인되었으나 SOUL 발급 대기
+- `SOUL_ISSUED`: SOUL 발급 완료, 활성화 대기
+- `ACTIVE`: 핵심 기능 접근 가능
 
-## 3. 진입/완료 조건 및 Blockers (서버 DB 기준)
-*Blockers는 UI 내부 상수로 플로우 블록 사유를 명시합니다. Error Code는 3번 문서(error_code_ux_standard)를 참고하세요.*
+### Legacy Compatibility Aliases
+- `AI_REVIEW` -> `AI_DECISION`
+- `HUMAN_REVIEW` -> `EXCEPTION_REVIEW`
 
-| Stage | 진입조건(서버) | 완료조건(서버 일치 조건) | UI Blockers |
-|---|---|---|---|
-| `LOGIN` | 없음 | Supabase Auth JWT 유효함 | `['AUTH_MISSING']` |
-| `KYC` | `auth.users` 존재 여부 확인 | `profiles.verified = true` OR `identity_claims` 테이블 데이터 존재 | `['IDENTITY_UNVERIFIED']` |
-| `QUALIFICATION` | `KYC` 완료 조건 충족 | `verifications` 필수 타입들이 모두 `status = 'VERIFIED'` | `['DOCUMENT_MISSING']` |
-| `CONSENT_HUB` | `QUALIFICATION` 완료 조건 충족 | `consents` 필수 module들이 `is_granted = true` | `['TERMS_NOT_ACCEPTED']` |
-| `E_SIGN` | `CONSENT_HUB` 완료 조건 충족 | `contracts` 테이블 내 `signature` 및 `document_version` 값 존재 및 유효 | `['SIGNATURE_MISSING']` |
-| `AI_INTERVIEW` | `E_SIGN` 완료 조건 충족 | `interviews.decision` 필드 존재 | `['INTERVIEW_INCOMPLETE']` |
-| `DASHBOARD_READY` | `AI_INTERVIEW` 완료 조건 충족 | N/A | `[]` |
+## 2. Stage -> Route Mapping
+`apps/web/lib/stageRoutes.ts` 기준 canonical mapping.
 
-## 4. 공통 화면 상태 (UI States)
-E2E 안정을 위해 모든 Onboarding 화면은 다음 4가지 상태만을 가짐.
-1. `loading`: `/api/me/status` 혹은 진입 시 초기 데이터 fetch 중. (Skeleton 표시)
-2. `ready`: 유저 입력 대기 중. (Form active)
-3. `submitting`: Action API 호출 중. CTA disabled & Spinner 액티브.
-4. `error`: API 에러 응답 수신. 
+| Stage | Route |
+|---|---|
+| `LOGIN` | `/login` |
+| `APPLY_START` | `/apply` |
+| `IDENTITY` | `/apply/identity` |
+| `LIVENESS` | `/apply/liveness` |
+| `CONSENTS` | `/apply/consents` |
+| `DOCUMENTS` | `/apply/documents` |
+| `AI_DECISION` | `/apply/review` |
+| `RESUBMIT_REQUIRED` | `/apply/documents` |
+| `REJECTED` | `/apply/status` |
+| `EXCEPTION_REVIEW` | `/apply/status` |
+| `APPEAL_PENDING` | `/apply/status` |
+| `AUDIT_REVIEW` | `/apply/status` |
+| `APPROVED` | `/apply/status` |
+| `SOUL_ISSUED` | `/apply/status` |
+| `ACTIVE` | `/dashboard` |
 
-## 5. 전이 규칙 (중요)
-UI 임의로 `router.push('/next-step')` 호출은 **절대 금지**됩니다. 모든 화면 이동 및 롤백은 서버의 진실에 의존합니다.
-1. 유저 CTA 클릭 -> Action API 호출.
-2. API 응답 200 OK 수신.
-3. 즉시 `GET /api/me/status` 캐시 무효화 및 재조회.
-4. 새로 내려온 `stage` 값에 의하여 전역 Route Controller가 자동으로 Redirect 수행.
-- **예외 시나리오 (강제 튕김)**: 대시보드 강제 튕김 등 (동의 철회, 서명 무효화, 밴 처리 발생 시). 유저 액션 직후 또는 주기적 `status 재조회` 시 서버가 이전 `stage`나 에러를 응답하면 즉각 **해당 stage로 강제 리다이렉트** 합니다.
----END FILE---
+### Allowed Sibling Routes (Guard Exceptions)
+- `/apply/status`: `LOGIN`, `ACTIVE` 외 모든 stage에서 접근 허용
+- `/apply/identity`: `APPLY_START`에서 접근 허용
+- `/apply/appeal`: `REJECTED`, `RESUBMIT_REQUIRED`, `EXCEPTION_REVIEW`, `APPEAL_PENDING`에서 접근 허용
+- `/apply/documents`: `RESUBMIT_REQUIRED`에서 접근 허용
+
+## 3. Stage Derivation Signals (Server)
+서버는 아래 신호를 조합해 stage를 계산합니다.
+- identity verified 여부 (`identity_claims`)
+- liveness verified 여부 (`admission_applications.liveness_verified_at` 또는 `verified_claims.REAL_PERSON_VERIFIED`)
+- consent completed 여부 (`consent_events` + policy version)
+- required documents verified 여부 (`admission_document_submissions`)
+- application status/current_step (`admission_applications`)
+- soul credential issued 여부 (`soul_credentials`)
+- cold-path 상태 (`appeals`, `exception_cases`, `audit_samples`, `audits`)
+- freeze/banned 상태 (`profiles`)
+
+## 4. Blockers and Recovery
+`blockers`는 stage 산출 근거이며, UI는 blocker를 사용자 복구 경로로 직접 연결해야 합니다.
+
+핵심 blocker 예시:
+- `APPLICATION_NOT_STARTED` -> `/apply`
+- `IDENTITY_REQUIRED` -> `/apply/identity`
+- `LIVENESS_REQUIRED` -> `/apply/liveness`
+- `CONSENTS_REQUIRED` -> `/apply/consents`
+- `DOCUMENTS_REQUIRED` -> `/apply/documents`
+- `RESUBMISSION_REQUIRED` -> `/apply/documents`
+- `ADMISSION_REJECTED` -> `/apply/status` + `/apply/appeal`
+- `EXCEPTION_REVIEW_REQUIRED` -> `/apply/status`
+- `APPEAL_PENDING` -> `/apply/status`
+- `AUDIT_REVIEW_PENDING` -> `/apply/status`
+- `SOUL_ISSUANCE_PENDING` -> `/apply/status`
+- `ACCOUNT_FROZEN` -> `/banned`
+
+## 5. Redirect Rules
+
+### Middleware (Coarse Gate)
+`apps/web/utils/supabase/middleware.ts`
+- 비인증 + 보호경로 접근 -> `/login`
+- ACTIVE 전용 경로(`/dashboard`, `/match`, `/chat`, `/review`, `/report`, `/revoke`)는 ACTIVE 아닌 경우 `/apply/status`
+- ACTIVE 사용자가 `/apply/*` 접근 시 `/dashboard`
+- legacy 진입점(`/onboarding/*`, `/interview`, `/contract`, `/consent`, `/osint`, `/admin-verify`)은 stage에 맞게 redirect
+
+### Client Guard (Fine Gate)
+`apps/web/components/ssot-route-guard.tsx`
+- `useStatus()` 결과의 stage와 현재 pathname을 비교
+- 불일치 시 `resolveGuardRedirect()`로 canonical route로 교정
+- `meta.is_frozen=true`면 `/banned` 우선
+
+## 6. UI State Contract
+모든 apply/active 화면은 최소 상태를 동일하게 유지합니다.
+1. `loading`: status/API 조회 중 (skeleton)
+2. `ready`: 사용자 입력 가능
+3. `submitting`: action API 처리 중 (CTA disabled)
+4. `error`: 복구 가능한 오류 + 재시도/이동 액션 제공
+5. `syncing`: 현재 화면 stage 불일치 시 `StageTransitionNotice`로 안내
+
+## 7. Architecture Note
+- 서버가 stage/blockers/meta를 계산한다.
+- 클라이언트는 status를 파싱/표시하고 route guard로 접근을 정렬한다.
+- 클라이언트가 임의로 "다음 단계"를 확정하지 않는다. 항상 status 재조회 후 이동한다.
+- ACTIVE 하위 기능은 API 계약을 기본으로 사용하며, 임시 adapter가 필요한 경우에만 명시적으로 분리한다.

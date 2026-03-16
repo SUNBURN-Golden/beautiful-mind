@@ -1,94 +1,80 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
+import {
+    getStatusStage,
+    parseStatusContract,
+    parseStatusErrorCode,
+    type ClientStatusContract,
+} from '@/lib/contracts/status-contract';
 
-type JsonObject = Record<string, unknown>;
+export type Status = ClientStatusContract;
 
-type Status = {
-    step?: string;
-    stage?: string;
-    error?: string | null;
-    meta?: JsonObject;
-    details?: JsonObject;
-    blockers: string[];
+type UseStatusOptions = {
+    refreshIntervalMs?: number;
+    redirectOnUnauthorized?: boolean;
 };
 
 const STATUS_FETCH_TIMEOUT_MS = 10_000;
 
-function parseStatusPayload(payload: unknown): Status {
-    if (typeof payload !== 'object' || payload === null) {
-        return { error: 'Invalid status payload', blockers: [] };
-    }
-
-    const obj = payload as JsonObject;
-    return {
-        step: typeof obj.step === 'string' ? obj.step : undefined,
-        stage: typeof obj.stage === 'string' ? obj.stage : undefined,
-        error: typeof obj.error === 'string' ? obj.error : null,
-        meta: typeof obj.meta === 'object' && obj.meta !== null ? (obj.meta as JsonObject) : undefined,
-        details: typeof obj.details === 'object' && obj.details !== null ? (obj.details as JsonObject) : undefined,
-        blockers: Array.isArray(obj.blockers)
-            ? obj.blockers.filter((item): item is string => typeof item === 'string')
-            : [],
+function createFetcher(redirectOnUnauthorized: boolean) {
+    return async (url: string): Promise<Status> => {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), STATUS_FETCH_TIMEOUT_MS);
+        try {
+            const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+            const payload = await res.json();
+            if (!res.ok) {
+                if (res.status === 401 && redirectOnUnauthorized && typeof window !== 'undefined') {
+                    window.location.assign('/login');
+                }
+                throw new Error(parseStatusErrorCode(payload));
+            }
+            return parseStatusContract(payload);
+        } catch (e) {
+            if (e instanceof DOMException && e.name === 'AbortError') {
+                throw new Error('STATUS_TIMEOUT');
+            }
+            throw e;
+        } finally {
+            window.clearTimeout(timeoutId);
+        }
     };
 }
 
-function parseStatusError(payload: unknown): string {
-    if (typeof payload !== 'object' || payload === null) {
-        return 'STATUS_FETCH_FAILED';
-    }
+export function useStatus(options: UseStatusOptions = {}) {
+    const { refreshIntervalMs = 0, redirectOnUnauthorized = true } = options;
+    const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+    const fetcher = useMemo(() => createFetcher(redirectOnUnauthorized), [redirectOnUnauthorized]);
 
-    const obj = payload as JsonObject;
-    if (typeof obj.error === 'string') {
-        return obj.error;
-    }
-
-    if (typeof obj.error === 'object' && obj.error !== null && typeof (obj.error as JsonObject).code === 'string') {
-        return (obj.error as JsonObject).code as string;
-    }
-
-    return 'STATUS_FETCH_FAILED';
-}
-
-const fetcher = async (url: string): Promise<Status> => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), STATUS_FETCH_TIMEOUT_MS);
-    try {
-        const res = await fetch(url, { cache: "no-store", signal: controller.signal });
-        const payload = await res.json();
-        if (!res.ok) {
-            if (res.status === 401 && typeof window !== 'undefined') {
-                window.location.assign('/login');
-            }
-            throw new Error(parseStatusError(payload));
-        }
-        return parseStatusPayload(payload);
-    } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') {
-            throw new Error('STATUS_TIMEOUT');
-        }
-        throw e;
-    } finally {
-        window.clearTimeout(timeoutId);
-    }
-};
-
-export function useStatus() {
-    const { data, error, mutate } = useSWR<Status, Error>('/api/me/status', fetcher, {
+    const { data, error, mutate, isValidating } = useSWR<Status, Error>('/api/me/status', fetcher, {
+        refreshInterval: refreshIntervalMs,
         revalidateOnFocus: true,
+        revalidateOnReconnect: true,
         shouldRetryOnError: false,
+        keepPreviousData: true,
     });
+
+    useEffect(() => {
+        if (data) {
+            setLastUpdatedAt(Date.now());
+        }
+    }, [data]);
 
     const handleActionError = useCallback((e: unknown) => {
         console.error(e);
     }, []);
 
     const resolvedStatus = data || (error ? { error: error.message, blockers: [] } : null);
+    const currentStage = getStatusStage(resolvedStatus) || undefined;
 
     return {
         status: resolvedStatus,
+        currentStage,
         isLoading: !data && !error,
+        isRefreshing: isValidating && Boolean(data),
+        lastUpdatedAt,
         refetch: mutate,
         handleActionError
     };

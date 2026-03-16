@@ -25,23 +25,23 @@ export default async function HomePage() {
             <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-between gap-12">
                 <header className="space-y-5">
                     <div className="liquid-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#6e6e73]">
-                        SoulBound Trust Network
+                        AI-Operated Trust Network
                     </div>
                     <h1 className="liquid-title max-w-3xl text-[40px] font-semibold leading-tight tracking-tight sm:text-[56px] text-balance">
-                        완벽한 신뢰.<br />가장 안전하게 증명되다.
+                        입장은 자동 심사로.<br />신뢰는 검증으로.
                     </h1>
                     <p className="liquid-copy max-w-2xl text-[16px] sm:text-[18px] leading-relaxed text-balance">
-                        당신이 이룬 모든 것들을 있는 그대로 보여주세요.<br className="hidden sm:block" />
-                        빈틈없는 자격 검증부터 영구적인 블록체인 기록까지, 오직 진짜 당신만의 평판을 세상에서 가장 안전하게 지켜냅니다.
+                        SoulBound는 누구나 바로 진입하는 서비스가 아닙니다.<br className="hidden sm:block" />
+                        `/apply/*`에서 신원·실재인물·동의·공식문서 4종을 제출하고 AI admission engine의 자동결정을 통과해야 핵심 기능이 열립니다.
                     </p>
                     <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center">
                         {isSignedIn ? (
                             <>
                                 <Button asChild className="h-12 px-6">
-                                    <Link href="/dashboard">대시보드로 이동</Link>
+                                    <Link href="/apply/status">Admission 상태 확인</Link>
                                 </Button>
                                 <Button asChild variant="outline" className="h-12 px-6">
-                                    <Link href="/onboarding">온보딩 상태 확인</Link>
+                                    <Link href="/dashboard">활성 사용자 대시보드 (승인 계정 전용)</Link>
                                 </Button>
                                 <Button asChild variant="secondary" className="h-12 px-6">
                                     <Link href="/manual">이용 매뉴얼</Link>
@@ -50,7 +50,7 @@ export default async function HomePage() {
                         ) : (
                             <>
                                 <Button asChild className="h-12 px-6">
-                                    <Link href="/signup">시작하기</Link>
+                                    <Link href="/signup">Admission 신청 시작</Link>
                                 </Button>
                                 <Button asChild variant="outline" className="h-12 px-6">
                                     <Link href="/login">로그인</Link>
@@ -65,16 +65,16 @@ export default async function HomePage() {
 
                 <section className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-3">
                     <article className="liquid-pane rounded-2xl p-5">
-                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Privacy</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">익명성의 그늘에서 벗어나세요. 강력한 암호화 기술이 개인정보는 안전하게 숨기고, 당신의 진실함은 가장 확실하게 보여줍니다.</p>
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Admission</h2>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">핵심 기능 접근은 승인 이후에만 열립니다. `/apply/*`가 제품의 중심 흐름입니다.</p>
                     </article>
                     <article className="liquid-pane rounded-2xl p-5">
-                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">SoulBound</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">누구도 흉내 낼 수 없는 당신의 발자취. 돈으로 살 수도, 남에게 넘겨줄 수도 없는 완전한 고유함을 당신에게 부여합니다.</p>
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">AI-Operated</h2>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">일반 케이스는 AI+규칙엔진이 자동 처리하고, 인간은 항소·예외·감사 콜드패스에서만 개입합니다.</p>
                     </article>
                     <article className="liquid-pane rounded-2xl p-5">
                         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Integrity</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">위변조가 불가능한 투명함. 모든 심사와 기록은 영구적인 장부 위에 쓰여져, 단 하나의 흔들림 없는 사실로 남습니다.</p>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">최종결정 후 원본 문서는 즉시 파기하고, 최소 검증 클레임과 원장 이벤트만 남겨 무결성을 유지합니다.</p>
                     </article>
                 </section>
 

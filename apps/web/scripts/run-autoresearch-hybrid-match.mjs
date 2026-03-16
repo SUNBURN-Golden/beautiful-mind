@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { evaluateHybridMatchOffline } from './eval-hybrid-match-offline.mjs';
+import { proposeHybridMatchCandidate } from './propose-hybrid-match-candidate.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +17,9 @@ const BASELINE_STATE_PATH = path.join(STATE_DIR, 'baseline.json');
 const RESULTS_PATH = path.join(AUTORESEARCH_ROOT, 'results.jsonl');
 const FIXTURE_PATH = path.join(AUTORESEARCH_ROOT, 'fixtures', 'hybrid-match-offline-v1.json');
 const EVAL_HARNESS_PATH = path.join(WEB_ROOT, 'scripts', 'eval-hybrid-match-offline.mjs');
+const PROPOSER_POLICY_PATH = path.join(AUTORESEARCH_ROOT, 'CANDIDATE_PROPOSER_POLICY.md');
 const IMPROVEMENT_THRESHOLD = 0.005;
+const DEFAULT_PROPOSER_MODEL = 'gpt-5-mini';
 
 const OPTIMIZATION_ISLAND = [
     'apps/web/scripts/lib/hybrid-match/scoring.mjs',
@@ -30,6 +33,7 @@ function parseArgs(argv) {
         command,
         note: '',
         forceRebaseline: false,
+        model: DEFAULT_PROPOSER_MODEL,
     };
 
     for (let index = 0; index < rest.length; index += 1) {
@@ -40,6 +44,11 @@ function parseArgs(argv) {
         }
         if (rest[index] === '--force-rebaseline') {
             parsed.forceRebaseline = true;
+            continue;
+        }
+        if (rest[index] === '--model' && rest[index + 1]) {
+            parsed.model = rest[index + 1];
+            index += 1;
         }
     }
 
@@ -135,6 +144,24 @@ function appendResultLog(entry) {
     fs.appendFileSync(RESULTS_PATH, `${JSON.stringify(entry)}\n`);
 }
 
+function getRecentResultsTail(maxLines = 8) {
+    if (!fs.existsSync(RESULTS_PATH)) return '';
+    const lines = fs.readFileSync(RESULTS_PATH, 'utf8')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    return lines.slice(-maxLines).join('\n');
+}
+
+function getIslandFileContents() {
+    const payload = {};
+    for (const rel of OPTIMIZATION_ISLAND) {
+        const abs = path.resolve(REPO_ROOT, rel);
+        payload[rel] = fs.readFileSync(abs, 'utf8');
+    }
+    return payload;
+}
+
 function verifyImmutableInputsAgainstBaseline(baselineState) {
     const snapshot = getImmutableInputsSnapshot();
     const expected = baselineState?.integrity || {};
@@ -156,6 +183,52 @@ function verifyImmutableInputsAgainstBaseline(baselineState) {
         checks,
         errors,
         snapshot,
+    };
+}
+
+function applyProposalPatch(changes) {
+    const allowed = new Set(OPTIMIZATION_ISLAND);
+    const stagedContents = new Map();
+    const touchedFiles = new Set();
+
+    for (const [index, change] of changes.entries()) {
+        const rel = String(change.file || '').replace(/\\/g, '/').trim();
+        if (!allowed.has(rel)) {
+            throw new Error(`proposal change[${index}] targets forbidden file: ${rel}`);
+        }
+
+        const find = String(change.find || '');
+        const replace = String(change.replace || '');
+        if (!find) {
+            throw new Error(`proposal change[${index}] has empty find snippet`);
+        }
+
+        const abs = path.resolve(REPO_ROOT, rel);
+        if (!stagedContents.has(rel)) {
+            stagedContents.set(rel, fs.readFileSync(abs, 'utf8'));
+        }
+        const current = stagedContents.get(rel);
+        const firstIndex = current.indexOf(find);
+        if (firstIndex === -1) {
+            throw new Error(`proposal change[${index}] find snippet not found in ${rel}`);
+        }
+        const secondIndex = current.indexOf(find, firstIndex + find.length);
+        if (secondIndex !== -1) {
+            throw new Error(`proposal change[${index}] find snippet is ambiguous in ${rel}`);
+        }
+
+        const next = `${current.slice(0, firstIndex)}${replace}${current.slice(firstIndex + find.length)}`;
+        stagedContents.set(rel, next);
+        touchedFiles.add(rel);
+    }
+
+    for (const rel of touchedFiles) {
+        const abs = path.resolve(REPO_ROOT, rel);
+        fs.writeFileSync(abs, stagedContents.get(rel));
+    }
+
+    return {
+        patch_target_files: [...touchedFiles],
     };
 }
 
@@ -191,6 +264,7 @@ function buildLogEntry(params) {
         evalResult: params.evalResult,
         extraChecks: params.extraSafetyChecks,
     });
+    const proposal = params.proposalContext || {};
 
     return {
         timestamp: now,
@@ -212,6 +286,12 @@ function buildLogEntry(params) {
         fixture_path: relativeFromRepoRoot(FIXTURE_PATH),
         metric_name: params.metric_name,
         force_rebaseline: params.forceRebaseline === true,
+        proposal_source: proposal.proposal_source ?? null,
+        proposal_model: proposal.proposal_model ?? null,
+        proposal_policy_version: proposal.prompt_policy_version ?? null,
+        proposal_patch_target_files: proposal.proposal_patch_target_files ?? [],
+        patch_application_succeeded: params.patchApplicationSucceeded ?? null,
+        evaluation_succeeded: params.evaluationSucceeded ?? null,
     };
 }
 
@@ -252,6 +332,8 @@ function runBaseline(note, options = {}) {
             immutable_fixture_hash_captured: Boolean(integritySnapshot.canonical_fixture_sha256),
         },
         forceRebaseline: options.forceRebaseline === true,
+        patchApplicationSucceeded: false,
+        evaluationSucceeded: true,
     });
     appendResultLog(logEntry);
 
@@ -264,7 +346,7 @@ function runBaseline(note, options = {}) {
     };
 }
 
-function runCandidate(note) {
+function runCandidate(note, options = {}) {
     const baselineState = readJsonIfExists(BASELINE_STATE_PATH);
     if (!baselineState) {
         throw new Error('baseline state not found. run baseline first.');
@@ -287,6 +369,9 @@ function runCandidate(note) {
                 fixture_override_used: false,
             },
             extraSafetyChecks: preflight.checks,
+            proposalContext: options.proposalContext,
+            patchApplicationSucceeded: options.patchApplicationSucceeded ?? null,
+            evaluationSucceeded: false,
         });
         appendResultLog(blockedLog);
         throw new Error(`candidate blocked by immutable integrity check: ${preflight.errors.join(', ')}`);
@@ -321,6 +406,9 @@ function runCandidate(note) {
         metric_name: evalResult.metric_name,
         evalResult,
         extraSafetyChecks: preflight.checks,
+        proposalContext: options.proposalContext,
+        patchApplicationSucceeded: options.patchApplicationSucceeded ?? null,
+        evaluationSucceeded: true,
     });
     appendResultLog(logEntry);
 
@@ -363,6 +451,8 @@ function runReset(note) {
                 canonical_harness_hash_match: false,
                 canonical_fixture_hash_match: false,
             },
+        patchApplicationSucceeded: false,
+        evaluationSucceeded: false,
     });
     appendResultLog(logEntry);
 
@@ -372,6 +462,116 @@ function runReset(note) {
         baseline: baselineState,
         log: logEntry,
     };
+}
+
+async function runProposeCandidate(note, options = {}) {
+    const baselineState = readJsonIfExists(BASELINE_STATE_PATH);
+    if (!baselineState) {
+        throw new Error('baseline state not found. run baseline first.');
+    }
+
+    let proposalContext = null;
+    try {
+        const proposal = await proposeHybridMatchCandidate({
+            model: options.model || DEFAULT_PROPOSER_MODEL,
+            policyPath: PROPOSER_POLICY_PATH,
+            baselineMetric: baselineState.baseline_metric,
+            threshold: IMPROVEMENT_THRESHOLD,
+            note,
+            allowedFiles: OPTIMIZATION_ISLAND,
+            recentResultsTail: getRecentResultsTail(8),
+            fileContents: getIslandFileContents(),
+        });
+
+        const patchResult = applyProposalPatch(proposal.proposal_changes);
+        proposalContext = {
+            ...proposal,
+            proposal_patch_target_files: patchResult.patch_target_files,
+        };
+    } catch (error) {
+        const failureLog = buildLogEntry({
+            baseline_metric: Number(baselineState.baseline_metric),
+            candidate_metric: null,
+            delta: null,
+            decision: 'PROPOSAL_FAILED',
+            short_note: `openai proposal failed: ${error?.message || String(error)}`,
+            run_status: 'FAILED_PROPOSAL',
+            metric_name: baselineState.metric_name || 'offline_hybrid_score',
+            evalResult: {
+                local_offline_only: true,
+                supabase_writes_used: false,
+                fixture_path: FIXTURE_PATH,
+                fixture_override_used: false,
+            },
+            proposalContext,
+            patchApplicationSucceeded: false,
+            evaluationSucceeded: false,
+        });
+        appendResultLog(failureLog);
+
+        return {
+            mode: 'propose-candidate',
+            status: 'failed',
+            error: error?.message || String(error),
+            log: failureLog,
+        };
+    }
+
+    try {
+        const candidate = runCandidate(
+            note || `openai proposal: ${proposalContext.proposal_summary}`,
+            {
+                proposalContext,
+                patchApplicationSucceeded: true,
+            },
+        );
+
+        return {
+            mode: 'propose-candidate',
+            status: 'completed',
+            proposal: proposalContext,
+            candidate,
+        };
+    } catch (error) {
+        restoreIslandFilesFromSnapshot();
+
+        if (String(error?.message || '').includes('candidate blocked by immutable integrity check')) {
+            return {
+                mode: 'propose-candidate',
+                status: 'blocked',
+                error: error?.message || String(error),
+                proposal: proposalContext,
+            };
+        }
+
+        const failureLog = buildLogEntry({
+            baseline_metric: Number(baselineState.baseline_metric),
+            candidate_metric: null,
+            delta: null,
+            decision: 'PROPOSAL_EVAL_FAILED',
+            short_note: `candidate evaluation failed: ${error?.message || String(error)}`,
+            run_status: 'FAILED_EVAL',
+            metric_name: baselineState.metric_name || 'offline_hybrid_score',
+            evalResult: {
+                local_offline_only: true,
+                supabase_writes_used: false,
+                fixture_path: FIXTURE_PATH,
+                fixture_override_used: false,
+            },
+            proposalContext,
+            patchApplicationSucceeded: true,
+            evaluationSucceeded: false,
+        });
+        appendResultLog(failureLog);
+
+        return {
+            mode: 'propose-candidate',
+            status: 'failed',
+            error: error?.message || String(error),
+            proposal: proposalContext,
+            log: failureLog,
+        };
+    }
 }
 
 function runStatus() {
@@ -399,12 +599,13 @@ function runStatus() {
         optimization_island: OPTIMIZATION_ISLAND,
         fixture_path: relativeFromRepoRoot(FIXTURE_PATH),
         eval_harness_path: relativeFromRepoRoot(EVAL_HARNESS_PATH),
+        proposer_policy_path: relativeFromRepoRoot(PROPOSER_POLICY_PATH),
         db_target_required: false,
         db_target: 'N/A_OFFLINE_ONLY',
     };
 }
 
-function main() {
+async function main() {
     ensureDirs();
     const args = parseArgs(process.argv.slice(2));
 
@@ -413,6 +614,8 @@ function main() {
         output = runBaseline(args.note, { forceRebaseline: args.forceRebaseline });
     } else if (args.command === 'candidate') {
         output = runCandidate(args.note);
+    } else if (args.command === 'propose-candidate') {
+        output = await runProposeCandidate(args.note, { model: args.model });
     } else if (args.command === 'reset') {
         output = runReset(args.note);
     } else if (args.command === 'status') {
@@ -425,5 +628,8 @@ function main() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    main();
+    main().catch((error) => {
+        console.error(error?.message || error);
+        process.exit(1);
+    });
 }

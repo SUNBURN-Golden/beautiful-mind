@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServiceRoleClient, getSessionUser } from '@/lib/server/trust';
 import { resolveAirdropTier } from '@/lib/server/tokenomics-core';
+import { claimSoulAirdrop } from '@/lib/server/soul-ledger';
 import { z } from 'zod';
 
 const AirdropClaimSchema = z.object({
@@ -29,19 +30,16 @@ export async function POST(req: Request) {
         }
 
         const admin = getServiceRoleClient();
-        const { data, error } = await admin.rpc('claim_soul_airdrop', {
-            p_user_id: user.id,
-            p_idempotency_key: parsed.data.idempotency_key ?? null,
-        });
-
-        if (error) {
-            return NextResponse.json(
-                { error: 'AIRDROP_CLAIM_FAILED', message: error.message },
-                { status: 500 }
-            );
+        let result: ClaimAirdropRpcResult;
+        try {
+            result = await claimSoulAirdrop(admin, {
+                userId: user.id,
+                idempotencyKey: parsed.data.idempotency_key ?? null,
+            }) as ClaimAirdropRpcResult;
+        } catch (rpcError: unknown) {
+            const message = rpcError instanceof Error ? rpcError.message : 'claim_soul_airdrop failed';
+            return NextResponse.json({ error: 'AIRDROP_CLAIM_FAILED', message }, { status: 500 });
         }
-
-        const result = (data ?? {}) as ClaimAirdropRpcResult;
         const status = typeof result.status === 'string' ? result.status : 'UNKNOWN';
         const claimNo = typeof result.claim_no === 'number' ? result.claim_no : null;
         const fallbackTier = claimNo ? resolveAirdropTier(claimNo) : null;

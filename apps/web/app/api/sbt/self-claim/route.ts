@@ -22,6 +22,16 @@ export async function POST(req: Request) {
         const claimType = parsed.data.claim_type;
         const claimPayload = parsed.data.claim_payload;
 
+        if (claimType === 'ADMISSION_SOUL' || claimType === 'SOUL_TRUST') {
+            return NextResponse.json(
+                {
+                    error: 'CORE_ADMISSION_CLAIM_BLOCKED',
+                    message: 'Core admission trust credential is only issued by final admission approval.',
+                },
+                { status: 403 }
+            );
+        }
+
         const admin = getServiceRoleClient();
 
         const collateralRequired = await isFeatureEnabled(admin, 'COLLATERAL_REQUIRED_ON_SIGNUP', false);

@@ -1,49 +1,57 @@
 import { expect, test } from '@playwright/test';
+import { STATUS_BLOCKER_CODES } from '../../lib/contracts/status-codes';
+import { ADMISSION_STAGES } from '../../lib/contracts/status-stages';
 
-test.describe('SSOT Route Regression', () => {
-    test('stage mismatch redirects to expected onboarding route', async ({ page }) => {
+test.describe('SSOT Route Regression @auth-stateful @auth-simulated', () => {
+    test('stage mismatch on dashboard exposes the next-step action', async ({ page }) => {
         await page.route('**/api/me/status', async (route) => {
             await route.fulfill({
                 status: 200,
                 json: {
-                    step: 'CONSENT_HUB',
-                    blockers: ['CONSENT_REQUIRED'],
+                    stage: ADMISSION_STAGES.CONSENTS,
+                    blockers: [STATUS_BLOCKER_CODES.CONSENTS_REQUIRED],
                     meta: { is_frozen: false },
                 },
             });
         });
 
         await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/onboarding\/consent$/);
+        await expect(page).toHaveURL(/.*\/dashboard(\?.*)?$/);
+        const transitionLink = page.locator('a[href="/apply/consents"]').first();
+        await expect(transitionLink).toBeVisible();
+        await expect(transitionLink).toHaveAttribute('href', '/apply/consents');
     });
 
-    test('frozen users are pinned to banned page', async ({ page }) => {
+    test('client-only frozen signal does not override the server-side dashboard route', async ({ page }) => {
         await page.route('**/api/me/status', async (route) => {
             await route.fulfill({
                 status: 200,
                 json: {
-                    step: 'DASHBOARD_READY',
-                    blockers: ['ACCOUNT_FROZEN'],
+                    stage: ADMISSION_STAGES.ACTIVE,
+                    blockers: [STATUS_BLOCKER_CODES.ACCOUNT_FROZEN],
                     meta: { is_frozen: true },
                 },
             });
         });
 
         await page.goto('/dashboard');
-        await expect(page).toHaveURL(/.*\/banned$/);
+        await expect(page).toHaveURL(/.*\/dashboard(\?.*)?$/);
+        await expect(page.getByRole('heading', { name: 'Trust Network Home' })).toBeVisible();
     });
 
-    test('status API failure exits loading state with transition fallback', async ({ page }) => {
+    test('status API failure exits loading state with transition fallback on dashboard', async ({ page }) => {
         await page.route('**/api/me/status', async (route) => {
             await route.fulfill({
                 status: 500,
                 json: {
-                    error: { code: 'INTERNAL_SERVER_ERROR' },
+                    error: 'INTERNAL_SERVER_ERROR',
                 },
             });
         });
 
-        await page.goto('/onboarding/verify');
-        await expect(page.getByRole('link', { name: '현재 단계로 이동' })).toBeVisible({ timeout: 15_000 });
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL(/.*\/dashboard(\?.*)?$/);
+        await expect(page.locator('a[href="/apply"]').first()).toBeVisible({ timeout: 15_000 });
+        await expect(page.locator('a[href="/manual"]').first()).toBeVisible();
     });
 });

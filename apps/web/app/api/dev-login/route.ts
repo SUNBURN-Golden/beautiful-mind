@@ -26,5 +26,5 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.redirect(new URL('/onboarding', request.url));
+    return NextResponse.redirect(new URL('/apply/status', request.url));
 }

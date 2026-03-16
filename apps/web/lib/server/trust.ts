@@ -44,6 +44,10 @@ export function isTestRouteEnabled(): boolean {
     return process.env.ALLOW_TEST_API_ROUTES === 'true';
 }
 
+export function isLegacyFlowEnabled(): boolean {
+    return process.env.ENABLE_LEGACY_FLOW === 'true';
+}
+
 export async function getSessionUser(): Promise<AuthUser | null> {
     const supabase = await createServerClient();
     const { data: { user }, error } = await supabase.auth.getUser();

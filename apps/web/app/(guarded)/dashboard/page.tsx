@@ -1,69 +1,71 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
-import { useStatus } from '@/lib/useStatus';
-import { Skeleton, SupportCTA, SecondaryButton, AuditLogRow, StageTransitionNotice } from '@/components/ui-kit';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { ADMISSION_STAGES } from '@/lib/contracts/status-stages';
+import { useStatus } from '@/lib/useStatus';
+import { PageLoadingState, SecondaryButton, StageTransitionNotice } from '@/components/ui-kit';
+import { ActiveStatusChip, ActiveSurfaceIntro } from '@/components/active-patterns';
+import {
+    FlowInfoCard,
+    FlowInfoGrid,
+    FlowInset,
+    FlowPagePanel,
+    FlowPageShell,
+    PageActionRow,
+    ReferenceDetailsCard,
+} from '@/components/screen-patterns';
+
+type RequiredDocumentMeta = {
+    type?: string;
+    status?: string;
+    processing_status?: string;
+    ai_confidence?: number | null;
+    purged_at?: string | null;
+};
+
+function toDocumentList(value: unknown): RequiredDocumentMeta[] {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => (item && typeof item === 'object' ? (item as RequiredDocumentMeta) : null))
+        .filter((item): item is RequiredDocumentMeta => item !== null);
+}
 
 export default function DashboardPage() {
-    const { status, isLoading } = useStatus();
+    const { status, isLoading, currentStage } = useStatus();
+    const stage = currentStage;
     const router = useRouter();
     const [isSigningOut, setIsSigningOut] = useState(false);
 
     if (isLoading) {
         return (
-            <main className="mx-auto max-w-5xl px-6 pb-12 pt-24">
-                <div className="liquid-pane rounded-3xl p-6">
-                    <Skeleton lines={4} />
-                </div>
-            </main>
-        );
-    }
-
-    if (status?.step !== 'DASHBOARD_READY') {
-        return (
-            <StageTransitionNotice
-                currentStep={status?.step}
-                title="대시보드 준비 중입니다."
-                description="심사/온보딩 상태를 확인한 뒤 접근 가능한 화면으로 연결합니다."
+            <PageLoadingState
+                title="Loading your ACTIVE home"
+                description="We’re syncing your access, trust summary, and current dashboard actions."
+                lines={4}
             />
         );
     }
 
-    const meta = status.meta;
-    const receiptId = typeof meta?.receipt_id === 'string' ? meta.receipt_id : 'N/A';
-    const docVersion = typeof meta?.doc_version === 'string'
-        ? meta.doc_version
-        : `SSOT-v${typeof meta?.schema_version === 'number' ? meta.schema_version : 1}`;
-    const latestContractId = typeof meta?.latest_contract_id === 'string' ? meta.latest_contract_id : null;
-    const latestInterviewId = typeof meta?.latest_interview_id === 'string' ? meta.latest_interview_id : null;
-    const latestContractAt = typeof meta?.latest_contract_at === 'string' ? meta.latest_contract_at : null;
-    const latestInterviewAt = typeof meta?.latest_interview_at === 'string' ? meta.latest_interview_at : null;
-    const latestDecision = typeof meta?.latest_interview_decision === 'string' ? meta.latest_interview_decision : null;
-    const latestScore = typeof meta?.latest_interview_score === 'number' ? meta.latest_interview_score : null;
-    const timeBucket = latestInterviewAt || latestContractAt || (typeof meta?.server_time === 'string' ? meta.server_time : new Date().toISOString());
-    const trustLevel = typeof meta?.trust_level === 'string' ? meta.trust_level : 'UNSET';
-    const sbtStatus = typeof meta?.sbt_status === 'string' ? meta.sbt_status : 'NONE';
-    const auditInProgress = meta?.audit_in_progress === true;
-    const selfDevConfidence = typeof meta?.self_dev_confidence === 'number' ? meta.self_dev_confidence : null;
-    const selfDevActionPlan = Array.isArray(meta?.self_dev_action_plan)
-        ? meta.self_dev_action_plan
-            .map((item) => (item && typeof item === 'object' ? item as Record<string, unknown> : null))
-            .filter((item): item is Record<string, unknown> => item !== null)
-            .map((item) => ({
-                title: typeof item.title === 'string' ? item.title : 'Action',
-                priority: typeof item.priority === 'string' ? item.priority : 'P2',
-                metric: typeof item.metric === 'string' ? item.metric : 'N/A',
-                target: typeof item.target === 'string' ? item.target : 'N/A',
-            }))
-            .slice(0, 3)
-        : [];
-    const auditLogRows = [
-        latestContractAt ? { action: 'CONTRACT_SIGNATURE', timestamp: latestContractAt, hash: latestContractId || receiptId } : null,
-        latestInterviewAt ? { action: `INTERVIEW_${latestDecision || 'DONE'}`, timestamp: latestInterviewAt, hash: latestInterviewId || receiptId } : null,
-        typeof meta?.sbt_issued_at === 'string' ? { action: 'SBT_STATUS_UPDATE', timestamp: meta.sbt_issued_at, hash: receiptId } : null,
-    ].filter((row): row is { action: string; timestamp: string; hash: string } => row !== null);
+    if (stage !== ADMISSION_STAGES.ACTIVE) {
+        return (
+            <StageTransitionNotice
+                currentStep={stage}
+                title="We’re syncing your admission route"
+                description="Only ACTIVE members can stay on the dashboard. If another stage is current, we’ll route you there automatically."
+            />
+        );
+    }
+
+    const meta = status?.meta || {};
+    const requiredDocuments = toDocumentList(meta.required_documents);
+    const trustLevel = typeof meta.trust_level === 'string' ? meta.trust_level : 'ADMISSION_VERIFIED';
+    const sbtStatus = typeof meta.sbt_status === 'string' ? meta.sbt_status : ADMISSION_STAGES.ACTIVE;
+    const soulIssued = meta.soul_credential_issued === true;
+    const soulIssuedAt = typeof meta.soul_credential_issued_at === 'string' ? meta.soul_credential_issued_at : null;
+    const admissionStatus = typeof meta.admission_status === 'string' ? meta.admission_status : ADMISSION_STAGES.ACTIVE;
 
     const handleLogout = async () => {
         if (isSigningOut) return;
@@ -79,113 +81,131 @@ export default function DashboardPage() {
     };
 
     return (
-        <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-14 pt-10 sm:px-8 sm:pt-14">
-            <div className="flex-1">
-                <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between">
-                    <h1 className="liquid-title text-[30px] font-semibold sm:text-[34px]">Dashboard.</h1>
+        <FlowPageShell maxWidth="max-w-5xl">
+            <FlowPagePanel>
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+                    <ActiveSurfaceIntro
+                        title="Trust Network Home"
+                        description="Your ACTIVE access is ready. Start with the action you need now, then use the reference detail only when you need to verify status or policy."
+                        meta={(
+                            <>
+                                <ActiveStatusChip tone="success">
+                                    Admission <span className="ml-1 font-mono text-[10px]">{admissionStatus}</span>
+                                </ActiveStatusChip>
+                                <ActiveStatusChip tone="info">
+                                    Trust <span data-testid="trust-level-badge" className="ml-1 font-mono text-[10px]">{trustLevel}</span>
+                                </ActiveStatusChip>
+                                <ActiveStatusChip tone={sbtStatus === ADMISSION_STAGES.ACTIVE ? 'success' : 'warning'}>
+                                    SOUL <span data-testid="sbt-status-badge" className="ml-1 font-mono text-[10px]">{sbtStatus}</span>
+                                </ActiveStatusChip>
+                                <ActiveStatusChip tone={soulIssued ? 'success' : 'warning'}>
+                                    Credential <span className="ml-1 font-mono text-[10px]">{soulIssued ? 'ISSUED' : 'PENDING'}</span>
+                                </ActiveStatusChip>
+                            </>
+                        )}
+                        note="Original source documents are purged after the final decision. Minimal claims, credential status, and audit trace remain available for verification."
+                    />
+
                     <div className="w-full sm:w-32">
                         <SecondaryButton onClick={handleLogout} disabled={isSigningOut}>
-                            {isSigningOut ? '로그아웃 중...' : '안전 로그아웃'}
+                            {isSigningOut ? 'Signing out...' : 'Sign out'}
                         </SecondaryButton>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-7 md:grid-cols-2">
-                    {/* Main Status Card */}
-                    <div className="liquid-pane liquid-rise flex flex-col rounded-3xl p-6 sm:p-8">
-                        <h2 className="liquid-title mb-2 text-[22px] font-semibold">온보딩 통합 결과</h2>
-                        <p className="liquid-copy mb-6 border-b pb-6 text-[14px] liquid-divider">
-                            모든 심사 단계를 정상적으로 통과하셨습니다.<br />
-                            메인 서비스의 모든 기능에 접근 권한이 활성화되었습니다.
-                        </p>
+                <FlowInfoGrid className="mt-6">
+                    <FlowInfoCard
+                        title="Start here"
+                        description="Open matches, continue a conversation, or record a trust attestation depending on what needs your attention right now."
+                    />
+                    <FlowInfoCard
+                        title="What stays verified"
+                        description="This home keeps the durable account signals visible without leading with policy or low-level processing detail."
+                    />
+                </FlowInfoGrid>
+            </FlowPagePanel>
 
-                        <div className="mb-6 space-y-3">
-                            <div className="flex items-center justify-between text-[13px]">
-                                <span className="text-slate-600">SBT 신뢰 레벨</span>
-                                <span data-testid="trust-level-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">{trustLevel}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[13px]">
-                                <span className="text-slate-600">SBT 상태</span>
-                                <span data-testid="sbt-status-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">{sbtStatus}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[13px]">
-                                <span className="text-slate-600">감사 진행 상태</span>
-                                <span data-testid="audit-progress-badge" className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">
-                                    {auditInProgress ? 'UNDER_REVIEW' : 'NONE'}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between text-[13px]">
-                                <span className="text-slate-600">Behavioral 신뢰도</span>
-                                <span className="liquid-chip rounded-full px-3 py-1 font-semibold text-slate-800">
-                                    {selfDevConfidence !== null ? selfDevConfidence.toFixed(2) : 'N/A'}
-                                </span>
-                            </div>
+            <section className="grid gap-6 md:grid-cols-2">
+                <FlowPagePanel>
+                    <h2 className="liquid-title text-[22px] font-semibold">Your next actions</h2>
+                    <p className="liquid-copy mt-2 text-[14px]">
+                        These are the ACTIVE surfaces currently available to you. Start with the task you need now and return here when you need the broader trust summary.
+                    </p>
+
+                    <div className="mt-5 space-y-4">
+                        <div className="rounded-2xl border border-[#e5e5e7] bg-white p-4">
+                            <p className="font-semibold text-slate-900">Connections and conversation</p>
+                            <p className="mt-1 text-[13px] text-slate-600">Review curated matches or continue an existing conversation.</p>
+                            <PageActionRow className="mt-3">
+                                <Link href="/match" className="liquid-btn liquid-btn-primary">Open matches</Link>
+                                <Link href="/chat" className="liquid-btn liquid-btn-secondary">Open chat</Link>
+                            </PageActionRow>
                         </div>
 
-                        {selfDevActionPlan.length > 0 && (
-                            <div className="mb-4 border-t pt-4 liquid-divider">
-                                <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">Self Development Loop</h3>
-                                <div className="space-y-2">
-                                    {selfDevActionPlan.map((action, idx) => (
-                                        <div key={`self-dev-action-${idx}`} className="rounded-xl border px-3 py-2 liquid-divider">
-                                            <div className="mb-1 flex items-center justify-between gap-2">
-                                                <span className="text-[12px] font-semibold text-slate-700">{action.title}</span>
-                                                <span className="liquid-chip rounded-full px-2 py-0.5 text-[10px] font-semibold text-slate-700">{action.priority}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                                                <span>{action.metric}</span>
-                                                <span>{action.target}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="mt-auto flex items-center justify-between pt-4 text-[13px] text-slate-500">
-                            <span>Status</span>
-                            <div className="liquid-chip rounded-full px-3 py-1 font-medium text-emerald-700">ACTIVE</div>
+                        <div className="rounded-2xl border border-[#e5e5e7] bg-white p-4">
+                            <p className="font-semibold text-slate-900">Trust actions</p>
+                            <p className="mt-1 text-[13px] text-slate-600">Submit an attestation, report a trust event, or revoke participation controls.</p>
+                            <PageActionRow className="mt-3">
+                                <Link href="/review" className="liquid-btn liquid-btn-primary">Open attestation</Link>
+                                <Link href="/report" className="liquid-btn liquid-btn-secondary">Open report</Link>
+                                <Link href="/revoke" className="liquid-btn liquid-btn-secondary">Open revoke</Link>
+                            </PageActionRow>
                         </div>
                     </div>
+                </FlowPagePanel>
 
-                    {/* Electronic Receipt / 증적 영수증 Card */}
-                    <div className="liquid-pane-muted liquid-rise flex flex-col rounded-3xl p-6 sm:p-8">
-                        <h2 className="liquid-title mb-2 text-[22px] font-semibold">통합 서비스 영수증</h2>
-                        <p className="liquid-copy mb-6 text-[13px]">등록된 모든 자격 증명과 서명 내역은 감사 로그로 불변 격리 보호됩니다.</p>
+                <FlowPagePanel>
+                    <h2 className="liquid-title text-[22px] font-semibold">Reference detail</h2>
+                    <p className="liquid-copy mt-2 text-[14px]">
+                        Keep the main action surface clean, but make the durable account and retention state easy to verify when needed.
+                    </p>
 
-                        <div className="flex flex-col gap-3">
-                            <div className="flex justify-between border-b pb-2 liquid-divider">
-                                <span className="text-[13px] text-slate-600">원장 Receipt ID</span>
-                                <span className="max-w-[160px] truncate text-[12px] font-mono text-slate-900">{receiptId}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2 liquid-divider">
-                                <span className="text-[13px] text-slate-600">계약서 버전</span>
-                                <span className="text-[13px] font-mono text-slate-900">{docVersion}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2 liquid-divider">
-                                <span className="text-[13px] text-slate-600">타임스탬프</span>
-                                <span className="text-[13px] font-mono text-slate-900">{timeBucket}</span>
-                            </div>
-                        </div>
+                    <FlowInfoGrid className="mt-5">
+                        <ReferenceDetailsCard
+                            title="Account status"
+                            rows={[
+                                { label: 'Admission status', value: admissionStatus },
+                                { label: 'Trust level', value: trustLevel },
+                                { label: 'SBT status', value: sbtStatus },
+                                { label: 'Credential', value: soulIssued ? 'ISSUED' : 'PENDING' },
+                                { label: 'Issued at', value: soulIssuedAt || 'Not available' },
+                            ]}
+                            className="h-full"
+                        />
+                        <FlowInset title="Retention posture" className="h-full">
+                            Original source documents are not retained after the final decision. What remains is the minimal claim set needed for trust operations and auditability.
+                        </FlowInset>
+                    </FlowInfoGrid>
+                </FlowPagePanel>
+            </section>
 
-                        <div className="mt-8 border-t pt-4 liquid-divider">
-                            <h3 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500">최근 감사 로그</h3>
-                            {auditLogRows.length > 0 ? (
-                                auditLogRows.map((row, idx) => (
-                                    <AuditLogRow key={`audit-log-${idx}`} action={row.action} timestamp={row.timestamp} hash={row.hash} />
-                                ))
-                            ) : (
-                                <AuditLogRow action="NO_RECENT_AUDIT_LOG" timestamp={timeBucket} hash={receiptId} />
-                            )}
-                            {latestScore !== null && (
-                                <p className="mt-3 text-[12px] text-slate-600">최근 인터뷰 점수: {latestScore}</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <FlowPagePanel>
+                <h2 className="liquid-title text-[22px] font-semibold">Document verification reference</h2>
+                <p className="liquid-copy mt-2 text-[14px]">
+                    This detail is secondary to the ACTIVE actions above. Use it when you need to confirm how document verification resolved after admission.
+                </p>
 
-            <SupportCTA />
-        </main>
+                {requiredDocuments.length === 0 ? (
+                    <FlowInset title="No document detail available" className="mt-5">
+                        We do not currently have document reference detail to show for this account.
+                    </FlowInset>
+                ) : (
+                    <FlowInfoGrid className="mt-5 md:grid-cols-2">
+                        {requiredDocuments.map((doc, index) => (
+                            <ReferenceDetailsCard
+                                key={`${doc.type || 'document'}-${index}`}
+                                title={doc.type || 'Document'}
+                                rows={[
+                                    { label: 'Status', value: doc.status || 'UNKNOWN' },
+                                    { label: 'Processing', value: doc.processing_status || 'PENDING' },
+                                    { label: 'Confidence', value: typeof doc.ai_confidence === 'number' ? doc.ai_confidence.toFixed(2) : 'N/A' },
+                                    { label: 'Purged at', value: doc.purged_at || 'NOT_PURGED' },
+                                ]}
+                            />
+                        ))}
+                    </FlowInfoGrid>
+                )}
+            </FlowPagePanel>
+        </FlowPageShell>
     );
 }

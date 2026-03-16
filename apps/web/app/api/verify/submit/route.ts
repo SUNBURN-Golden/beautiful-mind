@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { isLegacyFlowEnabled } from '@/lib/server/trust';
 
 function getSupabaseEnv() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -91,6 +92,13 @@ async function resolveUserIdFromRequest(req: Request, supabaseUrl: string, anonK
 
 export async function POST(req: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: 'LEGACY_FLOW_DISABLED', message: 'Use /api/admission/document/submit.' },
+                { status: 410 },
+            );
+        }
+
         const { supabaseUrl, anonKey, serviceKey } = getSupabaseEnv();
         const supabaseAdmin = createClient(supabaseUrl, serviceKey);
 

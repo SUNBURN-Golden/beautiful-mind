@@ -20,57 +20,29 @@ async function simulateAirdrop() {
 
     console.log('Target User ID:', user.id);
 
-    const idempotencyKey = `AIRDROP:${user.id}`;
-    let airdropAmount = 20; // Default
-    let claimNo = null;
-
-    // 1. Claim Airdrop Slot (Race Condition Safe)
-    const { data: claim, error: claimErr } = await s.from('soul_airdrop_claims').insert({
-        user_id: user.id,
-        airdrop_amount: 0, // Placeholder
-        idempotency_key: idempotencyKey
-    }).select().single();
+    const idempotencyKey = `SIM_AIRDROP:${user.id}:${Date.now()}`;
+    const { data: claimResult, error: claimErr } = await s.rpc('claim_soul_airdrop', {
+        p_user_id: user.id,
+        p_idempotency_key: idempotencyKey,
+    });
 
     if (claimErr) {
-        if (claimErr.code === '23505') {
-            console.log('User already claimed an airdrop.');
-            return;
-        } else {
-            console.error('Claim insert failed:', claimErr);
-            return;
-        }
-    }
-
-    claimNo = claim.claim_no;
-    console.log(`Claim No: ${claimNo}`);
-
-    // Determine tier
-    let tier = 'BASE';
-    if (claimNo <= 100) { airdropAmount = 80; tier = 'TOP100'; }
-    else if (claimNo <= 1000) { airdropAmount = 50; tier = 'TOP1000'; }
-
-    // Update claim amount
-    await s.from('soul_airdrop_claims').update({ airdrop_amount: airdropAmount }).eq('claim_no', claimNo);
-
-    // 2. Insert into Ledger
-    const { data: ledger, error: ledgerErr } = await s.from('token_ledger').insert({
-        user_id: user.id,
-        amount: airdropAmount,
-        type: 'AIRDROP',
-        idempotency_key: idempotencyKey,
-        meta: { claim_no: claimNo, tier: tier, verified_at: new Date().toISOString() }
-    }).select().single();
-
-    if (ledgerErr) {
-        console.error('Failed to insert ledger for airdrop:', ledgerErr);
+        console.error('claim_soul_airdrop RPC failed:', claimErr);
         return;
     }
-    console.log(`2) PortOne verified 후 Airdrop 지급 ledger 기록: +${ledger.amount} SOUL (Tier: ${tier})`);
 
-    // 3. Check Wallet
+    const status = String(claimResult?.status || 'UNKNOWN');
+    if (!['CLAIMED', 'ALREADY_CLAIMED', 'IDEMPOTENT_SKIPPED'].includes(status)) {
+        console.error('Unexpected claim status:', claimResult);
+        return;
+    }
+
+    console.log(`1) claim_soul_airdrop status=${status} claim_no=${claimResult?.claim_no ?? 'n/a'} amount=${claimResult?.amount ?? 'n/a'} cohort=${claimResult?.cohort ?? 'n/a'}`);
+
+    // 2. Check Wallet projection
     const { data: wallet, error: walletErr } = await s.from('user_wallets').select('*').eq('user_id', user.id).single();
     if (walletErr) console.error('Wallet fetch error:', walletErr);
-    else console.log(`3) user_wallet 반영 완료. Balance: ${wallet.balance} SOUL`);
+    else console.log(`2) user_wallet 반영 완료. Balance: ${wallet.balance} SOUL`);
 
     console.log('--- AIRDROP SIMULATION DONE ---');
 }

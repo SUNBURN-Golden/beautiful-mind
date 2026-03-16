@@ -67,15 +67,11 @@ export function SupportCTA({ children }: PropsWithChildren) {
         <div className="mt-auto pt-8 text-center text-[13px] text-slate-500">
             {children ?? (
                 <>
-                    진행이 어렵다면{" "}
-                    <Link href="/onboarding/help" className="font-semibold text-[#06c] underline underline-offset-2 hover:text-[#0077ed]">
-                        온보딩 도움말
-                    </Link>
-                    {" "}또는{" "}
+                    Need a hand? Start with the{" "}
                     <Link href="/manual" className="font-semibold text-[#06c] underline underline-offset-2 hover:text-[#0077ed]">
-                        이용 매뉴얼
+                        guide
                     </Link>
-                    {" "}을 먼저 확인해 주세요.
+                    {" "}for the quickest path forward.
                 </>
             )}
         </div>
@@ -113,11 +109,14 @@ export function Skeleton({ lines = 3, className }: { lines?: number; className?:
 }
 
 export function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
-    const { className, ...inputProps } = props;
+    const generatedId = React.useId();
+    const inputId = props.id || generatedId;
+    const { className, id: _unusedId, ...inputProps } = props;
     return (
         <div className="mb-4 flex w-full flex-col gap-2">
-            {label && <label className="text-[13px] font-medium text-slate-600">{label}</label>}
+            {label && <label htmlFor={inputId} className="text-[13px] font-medium text-slate-600">{label}</label>}
             <input
+                id={inputId}
                 {...inputProps}
                 className={cn("liquid-input", className)}
             />
@@ -139,7 +138,7 @@ export function ConsentItem({ label, checked, onChange, link }: { label: string;
                     rel="noopener noreferrer"
                     className="ml-[30px] mt-1 inline-block text-[12px] text-sky-600 underline"
                 >
-                    약관 보기
+                    View terms
                 </Link>
             )}
         </div>
@@ -149,7 +148,7 @@ export function ConsentItem({ label, checked, onChange, link }: { label: string;
 export function DocumentViewer({ text }: { text?: string }) {
     return (
         <div className="mb-6 liquid-doc">
-            {text ?? "문서 내용을 불러올 수 없습니다."}
+            {text ?? "Document content is not available."}
         </div>
     );
 }
@@ -172,10 +171,10 @@ export function SignaturePad({ onSign }: { onSign?: (data: string) => void }) {
                 role="button"
                 tabIndex={0}
             >
-                이곳에 서명하십시오 (클릭하여 시뮬레이션)
+                Sign here (click to simulate)
             </div>
             <button type="button" onClick={triggerSign} className="liquid-btn liquid-btn-secondary">
-                서명 인식 테스트
+                Test signature capture
             </button>
         </div>
     );
@@ -195,16 +194,20 @@ export function AuditLogRow({ action, timestamp, hash }: { action: string; times
 
 export function StageTransitionNotice({
     currentStep,
-    title = "진행 상태를 동기화하는 중입니다.",
-    description = "사용자 상태에 맞는 화면으로 이동합니다. 잠시만 기다려 주세요.",
+    title = "We’re syncing your progress.",
+    description = "We’ll take you to the screen that matches your current step.",
+    primaryLabel = "Go to current step",
+    secondaryLabel = "Open the guide",
 }: {
     currentStep?: string;
     title?: string;
     description?: string;
+    primaryLabel?: string;
+    secondaryLabel?: string;
 }) {
     const destination = currentStep && isStage(currentStep)
         ? getExpectedRoute(currentStep)
-        : "/onboarding";
+        : "/apply";
 
     return (
         <main className="mx-auto flex min-h-screen max-w-md flex-col px-4 pb-12 pt-20 sm:px-6 sm:pt-24">
@@ -216,16 +219,128 @@ export function StageTransitionNotice({
                         href={destination}
                         className="liquid-btn liquid-btn-primary"
                     >
-                        현재 단계로 이동
+                        {primaryLabel}
                     </Link>
                     <Link
                         href="/manual"
                         className="liquid-btn liquid-btn-secondary"
                     >
-                        이용 매뉴얼 보기
+                        {secondaryLabel}
                     </Link>
                 </div>
             </div>
         </main>
+    );
+}
+
+type FeedbackTone = 'info' | 'success' | 'warning' | 'error';
+
+const FEEDBACK_TONE_CLASS: Record<FeedbackTone, string> = {
+    info: 'border-[#d6e8ff] bg-[#f3f8ff] text-[#0f3d91]',
+    success: 'border-[#cde8d4] bg-[#edf9f1] text-[#14532d]',
+    warning: 'border-amber-300 bg-amber-50 text-amber-900',
+    error: 'border-[#f3d1d1] bg-[#fff5f5] text-[#7f1d1d]',
+};
+
+export function PageLoadingState({
+    title = 'Loading your progress.',
+    description = 'This should only take a moment.',
+    lines = 4,
+}: {
+    title?: string;
+    description?: string;
+    lines?: number;
+}) {
+    return (
+        <main className="mx-auto max-w-4xl px-4 pt-20 sm:px-6">
+            <div className="liquid-pane rounded-3xl p-6">
+                <h1 className="text-[18px] font-semibold text-slate-900">{title}</h1>
+                <p className="mt-1 text-[13px] text-slate-600">{description}</p>
+                <Skeleton lines={lines} className="mt-5" />
+            </div>
+        </main>
+    );
+}
+
+export function FeedbackPanel({
+    tone = 'info',
+    title,
+    description,
+    children,
+}: PropsWithChildren<{
+    tone?: FeedbackTone;
+    title: string;
+    description?: string;
+}>) {
+    return (
+        <section className={cn('rounded-2xl border p-4 text-[13px] leading-relaxed', FEEDBACK_TONE_CLASS[tone])}>
+            <h2 className="text-[15px] font-semibold">{title}</h2>
+            {description && <p className="mt-1">{description}</p>}
+            {children ? <div className="mt-3">{children}</div> : null}
+        </section>
+    );
+}
+
+export function RecoverableErrorPanel({
+    title = 'Something interrupted this step.',
+    message,
+    retryLabel = 'Try again',
+    onRetry,
+    secondaryHref,
+    secondaryLabel,
+}: {
+    title?: string;
+    message?: string;
+    retryLabel?: string;
+    onRetry?: () => void;
+    secondaryHref?: string;
+    secondaryLabel?: string;
+}) {
+    return (
+        <FeedbackPanel tone="error" title={title} description={message}>
+            <div className="flex flex-wrap gap-2">
+                {onRetry && (
+                    <button type="button" onClick={onRetry} className="liquid-btn liquid-btn-secondary !px-3 !py-1.5 text-[12px]">
+                        {retryLabel}
+                    </button>
+                )}
+                {secondaryHref && secondaryLabel && (
+                    <Link href={secondaryHref} className="liquid-btn liquid-btn-secondary !px-3 !py-1.5 text-[12px]">
+                        {secondaryLabel}
+                    </Link>
+                )}
+            </div>
+        </FeedbackPanel>
+    );
+}
+
+export function SuccessNextStepPanel({
+    title,
+    description,
+    primaryHref,
+    primaryLabel,
+    secondaryHref,
+    secondaryLabel,
+}: {
+    title: string;
+    description?: string;
+    primaryHref: string;
+    primaryLabel: string;
+    secondaryHref?: string;
+    secondaryLabel?: string;
+}) {
+    return (
+        <FeedbackPanel tone="success" title={title} description={description}>
+            <div className="flex flex-wrap gap-2">
+                <Link href={primaryHref} className="liquid-btn liquid-btn-primary !px-3 !py-1.5 text-[12px]">
+                    {primaryLabel}
+                </Link>
+                {secondaryHref && secondaryLabel && (
+                    <Link href={secondaryHref} className="liquid-btn liquid-btn-secondary !px-3 !py-1.5 text-[12px]">
+                        {secondaryLabel}
+                    </Link>
+                )}
+            </div>
+        </FeedbackPanel>
     );
 }

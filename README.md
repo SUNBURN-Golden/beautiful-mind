@@ -19,17 +19,26 @@ SoulBound는 신뢰할 수 있는 사용자 간의 명시적 동의와 검증 �
 ### 1. 패키지 설치
 최상위 경로에서 의존성을 설치합니다.
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 ### 2. 개발 서버 시작
-다음 명령어로 Next.js 웹앱을 로컬 리눅스 터미널에서 구동합니다.
+다음 명령어를 기준으로 Next.js 웹앱을 실행합니다.
 ```bash
-pnpm dev
+pnpm --filter web dev
 ```
-또는 `apps/web` 으로 이동하여 구동할 수도 있습니다.
 `http://localhost:3000` 에서 프로젝트를 확인할 수 있습니다.
+
+## 기본 검증 게이트 (Validation Gate)
+로컬/CI 기본 검증 경로는 아래 3단계입니다. 최상위(root) 경로에서 실행하세요.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm validate:web:scope
+```
+
+`pnpm validate:web:scope`는 `test:unit`과 `build`를 순차적으로 실행합니다.
 
 ### 핵심 설계 규칙 (Agent Rules)
 1. **Legal Texts**: 법무 문구(`docs/legal/terms.md`, `privacy.md`)는 오직 읽기 전용으로만 접근되어야 합니다. 수정은 금지되며, 동의 모듈에서 원본 그대로 렌더링됩니다.
-2. **Core Isolation**: 상태 판별, 패널티 부과, 자격 점수 도출 등 핵심 로직은 반드시 `packages/core/status.ts` 등에서 관리되며 서버사이드(Server Actions/API)에서만 실행됩니다.
+2. **Core Isolation**: 상태 판별/정책 계산 등 핵심 로직은 `packages/core` 및 `apps/web/lib/server` 도메인 모듈에서 관리되며, 서버 경계에서 실행됩니다.

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Users, Activity, LogOut } from 'lucide-react';
+import { ShieldCheck, Users, Activity, LogOut, FileCheck2, Gauge, FlaskConical } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 <div className="border-b border-[#e5e5e7] px-4 py-5 md:px-6 md:py-7">
                     <h2 className="flex items-center gap-2 text-[21px] font-semibold tracking-tight">
                         <ShieldCheck className="h-6 w-6 text-[#06c]" />
-                        Admin Control
+                        Admission Ops
                     </h2>
                     <p className="mt-2 truncate text-xs text-[#6e6e73]">{user.email}</p>
                 </div>
@@ -29,14 +29,35 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
                     >
                         <Activity className="h-4 w-4" />
-                        Dashboard
+                        Ops Home
                     </Link>
                     <Link
                         href="/admin/users"
                         className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
                     >
                         <Users className="h-4 w-4" />
-                        Users
+                        Trust Accounts
+                    </Link>
+                    <Link
+                        href="/admin/admissions"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <FileCheck2 className="h-4 w-4" />
+                        Cold-Path Queue
+                    </Link>
+                    <Link
+                        href="/admin/admissions/ops"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Gauge className="h-4 w-4" />
+                        Ops Metrics
+                    </Link>
+                    <Link
+                        href="/admin/admissions/policy"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <FlaskConical className="h-4 w-4" />
+                        Policy Proposals
                     </Link>
                 </nav>
 
@@ -46,7 +67,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d2d2d7] bg-[#fbfbfd] px-4 text-sm font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
                     >
                         <LogOut className="h-4 w-4" />
-                        Exit Admin
+                        Exit to Trust Home
                     </Link>
                 </div>
             </aside>

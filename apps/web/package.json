@@ -7,8 +7,12 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "node --test tests/unit/*.test.mjs",
-    "test:e2e:remote": "node ../../scripts/remote_e2e_seed.mjs && playwright test tests/e2e/onboarding-real.spec.ts --reporter=github,html; node ../../scripts/remote_e2e_cleanup.mjs"
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:auth": "ALLOW_TEST_API_ROUTES=true PLAYWRIGHT_REQUIRE_AUTH=1 playwright test --grep-invert @auth-simulated",
+    "test:e2e:remote": "node ../../scripts/remote_e2e_seed.mjs && PLAYWRIGHT_REQUIRE_AUTH=1 ALLOW_TEST_API_ROUTES=true playwright test tests/e2e/onboarding-real.spec.ts --reporter=github,html; node ../../scripts/remote_e2e_cleanup.mjs",
+    "check:wallet-consistency": "node scripts/check-wallet-consistency.mjs",
+    "reconcile:wallets": "node scripts/reconcile-wallets.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.42.0",

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { ai, systemInstruction, nextQuestionSchema } from '@/lib/gemini';
+import { systemInstruction, nextQuestionSchema, generateContentWithRetry } from '@/lib/gemini';
 import { buildSelfDevelopmentSignals } from '@/lib/server/self-development';
+import { isLegacyFlowEnabled } from '@/lib/server/trust';
 
 const REQUIRED_CONSENT_MODULES = ['OSINT', 'LOCATION', 'DEVICE'] as const;
 const FOCUS_TOPIC_HINTS: Record<string, string[]> = {
@@ -115,6 +116,13 @@ function buildDeterministicFallbackQuestion(topic: string, transcript: Transcrip
 
 export async function POST(request: Request) {
     try {
+        if (!isLegacyFlowEnabled()) {
+            return NextResponse.json(
+                { error: 'LEGACY_FLOW_DISABLED', message: 'Interview hot path is disabled for admission-first mode.' },
+                { status: 410 },
+            );
+        }
+
         const body = await request.json().catch(() => ({}));
         const interview_id = typeof body.interview_id === 'string' ? body.interview_id : null;
         const last_answer = typeof body.last_answer === 'string' ? body.last_answer.trim() : '';
@@ -265,15 +273,7 @@ Do not assert or assume facts that are not present in transcript.
 Keep your question conversational but analytical. Output strictly following the provided JSON schema.
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
-            contents: promptText,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: nextQuestionSchema,
-                systemInstruction: systemInstruction,
-            }
-        });
+        const { response } = await generateContentWithRetry(promptText, nextQuestionSchema);
 
         const resultJsonString = response.text || '{}';
         const parsedNode = JSON.parse(resultJsonString || '{}') as {
