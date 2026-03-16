@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/.e2e/
+/playwright/.auth/
+/playwright-report/
+/playwright-debug-login.png
 
 # next.js
 /.next/
