@@ -63,7 +63,7 @@ export default function ApplyReviewPage() {
                     step={5}
                     totalSteps={5}
                     title="AI decision"
-                    description="The admission engine combines document extraction signals with policy rules to determine the next outcome."
+                    description="Proof, not promises. The admission engine combines document extraction signals with policy rules to determine the next outcome."
                 />
 
                 <FlowInfoGrid className="mt-4">

@@ -66,7 +66,7 @@ export default function ApplyConsentsPage() {
                     step={3}
                     totalSteps={5}
                     title="Consent confirmations"
-                    description="Review each consent individually and type the confirmation phrase exactly as shown. Nothing is pre-checked for you."
+                    description="Standards come first. Review each consent individually and type the confirmation phrase exactly as shown. Nothing is pre-checked for you."
                 />
 
                 <FlowInfoGrid className="mt-6">

@@ -69,13 +69,13 @@ export default function ApplyDocumentsPage() {
                     step={4}
                     totalSteps={5}
                     title="Official documents"
-                    description="Upload the required records here. Each upload runs through the first AI review as soon as it arrives."
+                    description="Proof comes first. Upload the required records here. Each upload runs through the first AI review as soon as it arrives."
                 />
 
                 <FlowInfoGrid className="mt-6">
                     <FlowInfoCard
-                        title="Accepted formats"
-                        description="PDF, JPG, JPEG, and PNG are supported. You can replace a document when a clearer file is needed."
+                        title="What’s real can be proven."
+                        description="Upload official records in PDF, JPG, JPEG, or PNG. You can replace a document when a clearer file is needed."
                     />
                     <FlowInfoCard
                         title="What happens next"
@@ -95,6 +95,10 @@ export default function ApplyDocumentsPage() {
 
                 <FlowInset title="Progress" className="mt-4">
                     {verifiedCount} of {ADMISSION_DOCUMENTS.length} required documents verified
+                </FlowInset>
+
+                <FlowInset title="Safer because less remains." className="mt-4">
+                    Original documents are used to verify admission, then purged after the final decision. Minimal claims and decision records remain.
                 </FlowInset>
 
                 {lastSuccessType && (

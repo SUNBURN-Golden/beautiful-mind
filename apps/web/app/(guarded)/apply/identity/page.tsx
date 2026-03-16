@@ -65,13 +65,13 @@ export default function ApplyIdentityPage() {
                     step={1}
                     totalSteps={5}
                     title="Identity verification"
-                    description="We record only the minimum identity result needed for admission, then move you into liveness verification."
+                    description="We verify first. This step records only the minimum identity result needed for admission before liveness begins."
                 />
 
                 <FlowInfoGrid className="mt-4">
                     <FlowInfoCard
-                        title="Why this step matters"
-                        description="It creates a verified baseline for admission and helps block impersonation before the rest of the flow."
+                        title="Proof before connection."
+                        description="This creates the verified baseline for admission and helps block impersonation before the rest of the flow."
                     />
                     <FlowInfoCard
                         title="How to recover"

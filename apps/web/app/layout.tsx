@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SoulBound",
-  description: "SoulBound Trust Platform",
+  description: "Selective, admission-based trust network built on proof-first verification.",
 };
 
 export default function RootLayout({

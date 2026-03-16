@@ -85,7 +85,7 @@ export default function ApplyAppealPage() {
                     />
                 </FlowInfoGrid>
 
-                <FlowInset title="How to write a strong appeal" className="mt-4">
+                <FlowInset title="If it matters, prove it." className="mt-4">
                     Focus on verifiable facts, missing context, or a concrete document-reading issue. Keep policy interpretation secondary to the evidence you want reviewed.
                 </FlowInset>
 

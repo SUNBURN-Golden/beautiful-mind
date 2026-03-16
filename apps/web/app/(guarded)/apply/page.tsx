@@ -52,27 +52,27 @@ export default function ApplyStartPage() {
                     step={0}
                     totalSteps={5}
                     eyebrow="Admission"
-                    title="Start your admission review"
+                    title="Start with proof."
                     description={(
                         <>
-                            We’ll guide you through identity, liveness, consent, documents, and automated review.
-                            Start here, then follow the next step shown on each screen.
+                            SoulBound opens core access only after identity, liveness, consent, documents, and automated
+                            review are complete. We’ll guide each step from here.
                         </>
                     )}
                 />
 
                 <FlowInfoGrid className="mt-6">
                     <FlowInfoCard
-                        title="What happens now"
-                        description="We create your admission record and unlock the identity step."
+                        title="Admission is a standard."
+                        description="We create your admission record here, then unlock identity as the first verification step."
                     />
                     <FlowInfoCard
-                        title="What happens next"
-                        description="You continue to identity verification and the rest of the review flow."
+                        title="Proof comes first."
+                        description="You continue to identity verification first, then move through the rest of the review flow."
                     />
                 </FlowInfoGrid>
 
-                <FlowInset title="What we keep" className="mt-6">
+                <FlowInset title="Safer because less remains." className="mt-6">
                     <ul className="list-disc space-y-2 pl-5 text-[14px] text-slate-700">
                         <li>We do not ask for lifestyle or personality prompts that do not support review quality.</li>
                         <li>Original documents are purged after the final decision.</li>

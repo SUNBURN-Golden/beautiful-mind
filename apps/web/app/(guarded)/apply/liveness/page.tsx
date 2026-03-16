@@ -85,7 +85,7 @@ export default function ApplyLivenessPage() {
                     step={2}
                     totalSteps={5}
                     title="Liveness check"
-                    description="Confirm that you are a real person through a short camera capture. We retain only the verification result and minimal claims."
+                    description="We verify first. Confirm that you are a real person through a short camera capture. We retain only the verification result and minimal claims."
                 />
 
                 <FlowInfoGrid className="mt-4">
@@ -99,7 +99,7 @@ export default function ApplyLivenessPage() {
                     />
                 </FlowInfoGrid>
 
-                <FlowInset title="Privacy and retention" className="mt-3">
+                <FlowInset title="Safer because less remains." className="mt-3">
                     This step runs through a short camera session. Original capture media is not kept long term; only the verification outcome and minimal claims remain.
                 </FlowInset>
 
@@ -119,7 +119,7 @@ export default function ApplyLivenessPage() {
                 <form className="mt-7" onSubmit={handleStartSession}>
                     {!session && (
                         <div className="space-y-4">
-                            <FlowInset title="Before you begin" className="border-[#e5e5e7] bg-white">
+                            <FlowInset title="Proof before connection." className="border-[#e5e5e7] bg-white">
                                 Identity verification must already be complete. Once the session starts, we’ll request camera access and guide you into capture.
                             </FlowInset>
                             <PrimaryButton type="submit" submitting={starting} disabled={starting}>

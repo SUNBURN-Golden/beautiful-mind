@@ -100,7 +100,7 @@ export default function ApplyStatusPage() {
                     description={(
                         <>
                             <strong>{stageCopy.label}</strong>
-                            <span className="block pt-1 text-[14px] font-normal text-slate-600">Start with what you should do now, then use the reference detail only if you need it.</span>
+                            <span className="block pt-1 text-[14px] font-normal text-slate-600">Standards come first. Start with what you should do now, then use the reference detail only if you need it.</span>
                         </>
                     )}
                 />

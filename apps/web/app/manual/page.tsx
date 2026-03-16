@@ -3,56 +3,56 @@ import { Button } from '@/components/ui/button';
 
 const VALUES = [
     {
-        title: 'Admission 우선 접근제어',
-        description: '최종 승인 전까지 핵심 기능 접근을 제한하고, 심사 절차를 SSOT로 일원화합니다.',
+        title: 'Trust, by design.',
+        description: 'Admission is centralized as one source of truth, and core access stays closed until approval is complete.',
     },
     {
-        title: '공식 문서 기반 검증',
-        description: '졸업/소득/혼인/가족관계 문서로만 핵심 admission 근거를 수집합니다.',
+        title: 'Standards come first.',
+        description: 'Identity, liveness, consent, and official documents are completed before access opens.',
     },
     {
-        title: '즉시 파기 + 최소 보관',
-        description: '원본 문서는 최종 결정 직후 삭제하고, 최소 검증 클레임만 유지합니다.',
+        title: 'Safer because less remains.',
+        description: 'Original documents are purged after the final decision, and only minimal verification claims remain.',
     },
     {
-        title: '불변 원장 이벤트',
-        description: '승인/반려/재제출/발급/파기 상태 전이를 trust ledger 이벤트로 추적합니다.',
+        title: 'Only what’s real remains.',
+        description: 'Decision transitions stay traceable through ledger-style events and review-state history.',
     },
 ];
 
 const STEPS = [
     {
-        title: '1) 로그인 및 신청 시작',
-        details: ['`/login` 후 `/apply`에서 admission 신청을 시작합니다.'],
+        title: '1) Start with proof.',
+        details: ['After `/login`, start your admission review from `/apply`.'],
     },
     {
-        title: '2) 신원 검증',
-        details: ['`/apply/identity`에서 본인 확인을 완료합니다.'],
+        title: '2) We verify first.',
+        details: ['Complete identity verification on `/apply/identity`.'],
     },
     {
-        title: '3) 실재 인물(liveness) 검증',
-        details: ['`/apply/liveness`에서 real-person 검증을 제출합니다.'],
+        title: '3) Real-person check',
+        details: ['Submit the liveness step on `/apply/liveness`.'],
     },
     {
-        title: '4) 분리 동의 + 확인문구 입력',
-        details: ['`/apply/consents`에서 항목별 체크와 typed acknowledgement를 제출합니다.'],
+        title: '4) Standards come first.',
+        details: ['On `/apply/consents`, confirm each item individually and type the acknowledgement phrase exactly as shown.'],
     },
     {
-        title: '5) 공식 문서 4종 업로드 + AI 판독',
+        title: '5) Official documents',
         details: [
-            '`/apply/documents`에서 졸업·소득·혼인·가족관계 문서를 제출합니다.',
-            '문서별 교체/재업로드가 가능하며 AI 1차 판독이 실행됩니다.',
+            'On `/apply/documents`, submit the required graduation, income, marital-status, and family records.',
+            'Each document can be replaced, and the first AI read begins as soon as the upload lands.',
         ],
     },
     {
-        title: '6) AI 결정 실행/확인',
-        details: ['`/apply/review`는 AI admission engine 실행 상태를 확인하는 단계이며, 필요 시 재실행만 수행합니다.'],
+        title: '6) Automated decision',
+        details: ['`/apply/review` runs the AI admission engine and confirms whether the automated path can finish the case.'],
     },
     {
-        title: '7) 결과 확인 및 콜드패스',
+        title: '7) Proven connection.',
         details: [
-            '`/apply/status`에서 승인/반려/재제출 상태를 확인합니다.',
-            '예외/항소/감사 케이스만 인간 리뷰 큐로 이동하며, 승인 시 SOUL trust credential이 발급되고 `ACTIVE`로 전환됩니다.',
+            'Use `/apply/status` to confirm whether the result is approved, rejected, or requires resubmission.',
+            'Only appeal, exception, and audit cases move onto the human cold path. Approved cases issue a SOUL trust credential and transition to `ACTIVE`.',
         ],
     },
 ];
@@ -63,28 +63,28 @@ export default function ManualPage() {
             <div className="mx-auto max-w-5xl space-y-8">
                 <header className="space-y-3">
                     <div className="liquid-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#6e6e73]">
-                        SoulBound Admission Manual
+                        Trust, built on proof.
                     </div>
                     <h1 className="liquid-title text-[34px] font-semibold tracking-tight sm:text-[42px]">
-                        SoulBound 이용 매뉴얼
+                        SoulBound manual
                     </h1>
                     <p className="liquid-copy max-w-3xl text-[15px] sm:text-[16px]">
-                        SoulBound는 일반 온보딩 서비스가 아니라 admission-controlled trust network입니다.
-                        승인 이전에는 핵심 기능이 잠기며, `/apply/*` 절차 완료 후에만 ACTIVE 상태로 전환됩니다.
+                        Admission is a standard. SoulBound is a selective trust network, and core access opens only after
+                        identity, liveness, consent, and document review are complete.
                     </p>
 
                     <div className="flex flex-wrap gap-3 pt-1">
                         <Button asChild className="h-11 px-5">
-                            <Link href="/signup">회원가입</Link>
+                            <Link href="/signup">Sign up</Link>
                         </Button>
                         <Button asChild variant="outline" className="h-11 px-5">
-                            <Link href="/login">로그인</Link>
+                            <Link href="/login">Log in</Link>
                         </Button>
                         <Button asChild variant="secondary" className="h-11 px-5">
-                            <Link href="/apply">Admission 시작</Link>
+                            <Link href="/apply">Start admission</Link>
                         </Button>
                         <Button asChild variant="outline" className="h-11 px-5">
-                            <Link href="/manual/trust-model">Trust Model</Link>
+                            <Link href="/manual/trust-model">View trust model</Link>
                         </Button>
                     </div>
                 </header>
@@ -112,13 +112,14 @@ export default function ManualPage() {
                 </section>
 
                 <section className="liquid-pane-muted rounded-2xl p-5 sm:p-6">
-                    <h2 className="liquid-title text-[20px] font-semibold">레거시 경로 안내 (호환성 전용)</h2>
+                    <h2 className="liquid-title text-[20px] font-semibold">Compatibility routes only</h2>
                     <p className="mt-2 text-[14px] text-[#3a3a3c]">
-                        `/onboarding/*`, `/interview`, `/contract`, `/consent`, `/osint`, `/admin-verify`는 더 이상 핵심 흐름이 아닙니다.
-                        현재는 모두 admission 중심 경로로 리다이렉트됩니다.
+                        `/onboarding/*`, `/interview`, `/contract`, `/consent`, `/osint`, and `/admin-verify` are no longer the
+                        primary flow. They remain only as compatibility redirects into the admission path.
                     </p>
                     <p className="mt-2 text-[14px] text-[#3a3a3c]">
-                        `/match`, `/chat`, `/review`, `/report`, `/revoke`는 ACTIVE 계정 전용이며, API 계약 기반으로 동작합니다.
+                        `/match`, `/chat`, `/review`, `/report`, and `/revoke` are reserved for `ACTIVE` accounts and open only
+                        after approval.
                     </p>
                 </section>
             </div>
