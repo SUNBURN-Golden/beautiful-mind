@@ -16,7 +16,7 @@ const VALUES = [
     },
     {
         title: 'Only what’s real remains.',
-        description: 'Decision transitions stay traceable through ledger-style events and review-state history.',
+        description: 'Every decision remains traceable.',
     },
 ];
 
@@ -30,7 +30,7 @@ const STEPS = [
         details: ['Complete identity verification on `/apply/identity`.'],
     },
     {
-        title: '3) Real-person check',
+        title: '3) Liveness check',
         details: ['Submit the liveness step on `/apply/liveness`.'],
     },
     {
@@ -41,7 +41,7 @@ const STEPS = [
         title: '5) Official documents',
         details: [
             'On `/apply/documents`, submit the required graduation, income, marital-status, and family records.',
-            'Each document can be replaced, and the first AI read begins as soon as the upload lands.',
+            'Documents can be replaced at any time, and review begins after upload.',
         ],
     },
     {
@@ -51,8 +51,8 @@ const STEPS = [
     {
         title: '7) Proven connection.',
         details: [
-            'Use `/apply/status` to confirm whether the result is approved, rejected, or requires resubmission.',
-            'Only appeal, exception, and audit cases move onto the human cold path. Approved cases issue a SOUL trust credential and transition to `ACTIVE`.',
+            'Check your status to see whether your review was approved, rejected, or sent back for resubmission.',
+            'Human review is limited to appeals, exceptions, and audits. Approved cases issue a SOUL trust credential and grant ACTIVE access.',
         ],
     },
 ];
@@ -112,14 +112,13 @@ export default function ManualPage() {
                 </section>
 
                 <section className="liquid-pane-muted rounded-2xl p-5 sm:p-6">
-                    <h2 className="liquid-title text-[20px] font-semibold">Compatibility routes only</h2>
+                    <h2 className="liquid-title text-[20px] font-semibold">Legacy routes</h2>
                     <p className="mt-2 text-[14px] text-[#3a3a3c]">
-                        `/onboarding/*`, `/interview`, `/contract`, `/consent`, `/osint`, and `/admin-verify` are no longer the
-                        primary flow. They remain only as compatibility redirects into the admission path.
+                        Older routes remain available only to redirect into the admission flow.
                     </p>
                     <p className="mt-2 text-[14px] text-[#3a3a3c]">
-                        `/match`, `/chat`, `/review`, `/report`, and `/revoke` are reserved for `ACTIVE` accounts and open only
-                        after approval.
+                        Match, chat, review, reporting, and account controls remain reserved for ACTIVE accounts and open only after
+                        approval.
                     </p>
                 </section>
             </div>

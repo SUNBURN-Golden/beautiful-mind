@@ -8,11 +8,11 @@ const TRUST_FLOW = [
     },
     {
         title: '2) We verify first.',
-        detail: 'The first AI review normalizes the submitted records and produces policy-ready inputs.',
+        detail: 'The first review organizes submitted records for policy evaluation.',
     },
     {
         title: '3) Admission is a standard.',
-        detail: 'The policy engine determines APPROVE, REJECT, RESUBMIT_REQUIRED, or EXCEPTION_REQUIRED on the automated path.',
+        detail: 'The automated review determines whether a case is approved, rejected, returned for resubmission, or routed as an exception.',
     },
     {
         title: '4) Only what’s real remains.',
@@ -24,7 +24,7 @@ const PRINCIPLES = [
     'Core access does not open before approval.',
     'Original documents are purged immediately after the final decision.',
     'Verification results are retained only as minimal claims.',
-    'Every state transition should remain traceable through audit and ledger events.',
+    'Every decision remains traceable.',
 ];
 
 export default function TrustModelPage() {
@@ -37,8 +37,7 @@ export default function TrustModelPage() {
                     </div>
                     <h1 className="liquid-title text-[34px] font-semibold tracking-tight sm:text-[42px]">Admission trust model</h1>
                     <p className="liquid-copy text-[15px] sm:text-[16px]">
-                        Trust doesn’t happen by default. We verify first, retain less, and keep the path from admission to
-                        credential issuance auditable.
+                        Trust is not open by default. We verify first, retain less, and keep every decision auditable.
                     </p>
                     <div className="flex flex-wrap gap-3">
                         <Button asChild className="h-11 px-5">

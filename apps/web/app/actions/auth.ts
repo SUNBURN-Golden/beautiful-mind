@@ -11,6 +11,17 @@ const authSchema = z.object({
 })
 
 export type AuthState = { error?: string; success?: boolean };
+const AUTH_UNAVAILABLE_MESSAGE = 'Authentication is temporarily unavailable. Please try again shortly.'
+const SIGNUP_UNAVAILABLE_MESSAGE = 'Account creation is temporarily unavailable. Please try again shortly.'
+
+async function tryCreateAuthClient(): Promise<Awaited<ReturnType<typeof createClient>> | null> {
+    try {
+        return await createClient()
+    } catch (error) {
+        console.error('Supabase auth client init failed:', error)
+        return null
+    }
+}
 
 export async function login(_prevState: AuthState, formData: FormData): Promise<AuthState> {
     const parsed = authSchema.safeParse({
@@ -23,16 +34,24 @@ export async function login(_prevState: AuthState, formData: FormData): Promise<
     }
 
     const { email, password } = parsed.data
-    const supabase = await createClient()
+    const supabase = await tryCreateAuthClient()
+    if (!supabase) {
+        return { error: AUTH_UNAVAILABLE_MESSAGE }
+    }
 
-    const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    })
+    try {
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        })
 
-    if (error) {
-        console.error('Login error:', error.message)
-        return { error: error.message }
+        if (error) {
+            console.error('Login error:', error.message)
+            return { error: error.message }
+        }
+    } catch (error) {
+        console.error('Unexpected login failure:', error)
+        return { error: AUTH_UNAVAILABLE_MESSAGE }
     }
 
     return { success: true }
@@ -49,16 +68,24 @@ export async function signup(_prevState: AuthState, formData: FormData): Promise
     }
 
     const { email, password } = parsed.data
-    const supabase = await createClient()
+    const supabase = await tryCreateAuthClient()
+    if (!supabase) {
+        return { error: AUTH_UNAVAILABLE_MESSAGE }
+    }
 
-    const { error } = await supabase.auth.signUp({
-        email,
-        password,
-    })
+    try {
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+        })
 
-    if (error) {
-        console.error('Signup error:', error.message)
-        return { error: error.message }
+        if (error) {
+            console.error('Signup error:', error.message)
+            return { error: error.message }
+        }
+    } catch (error) {
+        console.error('Unexpected signup failure:', error)
+        return { error: SIGNUP_UNAVAILABLE_MESSAGE }
     }
 
     return { success: true }

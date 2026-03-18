@@ -65,16 +65,16 @@ export default async function HomePage() {
 
                 <section className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-3">
                     <article className="liquid-pane rounded-2xl p-5">
-                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Admission is a standard.</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Core access opens only after approval. `/apply/*` is the product’s main path.</p>
+                        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Admission comes first.</h2>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Core access opens only after approval.</p>
                     </article>
                     <article className="liquid-pane rounded-2xl p-5">
                         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">We verify first.</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Identity, liveness, consent, and document review are resolved before connection surfaces open.</p>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Connection opens only after identity, liveness, consent, and document review are complete.</p>
                     </article>
                     <article className="liquid-pane rounded-2xl p-5">
                         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[#6e6e73]">Safer because less remains.</h2>
-                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Original documents are purged after the final decision. Minimal claims and ledger events remain.</p>
+                        <p className="text-sm text-[#1d1d1f] leading-relaxed">Original documents are not retained after review is complete. Minimal claims and decision records remain.</p>
                     </article>
                 </section>
 
