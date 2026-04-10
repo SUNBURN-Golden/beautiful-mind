@@ -211,13 +211,14 @@ async function expectDashboardActiveSurface(page: Page) {
         const status = await fetchStatus(page);
         const headingVisible = await page.getByRole('heading', { name: 'Control Center' }).isVisible().catch(() => false);
         const bodyText = await page.locator('body').textContent().catch(() => '');
+        const sbtBadgeText = await page.getByTestId('sbt-status-badge').textContent().catch(() => null);
 
         return {
             urlMatches: /\/dashboard(\?.*)?$/.test(page.url()),
             headingVisible,
             apiStep: status?.step ?? null,
             soulCredentialIssued: status?.meta?.soul_credential_issued === true,
-            bodyHasActiveLedger: bodyText.includes('Ledger Status') && bodyText.includes(ADMISSION_STAGES.ACTIVE),
+            sbtBadgeText: sbtBadgeText?.trim() || null,
             bodyHasIssuedCredential: bodyText.includes('Credential') && bodyText.includes('ISSUED'),
         };
     }, {
@@ -228,7 +229,7 @@ async function expectDashboardActiveSurface(page: Page) {
         headingVisible: true,
         apiStep: ADMISSION_STAGES.ACTIVE,
         soulCredentialIssued: true,
-        bodyHasActiveLedger: true,
+        sbtBadgeText: ADMISSION_STAGES.ACTIVE,
         bodyHasIssuedCredential: true,
     });
 }
