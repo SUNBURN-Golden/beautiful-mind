@@ -16,6 +16,8 @@
 /playwright/.auth/
 /playwright-report/
 /playwright-debug-login.png
+/test-results/
+/test_output.log
 
 # next.js
 /.next/
