@@ -1,4 +1,4 @@
-import { systemInstruction, nextQuestionSchema, generateContentWithRetry } from './lib/gemini';
+import { systemInstruction, nextQuestionSchema, generateContentWithRetry } from '@/lib/gemini';
 
 async function test() {
     console.log("=== GEMINI SDK UNIT TEST: VERIFIED_SUMMARY CONSISTENCY ===");
