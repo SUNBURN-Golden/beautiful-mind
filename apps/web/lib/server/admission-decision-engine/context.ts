@@ -1,5 +1,5 @@
-import { ADMISSION_POLICY_VERSION, REQUIRED_CONSENT_TYPES } from '../admission-core.ts';
 import { ADMISSION_STAGES, LEGACY_ADMISSION_STAGE_CODES } from '../../contracts/status-stages.ts';
+import { getMissingContracts } from '../contracts.ts';
 import type { AdminClient, AdmissionApplicationRow, AdmissionDecisionContext, AdmissionDocumentRow } from './types';
 
 export async function fetchDecisionContext(
@@ -11,7 +11,7 @@ export async function fetchDecisionContext(
         applicationResult,
         docsResult,
         identityResult,
-        consentResult,
+        missingConsents,
     ] = await Promise.all([
         admin
             .from('admission_applications')
@@ -30,11 +30,7 @@ export async function fetchDecisionContext(
             .select('user_id')
             .eq('user_id', userId)
             .maybeSingle(),
-        admin
-            .from('consent_events')
-            .select('consent_type,policy_version')
-            .eq('user_id', userId)
-            .eq('policy_version', ADMISSION_POLICY_VERSION),
+        getMissingContracts(userId, admin),
     ]);
 
     if (applicationResult.error || !applicationResult.data) {
@@ -44,9 +40,6 @@ export async function fetchDecisionContext(
     if (docsResult.error) {
         throw new Error(docsResult.error.message);
     }
-
-    const consentSet = new Set((consentResult.data || []).map((row) => row.consent_type));
-    const missingConsents = REQUIRED_CONSENT_TYPES.filter((type) => !consentSet.has(type));
 
     return {
         application: applicationResult.data,

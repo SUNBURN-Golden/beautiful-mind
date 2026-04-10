@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getServiceRoleClient, getSessionUser } from '@/lib/server/trust';
 import {
-    ADMISSION_POLICY_VERSION,
-    REQUIRED_CONSENT_TYPES,
     ensureAdmissionApplication,
     isAdmissionDocumentType,
 } from '@/lib/server/admission-core';
+import { getMissingContracts } from '@/lib/server/contracts';
 import { writeTrustLedgerEvent } from '@/lib/server/admission-events';
 
 function extensionFromFilename(filename: string): string {
@@ -77,20 +76,15 @@ export async function POST(req: Request) {
             );
         }
 
-        const { data: consentRows } = await admin
-            .from('consent_events')
-            .select('consent_type,policy_version')
-            .eq('user_id', user.id)
-            .eq('policy_version', ADMISSION_POLICY_VERSION);
-
-        const consentSet = new Set((consentRows || []).map((row) => row.consent_type));
-        const missingConsents = REQUIRED_CONSENT_TYPES.filter((consentType) => !consentSet.has(consentType));
-        if (missingConsents.length > 0) {
+        const missingContracts = await getMissingContracts(user.id, admin);
+        if (missingContracts.length > 0) {
             return NextResponse.json(
                 {
                     error: 'CONSENTS_REQUIRED',
-                    message: 'All admission consents are required before document upload.',
-                    missing_consents: missingConsents,
+                    message: 'All required admission contracts must be signed before document upload.',
+                    missing_contracts: missingContracts,
+                    // Compatibility alias for older callers that still inspect missing_consents.
+                    missing_consents: missingContracts,
                 },
                 { status: 409 },
             );

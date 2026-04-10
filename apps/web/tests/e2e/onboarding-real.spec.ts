@@ -209,15 +209,16 @@ async function expectDashboardActiveSurface(page: Page) {
 
     await expect.poll(async () => {
         const status = await fetchStatus(page);
-        const headingVisible = await page.getByRole('heading', { name: 'Trust Network Home' }).isVisible().catch(() => false);
-        const badgeText = await page.getByTestId('sbt-status-badge').textContent().catch(() => null);
+        const headingVisible = await page.getByRole('heading', { name: 'Control Center' }).isVisible().catch(() => false);
+        const bodyText = await page.locator('body').textContent().catch(() => '');
 
         return {
             urlMatches: /\/dashboard(\?.*)?$/.test(page.url()),
             headingVisible,
             apiStep: status?.step ?? null,
             soulCredentialIssued: status?.meta?.soul_credential_issued === true,
-            badgeText: badgeText?.trim() || null,
+            bodyHasActiveLedger: bodyText.includes('Ledger Status') && bodyText.includes(ADMISSION_STAGES.ACTIVE),
+            bodyHasIssuedCredential: bodyText.includes('Credential') && bodyText.includes('ISSUED'),
         };
     }, {
         timeout: 60000,
@@ -227,7 +228,8 @@ async function expectDashboardActiveSurface(page: Page) {
         headingVisible: true,
         apiStep: ADMISSION_STAGES.ACTIVE,
         soulCredentialIssued: true,
-        badgeText: ADMISSION_STAGES.ACTIVE,
+        bodyHasActiveLedger: true,
+        bodyHasIssuedCredential: true,
     });
 }
 
@@ -345,22 +347,84 @@ async function completeLiveness(page: Page) {
 
     await expect.poll(async () => {
         const status = await fetchStatus(page);
-        return status.step;
+        return status.step === ADMISSION_STAGES.CONSENTS || status.step === ADMISSION_STAGES.DOCUMENTS;
     }, {
         timeout: 30000,
         intervals: [1000, 2000, 5000],
-    }).toBe(ADMISSION_STAGES.CONSENTS);
+    }).toBe(true);
 }
 
 async function completeConsents(page: Page) {
-    await page.goto('/apply/consents');
+    await page.goto('/apply/contracts');
 
-    for (let i = 0; i < CONSENT_PHRASES.length; i += 1) {
-        await page.locator('input[type="checkbox"]').nth(i).check();
-        await page.locator('form input.liquid-input').nth(i).fill(CONSENT_PHRASES[i]);
+    for (let i = 0; i < 10; i += 1) {
+        if (/\/apply\/status(\?.*)?$/.test(page.url())) {
+            break;
+        }
+
+        if (/\/apply\/contracts(\?.*)?$/.test(page.url())) {
+            await page.waitForURL(/.*\/apply\/(status|documents|contracts\/[^/?#]+)(\?.*)?$/, { timeout: 15000 });
+        }
+
+        if (/\/apply\/(status|documents)(\?.*)?$/.test(page.url())) {
+            break;
+        }
+
+        await expect(page).toHaveURL(/.*\/apply\/contracts\/[^/?#]+(\?.*)?$/);
+
+        await page.locator('form').waitFor({ state: 'visible' });
+
+        const typedPhraseInput = page.locator('form input[name="typedPhrase"]').first();
+        if (await typedPhraseInput.count()) {
+            await typedPhraseInput.waitFor({ state: 'visible' });
+            const title = (await typedPhraseInput.getAttribute('title')) ?? '';
+            const phraseText = title.replace(/^Must exactly match:\s*/, '').trim();
+            await typedPhraseInput.scrollIntoViewIfNeeded();
+            await typedPhraseInput.fill(phraseText);
+            await expect(typedPhraseInput).toHaveValue(phraseText);
+        }
+
+        const secondaryConfirm = page.locator('form input[name="secondaryConfirm"]').first();
+        if (await secondaryConfirm.count()) {
+            await secondaryConfirm.waitFor({ state: 'visible' });
+            await secondaryConfirm.check();
+            await expect(secondaryConfirm).toBeChecked();
+        }
+
+        const validityDebug = await page.locator('form').evaluate((form) => {
+            const typed = form.querySelector('input[name="typedPhrase"]');
+            const secondary = form.querySelector('input[name="secondaryConfirm"]');
+            return {
+                formIsValid: form.checkValidity(),
+                typedValue: typed ? typed.value : null,
+                typedPattern: typed ? typed.getAttribute('pattern') : null,
+                typedTitle: typed ? typed.getAttribute('title') : null,
+                typedRequired: typed ? typed.required : null,
+                typedValidity: typed ? {
+                    valueMissing: typed.validity.valueMissing,
+                    patternMismatch: typed.validity.patternMismatch,
+                    valid: typed.validity.valid,
+                    validationMessage: typed.validationMessage,
+                } : null,
+                secondaryChecked: secondary ? secondary.checked : null,
+                secondaryRequired: secondary ? secondary.required : null,
+                secondaryValidity: secondary ? {
+                    valueMissing: secondary.validity.valueMissing,
+                    valid: secondary.validity.valid,
+                    validationMessage: secondary.validationMessage,
+                } : null,
+            };
+        });
+        expect(validityDebug.formIsValid).toBe(true);
+
+        const beforeUrl = page.url();
+        await page.locator('form button[type="submit"]').click();
+        await page.waitForFunction(
+            (prev) => window.location.href !== prev,
+            beforeUrl,
+            { timeout: 15000 }
+        );
     }
-
-    await page.locator('form button[type="submit"]').click();
 
     await expect.poll(async () => {
         const status = await fetchStatus(page);
@@ -381,13 +445,24 @@ async function uploadAndScanDocument(page: Page, index: number, name: string, co
     });
     const button = fileInput.locator('xpath=ancestor::section[1]').locator('button[type="button"]').last();
     await expect(button).toBeEnabled({ timeout: 60000 });
-    const submitResponse = page.waitForResponse((response) => (
+
+    const uploadResponsePromise = page.waitForResponse((response) => (
+        response.request().method() === 'POST'
+        && response.url().includes('/api/admission/document/upload')
+    ), { timeout: 60000 });
+
+    const submitResponsePromise = page.waitForResponse((response) => (
         response.request().method() === 'POST'
         && response.url().includes('/api/admission/document/submit')
     ), { timeout: 60000 });
+
     await button.click();
-    const result = await submitResponse;
-    expect(result.ok()).toBeTruthy();
+
+    const uploadResult = await uploadResponsePromise;
+    expect(uploadResult.ok()).toBeTruthy();
+
+    const submitResult = await submitResponsePromise;
+    expect(submitResult.ok()).toBeTruthy();
 }
 
 async function completeDocumentsForAiDecision(page: Page) {

@@ -41,6 +41,32 @@ type DetailPayload = {
         extracted_claims_json: Record<string, unknown>;
         purged_at: string | null;
     }>;
+    consents?: Array<{
+        consent_type: string;
+        policy_version: string;
+        granted_at: string;
+        typed_ack_phrase: string | null;
+        capture_method: string | null;
+        audit_reference: string | null;
+    }>;
+    contract_signatures?: Array<{
+        document_slug: string;
+        display_title: string;
+        required: boolean;
+        active_version_id: string | null;
+        acceptance_id: string | null;
+        signed: boolean;
+        signed_current_version: boolean;
+        accepted_at: string | null;
+        accepted_via: string | null;
+        secondary_confirmed_at: string | null;
+        typed_ack_phrase: string | null;
+        ack_category: string | null;
+        acknowledgement_captured_at: string | null;
+        latest_event_type: string | null;
+        latest_event_at: string | null;
+        latest_event_payload: Record<string, unknown> | null;
+    }>;
     trust_ledger_timeline?: Array<{
         id: string;
         event_type: string;
@@ -298,6 +324,53 @@ export default function AdminAdmissionDetailPage() {
                                     </pre>
                                 </article>
                             ))}
+                        </div>
+                    </AdminSectionCard>
+
+                    <AdminSectionCard
+                        title="Consent & Signature Review"
+                        description="Use contract signatures as the authoritative proof for new applicants. Legacy consent events remain visible for older or in-flight cases."
+                    >
+                        <div className="mt-3 grid gap-3">
+                            {(detail.contract_signatures || []).map((signature) => (
+                                <article key={signature.document_slug} className="rounded-xl border border-[#ececf0] bg-[#fbfbfd] p-4 text-sm text-[#3a3a3c]">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="font-semibold text-[#1d1d1f]">{signature.display_title}</p>
+                                        <p>{signature.signed_current_version ? 'SIGNED_CURRENT' : signature.signed ? 'SIGNED_OLD_VERSION' : 'MISSING'}</p>
+                                    </div>
+                                    <p className="mt-1 text-xs text-[#6e6e73]">{signature.document_slug}</p>
+                                    <div className="mt-2 space-y-1 text-xs text-[#6e6e73]">
+                                        <p>Accepted: {signature.accepted_at || 'NOT_CAPTURED'}</p>
+                                        <p>Accepted via: {signature.accepted_via || 'N/A'}</p>
+                                        <p>Active version: {signature.active_version_id || 'N/A'}</p>
+                                        <p>Secondary confirm: {signature.secondary_confirmed_at || 'NOT_CAPTURED'}</p>
+                                        <p>Typed acknowledgement: {signature.typed_ack_phrase || 'NOT_REQUIRED'}</p>
+                                        <p>Acknowledgement category: {signature.ack_category || 'N/A'}</p>
+                                        <p>Evidence captured: {signature.acknowledgement_captured_at || 'N/A'}</p>
+                                        <p>Latest event: {signature.latest_event_type || 'N/A'} / {signature.latest_event_at || 'N/A'}</p>
+                                    </div>
+                                </article>
+                            ))}
+
+                            {(detail.contract_signatures || []).length === 0 && (detail.consents || []).length === 0 && (
+                                <p className="text-sm text-[#6e6e73]">No consent or contract signature evidence is available for this case yet.</p>
+                            )}
+
+                            {(detail.consents || []).length > 0 && (
+                                <div className="rounded-xl border border-[#ececf0] bg-white p-4 text-sm text-[#3a3a3c]">
+                                    <p className="font-semibold text-[#1d1d1f]">Legacy consent events</p>
+                                    <div className="mt-3 space-y-2 text-xs text-[#6e6e73]">
+                                        {(detail.consents || []).map((consent) => (
+                                            <div key={`${consent.consent_type}:${consent.granted_at}`} className="rounded-lg border border-[#ececf0] bg-[#fbfbfd] p-2">
+                                                <p className="font-semibold text-[#3a3a3c]">{consent.consent_type}</p>
+                                                <p>{consent.granted_at} / {consent.policy_version}</p>
+                                                <p>Phrase: {consent.typed_ack_phrase || 'N/A'}</p>
+                                                <p>Capture: {consent.capture_method || 'N/A'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </AdminSectionCard>
 

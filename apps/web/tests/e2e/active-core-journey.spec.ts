@@ -102,7 +102,7 @@ test.describe('ACTIVE Core Journey', () => {
         });
 
         await page.goto('/match');
-        await expect(page.getByRole('heading', { name: 'Curated Trust Connections' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Verified Connection Feed' })).toBeVisible();
         await expect(page.getByText('Why this appears now')).toBeVisible();
         const openConversationButton = page.getByRole('button', { name: 'Open Conversation' }).first();
         await expect(openConversationButton).toBeVisible();

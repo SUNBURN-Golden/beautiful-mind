@@ -53,8 +53,8 @@ test.describe('ACTIVE Access + Recovery (Authenticated)', () => {
         }
 
         const routeChecks: Array<{ route: string; marker: RegExp }> = [
-            { route: '/dashboard', marker: /Trust Network Home/ },
-            { route: '/match', marker: /Curated Trust Connections/ },
+            { route: '/dashboard', marker: /Control Center/ },
+            { route: '/match', marker: /Verified Connection Feed/ },
             { route: '/review', marker: /Trust Attestation/ },
         ];
 
@@ -72,7 +72,7 @@ test.describe('ACTIVE Access + Recovery (Authenticated)', () => {
             test.skip(true, 'Authenticated storage state is not available in this local environment.');
         }
 
-        await expect(page.locator('body')).toContainText(/Trust Network Home/);
+        await expect(page.locator('body')).toContainText(/Control Center/);
 
         await page.context().clearCookies();
         await page.goto('/match');
