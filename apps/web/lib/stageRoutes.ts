@@ -10,7 +10,7 @@ export const STAGE_ROUTES = {
     [ADMISSION_STAGES.APPLY_START]: '/apply',
     [ADMISSION_STAGES.IDENTITY]: '/apply/identity',
     [ADMISSION_STAGES.LIVENESS]: '/apply/liveness',
-    [ADMISSION_STAGES.CONSENTS]: '/apply/consents',
+    [ADMISSION_STAGES.CONSENTS]: '/apply/contracts',
     [ADMISSION_STAGES.DOCUMENTS]: '/apply/documents',
     [ADMISSION_STAGES.AI_DECISION]: '/apply/review',
     [ADMISSION_STAGES.RESUBMIT_REQUIRED]: '/apply/documents',

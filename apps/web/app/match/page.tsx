@@ -98,7 +98,7 @@ export default function MatchListPage() {
         <ActiveSurfaceShell>
             <ActiveSectionPanel className="space-y-6">
                 <ActiveSurfaceIntro
-                    title="Curated Trust Connections"
+                    title="Verified Connection Feed"
                     description="A calm shortlist of verified candidates, presented in your latest sync order."
                     meta={<ActiveStatusChip>Connection • {sourceLabel}</ActiveStatusChip>}
                     note="Transparency note: ranking context in this view is limited to visible trust signal, status, and feed order returned by the current sync."

@@ -1,9 +1,12 @@
 import { redirect } from 'next/navigation';
+import { ADMISSION_STAGES } from '@/lib/contracts/status-stages';
 import { getMissingContracts } from '@/lib/server/contracts';
-import { getUser } from '@/utils/supabase/server';
+import { getSessionUser } from '@/lib/server/trust';
+import { createClient } from '@/utils/supabase/server';
+import { findLatestApplicationId } from '@/lib/server/active-features/shared';
 
 export default async function ContractsControllerPage() {
-    const user = await getUser();
+    const user = await getSessionUser();
     if (!user) {
         redirect('/login');
     }
@@ -11,8 +14,18 @@ export default async function ContractsControllerPage() {
     const missingSlugs = await getMissingContracts(user.id);
 
     if (missingSlugs.length === 0) {
-        // All contracts signed. Return to the main status gateway to proceed
-        // to documents or AI decision.
+        // All contracts signed. Advance to documents stage.
+        const supabase = await createClient();
+        const applicationId = await findLatestApplicationId(supabase, user.id);
+        if (applicationId) {
+            await supabase
+                .from('admission_applications')
+                .update({
+                    status: 'IN_PROGRESS',
+                    current_step: ADMISSION_STAGES.DOCUMENTS,
+                })
+                .eq('id', applicationId);
+        }
         redirect('/apply/status');
     }
 

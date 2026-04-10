@@ -85,7 +85,7 @@ export default function DashboardPage() {
             <FlowPagePanel>
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                     <ActiveSurfaceIntro
-                        title="Trust Network Home"
+                        title="Control Center"
                         description="Your ACTIVE access is ready. Start with the action you need now, then use the reference detail only when you need to verify status or policy."
                         meta={(
                             <>
