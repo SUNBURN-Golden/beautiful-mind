@@ -2,10 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { signContract } from '@/lib/server/contracts';
-import { getUser } from '@/utils/supabase/server';
+import { getSessionUser } from '@/lib/server/trust';
 
 export async function submitContractSignature(formData: FormData) {
-    const user = await getUser();
+    const user = await getSessionUser();
     if (!user) {
         throw new Error('Unauthorized');
     }

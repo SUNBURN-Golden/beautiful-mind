@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
     AdmissionApplication,
     ConsentEvent,
+    ContractAcceptance,
     StatusCoreInputs,
     SoulCredential,
     VerifiedClaimRow,
@@ -17,6 +18,7 @@ export async function fetchCoreStatusInputs(
         applicationResult,
         documentResult,
         consentResult,
+        contractResult,
         soulCredentialResult,
         verifiedClaimsResult,
     ] = await Promise.all([
@@ -46,6 +48,11 @@ export async function fetchCoreStatusInputs(
             .order('granted_at', { ascending: false })
             .returns<ConsentEvent[]>(),
         admin
+            .from('contract_acceptances')
+            .select('document_slug,version_id,accepted_at')
+            .eq('user_id', userId)
+            .returns<ContractAcceptance[]>(),
+        admin
             .from('soul_credentials')
             .select('id,status,issued_at')
             .eq('user_id', userId)
@@ -64,6 +71,7 @@ export async function fetchCoreStatusInputs(
         application: applicationResult.data ?? null,
         documents: documentResult.data ?? [],
         consentEvents: consentResult.data ?? [],
+        contractAcceptances: contractResult.data ?? [],
         soulCredential: soulCredentialResult.data ?? null,
         verifiedClaims: verifiedClaimsResult.data ?? [],
     };

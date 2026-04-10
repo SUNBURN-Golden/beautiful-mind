@@ -4,7 +4,7 @@ import {
     REQUIRED_DOCUMENT_TYPES,
     isAdmissionDocumentType,
 } from '../admission-core.ts';
-import type { AdmissionDocument, ConsentEvent, ConsentProgress, DocumentProgress } from './types.ts';
+import type { AdmissionDocument, ConsentEvent, ConsentProgress, ContractAcceptance, ContractProgress, DocumentProgress } from './types.ts';
 
 export function requiredDocumentProgress(documents: AdmissionDocument[]): DocumentProgress {
     const byType = new Map<string, AdmissionDocument>();
@@ -40,5 +40,17 @@ export function buildConsentProgress(
         consentSet,
         missingConsents,
         consentCompleted: missingConsents.length === 0,
+    };
+}
+
+export function buildContractProgress(
+    contractAcceptances: ContractAcceptance[],
+): ContractProgress {
+    const acceptedSet = new Set(contractAcceptances.map((a) => a.document_slug));
+    const missingContracts: string[] = [];
+    return {
+        acceptedSet,
+        missingContracts,
+        contractsCompleted: acceptedSet.size > 0,
     };
 }

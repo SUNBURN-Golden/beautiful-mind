@@ -8,6 +8,7 @@ export function buildStageSignals(params: {
     documents: AdmissionDocument[];
     verifiedClaims: Array<{ claim_type: string; verification_status: string }>;
     consentCompleted: boolean;
+    contractsCompleted: boolean;
     documentsCompleted: boolean;
     latestExceptionCaseStatus: string | null;
     latestAppealStatus: string | null;
@@ -35,6 +36,7 @@ export function buildStageSignals(params: {
         hasIdentity,
         hasLiveness,
         consentCompleted: params.consentCompleted,
+        contractsCompleted: params.contractsCompleted,
         documentsCompleted: params.documentsCompleted,
         hasSoulCredential: params.soulCredentialIssued,
         hasResubmitRequest,
@@ -54,6 +56,7 @@ export function deriveStageAndBlockers(params: {
         hasIdentity: params.signals.hasIdentity,
         hasLiveness: params.signals.hasLiveness,
         consentCompleted: params.signals.consentCompleted,
+        contractsCompleted: params.signals.contractsCompleted,
         documentsCompleted: params.signals.documentsCompleted,
         hasSoulCredential: params.signals.hasSoulCredential,
         application: params.application,

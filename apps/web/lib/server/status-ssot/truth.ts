@@ -1,5 +1,5 @@
 import { ADMISSION_POLICY_VERSION } from '../admission-core.ts';
-import { buildConsentProgress, requiredDocumentProgress } from './progress.ts';
+import { buildConsentProgress, buildContractProgress, requiredDocumentProgress } from './progress.ts';
 import { buildStageSignals, deriveStageAndBlockers } from './adapter.ts';
 import type {
     StatusOverlayInputs,
@@ -13,6 +13,7 @@ export type DerivedStatusTruth = {
     application: StatusTruthInputs['application'];
     documentProgress: ReturnType<typeof requiredDocumentProgress>;
     consentProgress: ReturnType<typeof buildConsentProgress>;
+    contractProgress: ReturnType<typeof buildContractProgress>;
     stageSignals: ReturnType<typeof buildStageSignals>;
     stage: StatusResponse['stage'];
     blockers: StatusResponse['blockers'];
@@ -36,6 +37,7 @@ export function deriveStatusTruth(truth: StatusTruthInputs): DerivedStatusTruth 
     const application = truth.application;
     const documentProgress = requiredDocumentProgress(truth.documents);
     const consentProgress = buildConsentProgress(truth.consentEvents, ADMISSION_POLICY_VERSION);
+    const contractProgress = buildContractProgress(truth.contractAcceptances);
 
     const stageSignals = buildStageSignals({
         identity: truth.identity,
@@ -43,6 +45,7 @@ export function deriveStatusTruth(truth: StatusTruthInputs): DerivedStatusTruth 
         documents: truth.documents,
         verifiedClaims: truth.verifiedClaims,
         consentCompleted: consentProgress.consentCompleted,
+        contractsCompleted: contractProgress.contractsCompleted,
         documentsCompleted: documentProgress.missing.length === 0,
         latestExceptionCaseStatus: truth.latestExceptionCase?.status || null,
         latestAppealStatus: truth.latestAppeal?.status || null,
@@ -62,6 +65,7 @@ export function deriveStatusTruth(truth: StatusTruthInputs): DerivedStatusTruth 
         application,
         documentProgress,
         consentProgress,
+        contractProgress,
         stageSignals,
         stage,
         blockers,

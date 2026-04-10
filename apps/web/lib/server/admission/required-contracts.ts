@@ -1,5 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ContractAcceptance, ContractDocument } from '../status-ssot/types.ts';
+
+type ContractDocumentRow = {
+    slug: string;
+    active_version_id: string | null;
+    required_for_admission: boolean;
+};
+
+type ContractAcceptanceRow = {
+    document_slug: string;
+    version_id: string;
+};
 
 export type ContractsReader = Pick<SupabaseClient, 'from'>;
 
@@ -19,12 +29,12 @@ export async function getMissingRequiredAdmissionContracts(
             .from('contract_documents')
             .select('slug,active_version_id,required_for_admission')
             .eq('required_for_admission', true)
-            .returns<ContractDocument[]>(),
+            .returns<ContractDocumentRow[]>(),
         client
             .from('contract_acceptances')
             .select('document_slug,version_id')
             .eq('user_id', userId)
-            .returns<ContractAcceptance[]>(),
+            .returns<ContractAcceptanceRow[]>(),
     ]);
 
     if (bundleRes.error) throw new Error(bundleRes.error.message);
@@ -34,7 +44,7 @@ export async function getMissingRequiredAdmissionContracts(
     const docMap = new Map((docsRes.data || []).map((doc) => [doc.slug, doc]));
     const required = (bundleRes.data || [])
         .map((row) => docMap.get(row.document_slug))
-        .filter((row): row is ContractDocument => Boolean(row));
+        .filter((row): row is ContractDocumentRow => Boolean(row));
 
     const accepted = new Set(
         (acceptsRes.data || []).map((acceptance) => `${acceptance.document_slug}:${acceptance.version_id}`),

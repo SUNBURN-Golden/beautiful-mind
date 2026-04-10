@@ -20,6 +20,7 @@ export type DeriveAdmissionStageParams = {
     hasIdentity: boolean;
     hasLiveness: boolean;
     consentCompleted: boolean;
+    contractsCompleted: boolean;
     documentsCompleted: boolean;
     hasSoulCredential: boolean;
     application: AdmissionApplicationSnapshot | null;
@@ -80,7 +81,7 @@ export function deriveAdmissionStage(params: DeriveAdmissionStageParams): Derive
         return { stage: ADMISSION_STAGES.LIVENESS, blockers };
     }
 
-    if (!params.consentCompleted) {
+    if (!params.contractsCompleted) {
         blockers.push(STATUS_BLOCKER_CODES.CONSENTS_REQUIRED);
         return { stage: ADMISSION_STAGES.CONSENTS, blockers };
     }

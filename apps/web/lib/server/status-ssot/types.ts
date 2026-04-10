@@ -38,6 +38,12 @@ export type ConsentEvent = {
     policy_version: string | null;
 };
 
+export type ContractAcceptance = {
+    document_slug: string;
+    version_id: string;
+    accepted_at: string;
+};
+
 export type SoulCredential = {
     id: string;
     status: string;
@@ -119,6 +125,7 @@ export type StatusCoreInputs = {
     application: AdmissionApplication | null;
     documents: AdmissionDocument[];
     consentEvents: ConsentEvent[];
+    contractAcceptances: ContractAcceptance[];
     soulCredential: SoulCredential | null;
     verifiedClaims: VerifiedClaimRow[];
 };
@@ -159,10 +166,17 @@ export type ConsentProgress = {
     consentCompleted: boolean;
 };
 
+export type ContractProgress = {
+    acceptedSet: Set<string>;
+    missingContracts: string[];
+    contractsCompleted: boolean;
+};
+
 export type StageSignals = {
     hasIdentity: boolean;
     hasLiveness: boolean;
     consentCompleted: boolean;
+    contractsCompleted: boolean;
     documentsCompleted: boolean;
     hasSoulCredential: boolean;
     hasResubmitRequest: boolean;
