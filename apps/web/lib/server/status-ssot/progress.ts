@@ -44,13 +44,17 @@ export function buildConsentProgress(
 }
 
 export function buildContractProgress(
-    contractAcceptances: ContractAcceptance[],
+    contractAcceptances: ContractAcceptance[] | undefined,
 ): ContractProgress {
-    const acceptedSet = new Set(contractAcceptances.map((a) => a.document_slug));
+    const data = contractAcceptances || [];
+    const acceptedSet = new Set(data.map((a) => a.document_slug));
     const missingContracts: string[] = [];
+    // If there are no contract acceptances at all, contracts are implicitly complete
+    // (either no contracts required, or legacy flow without contracts)
+    const contractsCompleted = data.length === 0 || acceptedSet.size > 0;
     return {
         acceptedSet,
         missingContracts,
-        contractsCompleted: acceptedSet.size > 0,
+        contractsCompleted,
     };
 }

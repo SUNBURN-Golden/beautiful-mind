@@ -16,6 +16,7 @@ test('derive stage -> APPLY_START when application is missing', () => {
         hasIdentity: false,
         hasLiveness: false,
         consentCompleted: false,
+        contractsCompleted: false,
         documentsCompleted: false,
         hasSoulCredential: false,
         application: null,
@@ -32,6 +33,7 @@ test('derive stage -> RESUBMIT_REQUIRED on resubmit state', () => {
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -52,6 +54,7 @@ test('derive stage -> EXCEPTION_REVIEW when app is in exception state', () => {
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -73,6 +76,7 @@ test('derive stage -> APPEAL_PENDING when appeal queue is open', () => {
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -94,6 +98,7 @@ test('derive stage -> ACTIVE when soul credential issued and app active', () => 
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: true,
         application: {
@@ -120,6 +125,7 @@ test('missing identity precondition takes precedence over downstream status queu
         hasIdentity: false,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -143,6 +149,7 @@ test('documents branch emits stacked blockers when resubmit signals exist', () =
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: false,
         hasSoulCredential: false,
         application: {
@@ -166,6 +173,7 @@ test('explicit rejected status takes precedence before document completeness che
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: false,
         hasSoulCredential: false,
         application: {
@@ -186,6 +194,7 @@ test('legacy HUMAN_REVIEW current_step maps to EXCEPTION_REVIEW with blocker', (
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -206,6 +215,7 @@ test('legacy AI_REVIEW current_step maps to AI_DECISION with pending blocker', (
         hasIdentity: true,
         hasLiveness: true,
         consentCompleted: true,
+        contractsCompleted: true,
         documentsCompleted: true,
         hasSoulCredential: false,
         application: {
@@ -226,6 +236,7 @@ test('active+credential fast-path stays highest precedence', () => {
         hasIdentity: false,
         hasLiveness: false,
         consentCompleted: false,
+        contractsCompleted: false,
         documentsCompleted: false,
         hasSoulCredential: true,
         application: {

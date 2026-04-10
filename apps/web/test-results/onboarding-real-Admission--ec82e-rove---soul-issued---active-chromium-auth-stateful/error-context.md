@@ -4,12 +4,128 @@
 - generic [active] [ref=e1]:
   - main [ref=e4]:
     - generic [ref=e5]:
-      - heading "We’re syncing your admission route" [level=1] [ref=e6]
-      - paragraph [ref=e7]: We’ll take you to the screen that matches your current status.
-      - generic [ref=e8]:
-        - link "Go to current step" [ref=e9] [cursor=pointer]:
-          - /url: /apply/contracts
-        - link "Open the guide" [ref=e10] [cursor=pointer]:
-          - /url: /manual
-  - alert [ref=e11]
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - heading "Control Center" [level=1] [ref=e9]
+            - generic [ref=e10]: Your ACTIVE access is ready. Start with the action you need now, then use the reference detail only when you need to verify status or policy.
+          - generic [ref=e11]:
+            - generic [ref=e12]:
+              - text: Admission
+              - generic [ref=e13]: ACTIVE
+            - generic [ref=e14]:
+              - text: Trust
+              - generic [ref=e15]: ADMISSION_VERIFIED
+            - generic [ref=e16]:
+              - text: SOUL
+              - generic [ref=e17]: ACTIVE
+            - generic [ref=e18]:
+              - text: Credential
+              - generic [ref=e19]: ISSUED
+          - paragraph [ref=e20]: Original source documents are purged after the final decision. Minimal claims, credential status, and audit trace remain available for verification.
+        - button "Sign out" [ref=e22]
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Start here
+          - generic [ref=e26]: Open matches, continue a conversation, or record a trust attestation depending on what needs your attention right now.
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: What stays verified
+          - generic [ref=e29]: This home keeps the durable account signals visible without leading with policy or low-level processing detail.
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Your next actions" [level=2] [ref=e32]
+        - paragraph [ref=e33]: These are the ACTIVE surfaces currently available to you. Start with the task you need now and return here when you need the broader trust summary.
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - paragraph [ref=e36]: Connections and conversation
+            - paragraph [ref=e37]: Review curated matches or continue an existing conversation.
+            - generic [ref=e38]:
+              - link "Open matches" [ref=e39] [cursor=pointer]:
+                - /url: /match
+              - link "Open chat" [ref=e40] [cursor=pointer]:
+                - /url: /chat
+          - generic [ref=e41]:
+            - paragraph [ref=e42]: Trust actions
+            - paragraph [ref=e43]: Submit an attestation, report a trust event, or revoke participation controls.
+            - generic [ref=e44]:
+              - link "Open attestation" [ref=e45] [cursor=pointer]:
+                - /url: /review
+              - link "Open report" [ref=e46] [cursor=pointer]:
+                - /url: /report
+              - link "Open revoke" [ref=e47] [cursor=pointer]:
+                - /url: /revoke
+      - generic [ref=e48]:
+        - heading "Reference detail" [level=2] [ref=e49]
+        - paragraph [ref=e50]: Keep the main action surface clean, but make the durable account and retention state easy to verify when needed.
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - paragraph [ref=e53]: Account status
+            - generic [ref=e54]:
+              - term [ref=e55]: Admission status
+              - definition [ref=e56]: ACTIVE
+              - term [ref=e57]: Trust level
+              - definition [ref=e58]: ADMISSION_VERIFIED
+              - term [ref=e59]: SBT status
+              - definition [ref=e60]: ACTIVE
+              - term [ref=e61]: Credential
+              - definition [ref=e62]: ISSUED
+              - term [ref=e63]: Issued at
+              - definition [ref=e64]: 2026-04-10T05:13:38.767+00:00
+          - generic [ref=e65]:
+            - paragraph [ref=e66]: Retention posture
+            - generic [ref=e67]: Original source documents are not retained after the final decision. What remains is the minimal claim set needed for trust operations and auditability.
+    - generic [ref=e68]:
+      - heading "Document verification reference" [level=2] [ref=e69]
+      - paragraph [ref=e70]: This detail is secondary to the ACTIVE actions above. Use it when you need to confirm how document verification resolved after admission.
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: GRADUATION_CERTIFICATE
+          - generic [ref=e74]:
+            - term [ref=e75]: Status
+            - definition [ref=e76]: VERIFIED
+            - term [ref=e77]: Processing
+            - definition [ref=e78]: AI_PASSED
+            - term [ref=e79]: Confidence
+            - definition [ref=e80]: "0.76"
+            - term [ref=e81]: Purged at
+            - definition [ref=e82]: 2026-04-10T05:13:38.767+00:00
+        - generic [ref=e83]:
+          - paragraph [ref=e84]: INCOME_CERTIFICATE
+          - generic [ref=e85]:
+            - term [ref=e86]: Status
+            - definition [ref=e87]: VERIFIED
+            - term [ref=e88]: Processing
+            - definition [ref=e89]: AI_PASSED
+            - term [ref=e90]: Confidence
+            - definition [ref=e91]: "0.73"
+            - term [ref=e92]: Purged at
+            - definition [ref=e93]: 2026-04-10T05:13:38.767+00:00
+        - generic [ref=e94]:
+          - paragraph [ref=e95]: MARRIAGE_CERTIFICATE
+          - generic [ref=e96]:
+            - term [ref=e97]: Status
+            - definition [ref=e98]: VERIFIED
+            - term [ref=e99]: Processing
+            - definition [ref=e100]: AI_PASSED
+            - term [ref=e101]: Confidence
+            - definition [ref=e102]: "0.71"
+            - term [ref=e103]: Purged at
+            - definition [ref=e104]: 2026-04-10T05:13:38.767+00:00
+        - generic [ref=e105]:
+          - paragraph [ref=e106]: FAMILY_RELATION_CERTIFICATE
+          - generic [ref=e107]:
+            - term [ref=e108]: Status
+            - definition [ref=e109]: VERIFIED
+            - term [ref=e110]: Processing
+            - definition [ref=e111]: AI_PASSED
+            - term [ref=e112]: Confidence
+            - definition [ref=e113]: "0.69"
+            - term [ref=e114]: Purged at
+            - definition [ref=e115]: 2026-04-10T05:13:38.767+00:00
+    - generic [ref=e116]:
+      - text: Need a hand? Start with the
+      - link "guide" [ref=e117] [cursor=pointer]:
+        - /url: /manual
+      - text: for the quickest path forward.
+  - alert [ref=e118]
 ```

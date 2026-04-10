@@ -81,7 +81,7 @@ export function deriveAdmissionStage(params: DeriveAdmissionStageParams): Derive
         return { stage: ADMISSION_STAGES.LIVENESS, blockers };
     }
 
-    if (!params.contractsCompleted) {
+    if (!params.consentCompleted || !params.contractsCompleted) {
         blockers.push(STATUS_BLOCKER_CODES.CONSENTS_REQUIRED);
         return { stage: ADMISSION_STAGES.CONSENTS, blockers };
     }

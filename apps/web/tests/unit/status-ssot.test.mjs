@@ -42,6 +42,7 @@ function makeStatusInputs(overrides = {}) {
             application: null,
             documents: [],
             consentEvents: [],
+            contractAcceptances: [],
             soulCredential: null,
             verifiedClaims: [],
             openAudits: [],
