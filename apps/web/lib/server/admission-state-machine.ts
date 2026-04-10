@@ -81,7 +81,9 @@ export function deriveAdmissionStage(params: DeriveAdmissionStageParams): Derive
         return { stage: ADMISSION_STAGES.LIVENESS, blockers };
     }
 
-    if (!params.consentCompleted || !params.contractsCompleted) {
+    // In contracts-based admission, only contracts gate progression to DOCUMENTS
+    // (legacy consents are optional; contracts are the primary requirement)
+    if (!params.contractsCompleted) {
         blockers.push(STATUS_BLOCKER_CODES.CONSENTS_REQUIRED);
         return { stage: ADMISSION_STAGES.CONSENTS, blockers };
     }
