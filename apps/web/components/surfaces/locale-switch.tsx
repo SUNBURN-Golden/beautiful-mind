@@ -24,17 +24,17 @@ export function LocaleSwitch({
     const koreanHref = withLangQuery(pathname, 'ko', fallbackLocale);
 
     return (
-        <div className="flex items-center gap-2 text-[12px]">
-            <span className="font-medium text-[var(--sb-text-muted)]">{label}</span>
-            <div className="inline-flex items-center gap-1 rounded-full border border-[var(--sb-border-soft)] bg-[var(--sb-surface-muted)] p-1">
+        <div className="sb-locale-switch" role="group" aria-label={label}>
+            <span className="sb-locale-label">{label}</span>
+            <div className="sb-locale-track">
                 <Link
                     href={englishHref}
                     prefetch={false}
                     aria-current={currentLocale === 'en' ? 'page' : undefined}
-                    className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                    className={`sb-locale-option ${
                         currentLocale === 'en'
-                            ? 'bg-[var(--sb-surface-panel)] text-[var(--sb-text-strong)] shadow-[var(--sb-shadow-soft)]'
-                            : 'text-[var(--sb-text-muted)] hover:text-[var(--sb-text-strong)]'
+                            ? 'sb-locale-option-active'
+                            : 'sb-locale-option-idle'
                     }`}
                 >
                     {englishLabel}
@@ -43,10 +43,10 @@ export function LocaleSwitch({
                     href={koreanHref}
                     prefetch={false}
                     aria-current={currentLocale === 'ko' ? 'page' : undefined}
-                    className={`rounded-full px-3 py-1 font-semibold transition-colors ${
+                    className={`sb-locale-option ${
                         currentLocale === 'ko'
-                            ? 'bg-[var(--sb-surface-panel)] text-[var(--sb-text-strong)] shadow-[var(--sb-shadow-soft)]'
-                            : 'text-[var(--sb-text-muted)] hover:text-[var(--sb-text-strong)]'
+                            ? 'sb-locale-option-active'
+                            : 'sb-locale-option-idle'
                     }`}
                 >
                     {koreanLabel}

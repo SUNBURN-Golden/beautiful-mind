@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "implementation_status": "playwright_spec_with_local_baselines",
+  "intended_runner": "playwright_existing_repo_setup",
+  "planned_spec_target": "apps/web/tests/e2e/frontend-harness-visual.spec.ts",
+  "baseline_path": "apps/web/tests/e2e/frontend-harness-visual.spec.ts-snapshots",
+  "minimum_viewports": [
+    {
+      "id": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "id": "mobile",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "required_state_matrix": {
+    "landing": [
+      "default"
+    ],
+    "dashboard": [
+      "loading",
+      "non_active_gate",
+      "active"
+    ],
+    "match": [
+      "non_active_gate",
+      "status_loading",
+      "ready_empty",
+      "ready_error",
+      "ready_populated"
+    ]
+  },
+  "enforcement": {
+    "active": true,
+    "activation_requires": []
+  }
+}

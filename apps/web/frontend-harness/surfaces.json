@@ -1,0 +1,147 @@
+{
+  "version": "1.0.0",
+  "path_basis": "repo_relative",
+  "surfaces": [
+    {
+      "id": "landing",
+      "status": "live",
+      "route_path": "/",
+      "owner_file": "apps/web/app/page.tsx",
+      "surface_files": [
+        "apps/web/components/surfaces/landing-surface.tsx"
+      ],
+      "i18n_files": [
+        "apps/web/i18n/landing.ts"
+      ],
+      "fixture_files": [
+        "apps/web/dev-fixtures/landing.fixture.ts",
+        "apps/web/app/manual/fixtures/landing/page.tsx"
+      ],
+      "fixture_route_path": "/manual/fixtures/landing",
+      "fixture_routes": {
+        "default": "/manual/fixtures/landing"
+      },
+      "allowed_modes": [
+        "paint_only",
+        "composition",
+        "component_extension",
+        "system_update"
+      ],
+      "required_visible_states": [
+        "default"
+      ]
+    },
+    {
+      "id": "dashboard",
+      "status": "live",
+      "route_path": "/dashboard",
+      "owner_file": "apps/web/app/(guarded)/dashboard/page.tsx",
+      "surface_files": [
+        "apps/web/components/surfaces/dashboard-surface.tsx"
+      ],
+      "i18n_files": [
+        "apps/web/i18n/dashboard.ts"
+      ],
+      "fixture_files": [
+        "apps/web/dev-fixtures/dashboard.fixture.ts",
+        "apps/web/app/manual/fixtures/dashboard/loading/page.tsx",
+        "apps/web/app/manual/fixtures/dashboard/non-active/page.tsx",
+        "apps/web/app/manual/fixtures/dashboard/active/page.tsx"
+      ],
+      "fixture_route_path": "/manual/fixtures/dashboard/active",
+      "fixture_routes": {
+        "loading": "/manual/fixtures/dashboard/loading",
+        "non_active_gate": "/manual/fixtures/dashboard/non-active",
+        "active": "/manual/fixtures/dashboard/active"
+      },
+      "allowed_modes": [
+        "paint_only",
+        "composition",
+        "component_extension",
+        "system_update"
+      ],
+      "required_visible_states": [
+        "loading",
+        "non_active_gate",
+        "active"
+      ]
+    },
+    {
+      "id": "match",
+      "status": "live",
+      "route_path": "/match",
+      "owner_file": "apps/web/app/match/page.tsx",
+      "surface_files": [
+        "apps/web/components/surfaces/match-surface.tsx"
+      ],
+      "i18n_files": [
+        "apps/web/i18n/match.ts"
+      ],
+      "fixture_files": [
+        "apps/web/dev-fixtures/match.fixture.ts",
+        "apps/web/app/manual/fixtures/match/status-loading/page.tsx",
+        "apps/web/app/manual/fixtures/match/non-active/page.tsx",
+        "apps/web/app/manual/fixtures/match/ready-empty/page.tsx",
+        "apps/web/app/manual/fixtures/match/ready-error/page.tsx",
+        "apps/web/app/manual/fixtures/match/ready-populated/page.tsx"
+      ],
+      "fixture_route_path": "/manual/fixtures/match/ready-populated",
+      "fixture_routes": {
+        "status_loading": "/manual/fixtures/match/status-loading",
+        "non_active_gate": "/manual/fixtures/match/non-active",
+        "ready_empty": "/manual/fixtures/match/ready-empty",
+        "ready_error": "/manual/fixtures/match/ready-error",
+        "ready_populated": "/manual/fixtures/match/ready-populated"
+      },
+      "allowed_modes": [
+        "paint_only",
+        "composition",
+        "component_extension",
+        "system_update"
+      ],
+      "required_visible_states": [
+        "non_active_gate",
+        "status_loading",
+        "ready_empty",
+        "ready_error",
+        "ready_populated"
+      ]
+    },
+    {
+      "id": "circles",
+      "status": "planned",
+      "route_path": null,
+      "owner_file": null,
+      "surface_files": [],
+      "i18n_files": [],
+      "fixture_files": [],
+      "fixture_route_path": null,
+      "allowed_modes": [],
+      "required_visible_states": []
+    },
+    {
+      "id": "profile",
+      "status": "planned",
+      "route_path": null,
+      "owner_file": null,
+      "surface_files": [],
+      "i18n_files": [],
+      "fixture_files": [],
+      "fixture_route_path": null,
+      "allowed_modes": [],
+      "required_visible_states": []
+    },
+    {
+      "id": "introduction",
+      "status": "planned",
+      "route_path": null,
+      "owner_file": null,
+      "surface_files": [],
+      "i18n_files": [],
+      "fixture_files": [],
+      "fixture_route_path": null,
+      "allowed_modes": [],
+      "required_visible_states": []
+    }
+  ]
+}

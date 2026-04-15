@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "default_policy": "deny",
+  "path_basis": "repo_relative",
+  "task_modes": [
+    "paint_only",
+    "composition",
+    "component_extension",
+    "system_update"
+  ],
+  "contracts": {
+    "surfaces": "apps/web/frontend-harness/surfaces.json",
+    "file_boundaries": "apps/web/frontend-harness/file-boundaries.json",
+    "semantic_guard": "apps/web/frontend-harness/semantic-guard.json",
+    "style_guard": "apps/web/frontend-harness/style-guard.json",
+    "visual_regression": "apps/web/frontend-harness/visual-regression.json",
+    "task_request_schema": "apps/web/frontend-harness/task-request.schema.json"
+  }
+}

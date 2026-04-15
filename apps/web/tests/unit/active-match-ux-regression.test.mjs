@@ -10,70 +10,94 @@ function read(filePath) {
 }
 
 test('match page keeps loading, non-active gate, empty, and recovery states stable', () => {
-    const page = read('app/match/page.tsx');
+    const surface = read('components/surfaces/match-surface.tsx');
+    const copy = read('i18n/match.ts');
 
-    assert.match(page, /PageLoadingState/);
-    assert.match(page, /title="Preparing your match space"/);
-    assert.match(page, /description="We are syncing ACTIVE access and candidate signals\."?/);
+    assert.match(surface, /PageLoadingState/);
+    assert.match(surface, /title=\{copy\.loading\.title\}/);
+    assert.match(surface, /description=\{copy\.loading\.description\}/);
+    assert.match(copy, /Preparing your match space/);
+    assert.match(copy, /We are syncing ACTIVE access and candidate signals\./);
 
-    assert.match(page, /StageTransitionNotice/);
-    assert.match(page, /title="This area is available to ACTIVE members"/);
-    assert.match(page, /Match discovery opens after admission approval and SOUL credential issuance\./);
+    assert.match(surface, /StageTransitionNotice/);
+    assert.match(surface, /title=\{copy\.gate\.title\}/);
+    assert.match(surface, /description=\{copy\.gate\.description\}/);
+    assert.match(copy, /This area is available to ACTIVE members/);
+    assert.match(copy, /Match discovery opens after admission approval and SOUL credential issuance\./);
 
-    assert.match(page, /RecoverableErrorPanel/);
-    assert.match(page, /title="We couldn’t refresh your candidate feed"/);
-    assert.match(page, /retryLabel="Refresh feed"/);
-    assert.match(page, /secondaryHref="\/dashboard"/);
+    assert.match(surface, /RecoverableErrorPanel/);
+    assert.match(surface, /title=\{copy\.error\.title\}/);
+    assert.match(surface, /retryLabel=\{copy\.refresh\.retry\}/);
+    assert.match(surface, /secondaryHref=\{withLangQuery\('\/dashboard', locale, LIVE_DEFAULT_LOCALE\)\}/);
+    assert.match(copy, /We couldn’t refresh your candidate feed/);
+    assert.match(copy, /Refresh feed/);
 
-    assert.match(page, /FeedbackPanel/);
-    assert.match(page, /title="No candidates are visible yet"/);
-    assert.match(page, /Refresh feed/);
-    assert.match(page, /View Status/);
+    assert.match(surface, /FeedbackPanel/);
+    assert.match(surface, /title=\{copy\.empty\.title\}/);
+    assert.match(surface, /copy\.refresh\.retry/);
+    assert.match(surface, /copy\.refresh\.viewStatus/);
+    assert.match(copy, /No candidates are visible yet/);
+    assert.match(copy, /View Status/);
 });
 
 test('match page keeps transparent ranking language grounded in visible sync signals', () => {
+    const surface = read('components/surfaces/match-surface.tsx');
+    const copy = read('i18n/match.ts');
     const page = read('app/match/page.tsx');
 
-    assert.match(page, /Transparency note: ranking context in this view is limited to visible trust signal, status, and feed order returned by the current sync\./);
-    assert.match(page, /A calm shortlist of verified candidates, presented in your latest sync order\./);
-    assert.match(page, /const sourceLabel = source === 'ADAPTER' \? 'Continuity mode' : 'Live sync'/);
+    assert.match(surface, /copy\.intro\.note/);
+    assert.match(surface, /copy\.intro\.description/);
+    assert.match(copy, /Transparency note: ranking context in this view is limited to visible trust signal, status, and feed order returned by the current sync\./);
+    assert.match(copy, /A calm shortlist of verified candidates, presented in your latest sync order\./);
+    assert.match(page, /const connectionLabel = source === 'ADAPTER' \? copy\.connectionLabels\.adapter : copy\.connectionLabels\.live/);
 });
 
 test('match cards keep hierarchy: reason chip, signal summary, explanation block, and CTA framing', () => {
-    const page = read('app/match/page.tsx');
+    const surface = read('components/surfaces/match-surface.tsx');
+    const copy = read('i18n/match.ts');
 
-    assert.match(page, /topReasonLabel\(index\)/);
-    assert.match(page, /CardTitle className="text-\[22px\] font-semibold text-\[#1d1d1f\]">\{match\.name\}<\/CardTitle>/);
-    assert.match(page, /signalSummary\(match\.trustSignal\)[\s\S]*formatUpdatedAt\(match\.updatedAt\)/);
-    assert.match(page, /\{match\.statusLabel\}/);
+    assert.match(surface, /topReasonLabel\(index, copy\)/);
+    assert.match(surface, /CardTitle className="sb-match-card-title text-\[22px\] font-semibold">\{match\.name\}<\/CardTitle>/);
+    assert.match(surface, /signalSummary\(match\.trustSignal, copy\)[\s\S]*match\.updatedLabel/);
+    assert.match(surface, /\{match\.statusLabel\}/);
 
-    assert.match(page, /Why this appears now/);
-    assert.match(page, /This placement reflects your current sync snapshot\./);
-    assert.match(page, /Trust Signal/);
-    assert.match(page, /Status/);
-    assert.match(page, /Feed position/);
-    assert.match(page, /\{formatSignal\(match\.trustSignal\)\}/);
-    assert.match(page, /#\{index \+ 1\}/);
+    assert.match(surface, /title=\{copy\.labels\.referenceTitle\}/);
+    assert.match(surface, /label: copy\.labels\.summaryLabel, value: copy\.labels\.summaryValue/);
+    assert.match(surface, /label: copy\.labels\.trustSignal, value: <>\{formatSignal\(match\.trustSignal, copy\.labels\.signalUnavailable\)\}<\/>/);
+    assert.match(surface, /label: copy\.labels\.status, value: match\.statusLabel/);
+    assert.match(surface, /label: copy\.labels\.feedPosition, value: <>#\{index \+ 1\}<\/>/);
 
-    assert.match(page, /Visible trust signals/);
-    assert.match(page, /\{match\.tags\.map\(\(tag\) => \(/);
-    assert.match(page, /Open Conversation/);
-    assert.match(page, /If anything feels off, you can file a report at any point in the conversation\./);
+    assert.match(surface, /copy\.labels\.visibleSignals/);
+    assert.match(surface, /\{match\.tags\.map\(\(tag\) => \(/);
+    assert.match(surface, /copy\.labels\.openConversation/);
+    assert.match(surface, /copy\.labels\.supportNote/);
+    assert.match(copy, /Why this appears now/);
+    assert.match(copy, /This placement reflects your current sync snapshot\./);
+    assert.match(copy, /Open Conversation/);
 });
 
 test('match page keeps chat CTA route wiring stable for action confidence', () => {
     const page = read('app/match/page.tsx');
 
-    assert.match(page, /const handleChat = \(match: MatchCandidate\) => \{/);
-    assert.match(page, /router\.push\(`\/chat\?matchId=\$\{encodeURIComponent\(match\.id\)\}&partnerName=\$\{encodeURIComponent\(match\.name\)\}`\)/);
+    assert.match(page, /const handleChat = \(match: MatchSurfaceItem\) => \{/);
+    assert.match(page, /router\.push\(withLangQuery\(`\/chat\?matchId=\$\{encodeURIComponent\(match\.id\)\}&partnerName=\$\{encodeURIComponent\(match\.name\)\}`,\s*locale,\s*LIVE_DEFAULT_LOCALE\)\)/);
+});
+
+test('match page keeps route-side presentational mapping deterministic and explicit', () => {
+    const page = read('app/match/page.tsx');
+
+    assert.match(page, /const copy = getMatchCopy\(locale\)/);
+    assert.match(page, /const uiMatches: MatchSurfaceItem\[\] = matches\.map\(\(match: MatchCandidate\) => \(\{/);
+    assert.match(page, /updatedLabel: formatMatchUpdatedLabel\(locale, match\.updatedAt\)/);
 });
 
 test('signal summary copy tiers remain concise and deterministic', () => {
-    const page = read('app/match/page.tsx');
+    const surface = read('components/surfaces/match-surface.tsx');
+    const copy = read('i18n/match.ts');
 
-    assert.match(page, /function signalSummary\(signal: number \| null\): string/);
-    assert.match(page, /if \(signal === null\) return 'Signal pending'/);
-    assert.match(page, /if \(signal >= 100\) return 'High-confidence signal'/);
-    assert.match(page, /if \(signal >= 80\) return 'Solid signal'/);
-    assert.match(page, /return 'Early signal'/);
+    assert.match(surface, /function signalSummary\(signal: number \| null, copy: ReturnType<typeof getMatchCopy>\): string/);
+    assert.match(copy, /pending: 'Signal pending'/);
+    assert.match(copy, /high: 'High-confidence signal'/);
+    assert.match(copy, /solid: 'Solid signal'/);
+    assert.match(copy, /early: 'Early signal'/);
 });

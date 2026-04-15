@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "product_frame": {
+    "required_descriptors": [
+      "calm_premium",
+      "private_member_network",
+      "trust_first_introductions"
+    ],
+    "forbidden_descriptors": [
+      "dating_app",
+      "swipe_app",
+      "hookup_app",
+      "social_feed"
+    ]
+  },
+  "copy_rules": {
+    "banned_user_facing_terms": [
+      "swipe",
+      "super like",
+      "like back",
+      "nearby singles",
+      "dating",
+      "hookup",
+      "spark",
+      "crush",
+      "chemistry score",
+      "hot or not",
+      "double tap to like",
+      "it's a match"
+    ],
+    "banned_user_facing_ctas": [
+      "Like",
+      "Pass",
+      "Super Like",
+      "Start Dating",
+      "Find Singles"
+    ],
+    "ban_if_not_repo_backed": [
+      "verified income",
+      "background checked",
+      "government verified",
+      "private by default",
+      "encrypted",
+      "anonymous",
+      "exclusive membership",
+      "screened by humans"
+    ]
+  },
+  "interaction_rules": {
+    "banned_patterns": [
+      "left_right_swipe_deck",
+      "heart_vs_x_primary_decision",
+      "gamified_like_counter",
+      "romance_first_empty_state",
+      "endless_candidate_browse_stack"
+    ]
+  },
+  "claim_rules": {
+    "invented_trust_claims_forbidden": true,
+    "invented_privacy_claims_forbidden": true,
+    "invented_verification_claims_forbidden": true,
+    "require_repo_backing_for_new_claims": true
+  },
+  "field_rules": {
+    "invented_member_fields_forbidden": true,
+    "allowed_field_sources": [
+      "current_surface_owner_file",
+      "future_declared_fixture_payload"
+    ],
+    "known_surface_fields": {
+      "landing": [],
+      "dashboard": [
+        "admissionStatus",
+        "trustLevel",
+        "sbtStatus",
+        "soulIssued",
+        "soulIssuedAt",
+        "requiredDocuments.type",
+        "requiredDocuments.status",
+        "requiredDocuments.processing_status",
+        "requiredDocuments.ai_confidence",
+        "requiredDocuments.purged_at"
+      ],
+      "match": [
+        "name",
+        "trustSignal",
+        "statusLabel",
+        "tags",
+        "updatedAt"
+      ]
+    },
+    "forbidden_unbacked_examples": [
+      "age",
+      "height",
+      "income",
+      "religion",
+      "politics",
+      "relationship_goal",
+      "distance_km",
+      "compatibility_score",
+      "follower_count"
+    ]
+  }
+}

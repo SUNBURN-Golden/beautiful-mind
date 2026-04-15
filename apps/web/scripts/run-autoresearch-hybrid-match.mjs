@@ -19,7 +19,7 @@ const FIXTURE_PATH = path.join(AUTORESEARCH_ROOT, 'fixtures', 'hybrid-match-offl
 const EVAL_HARNESS_PATH = path.join(WEB_ROOT, 'scripts', 'eval-hybrid-match-offline.mjs');
 const PROPOSER_POLICY_PATH = path.join(AUTORESEARCH_ROOT, 'CANDIDATE_PROPOSER_POLICY.md');
 const IMPROVEMENT_THRESHOLD = 0.005;
-const DEFAULT_PROPOSER_MODEL = 'gpt-5-mini';
+const DEFAULT_PROPOSER_MODEL = 'gemini-2.5-flash';
 
 const OPTIMIZATION_ISLAND = [
     'apps/web/scripts/lib/hybrid-match/scoring.mjs',
@@ -494,7 +494,7 @@ async function runProposeCandidate(note, options = {}) {
             candidate_metric: null,
             delta: null,
             decision: 'PROPOSAL_FAILED',
-            short_note: `openai proposal failed: ${error?.message || String(error)}`,
+            short_note: `proposal failed: ${error?.message || String(error)}`,
             run_status: 'FAILED_PROPOSAL',
             metric_name: baselineState.metric_name || 'offline_hybrid_score',
             evalResult: {

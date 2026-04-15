@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SoulBound Frontend Harness Task Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "mode",
+    "surface_id",
+    "goal",
+    "allowed_files",
+    "forbidden_files",
+    "fixture_state",
+    "acceptance_checks",
+    "reviewer_notes"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "minLength": 3
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "paint_only",
+        "composition",
+        "component_extension",
+        "system_update"
+      ]
+    },
+    "surface_id": {
+      "type": "string",
+      "enum": [
+        "landing",
+        "dashboard",
+        "match",
+        "circles",
+        "profile",
+        "introduction"
+      ]
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 10
+    },
+    "allowed_files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(apps\\/web\\/.*|supabase\\/.*|packages\\/.*|pnpm-lock\\.yaml)$"
+      }
+    },
+    "forbidden_files": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(apps\\/web\\/.*|supabase\\/.*|packages\\/.*|pnpm-lock\\.yaml)$"
+      }
+    },
+    "fixture_state": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "default",
+        "loading",
+        "non_active_gate",
+        "active",
+        "status_loading",
+        "ready_empty",
+        "ready_error",
+        "ready_populated",
+        "pending",
+        null
+      ]
+    },
+    "acceptance_checks": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 3
+      }
+    },
+    "reviewer_notes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

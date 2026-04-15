@@ -1,0 +1,111 @@
+{
+  "version": "1.0.0",
+  "default_policy": "deny",
+  "path_basis": "repo_relative",
+  "shared_allowed_patterns": [
+    "apps/web/app/page.tsx",
+    "apps/web/app/(guarded)/dashboard/page.tsx",
+    "apps/web/app/match/page.tsx",
+    "apps/web/components/surfaces/**",
+    "apps/web/i18n/**",
+    "apps/web/dev-fixtures/**",
+    "apps/web/app/manual/fixtures/**",
+    "apps/web/components/active-patterns.tsx",
+    "apps/web/components/screen-patterns.tsx",
+    "apps/web/components/ui-kit.tsx",
+    "apps/web/components/ui/**",
+    "apps/web/app/globals.css",
+    "apps/web/frontend-harness/**"
+  ],
+  "shared_forbidden_patterns": [
+    "apps/web/app/api/**",
+    "apps/web/lib/server/**",
+    "apps/web/app/actions/**",
+    "apps/web/lib/contracts/**",
+    "apps/web/lib/useStatus.ts",
+    "apps/web/lib/active-contract.ts",
+    "apps/web/utils/supabase/**",
+    "supabase/**",
+    "packages/**",
+    "apps/web/package.json",
+    "pnpm-lock.yaml"
+  ],
+  "mode_rules": {
+    "paint_only": {
+      "max_touched_files": 3,
+      "allowed_patterns": [
+        "apps/web/app/page.tsx",
+        "apps/web/app/(guarded)/dashboard/page.tsx",
+        "apps/web/app/match/page.tsx",
+        "apps/web/components/surfaces/**",
+        "apps/web/i18n/**",
+        "apps/web/dev-fixtures/**",
+        "apps/web/app/manual/fixtures/**"
+      ],
+      "forbidden_patterns": [
+        "apps/web/components/active-patterns.tsx",
+        "apps/web/components/screen-patterns.tsx",
+        "apps/web/components/ui-kit.tsx",
+        "apps/web/components/ui/**",
+        "apps/web/app/globals.css"
+      ]
+    },
+    "composition": {
+      "max_touched_files": 6,
+      "allowed_patterns": [
+        "apps/web/app/page.tsx",
+        "apps/web/app/(guarded)/dashboard/page.tsx",
+        "apps/web/app/match/page.tsx",
+        "apps/web/components/surfaces/**",
+        "apps/web/i18n/**",
+        "apps/web/dev-fixtures/**",
+        "apps/web/app/manual/fixtures/**",
+        "apps/web/components/active-patterns.tsx",
+        "apps/web/components/screen-patterns.tsx",
+        "apps/web/components/ui-kit.tsx"
+      ],
+      "forbidden_patterns": [
+        "apps/web/components/ui/**",
+        "apps/web/app/globals.css"
+      ]
+    },
+    "component_extension": {
+      "max_touched_files": 8,
+      "allowed_patterns": [
+        "apps/web/app/page.tsx",
+        "apps/web/app/(guarded)/dashboard/page.tsx",
+        "apps/web/app/match/page.tsx",
+        "apps/web/components/surfaces/**",
+        "apps/web/i18n/**",
+        "apps/web/dev-fixtures/**",
+        "apps/web/app/manual/fixtures/**",
+        "apps/web/components/active-patterns.tsx",
+        "apps/web/components/screen-patterns.tsx",
+        "apps/web/components/ui-kit.tsx",
+        "apps/web/components/ui/**"
+      ],
+      "forbidden_patterns": [
+        "apps/web/app/globals.css"
+      ]
+    },
+    "system_update": {
+      "max_touched_files": 12,
+      "allowed_patterns": [
+        "apps/web/app/page.tsx",
+        "apps/web/app/(guarded)/dashboard/page.tsx",
+        "apps/web/app/match/page.tsx",
+        "apps/web/components/surfaces/**",
+        "apps/web/i18n/**",
+        "apps/web/dev-fixtures/**",
+        "apps/web/app/manual/fixtures/**",
+        "apps/web/components/active-patterns.tsx",
+        "apps/web/components/screen-patterns.tsx",
+        "apps/web/components/ui-kit.tsx",
+        "apps/web/components/ui/**",
+        "apps/web/app/globals.css",
+        "apps/web/frontend-harness/**"
+      ],
+      "forbidden_patterns": []
+    }
+  }
+}

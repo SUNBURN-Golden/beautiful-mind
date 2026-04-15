@@ -14,11 +14,11 @@ export default function ManualFixturesLayout({ children }: { children: ReactNode
                 const copy = getManualFixturesCopy(locale);
 
                 return (
-                    <main className="liquid-shell px-4 pb-14 pt-10 sm:px-8 sm:pt-14">
+                    <main className={`liquid-shell sb-stage-shell sb-manual-stage sb-locale-${locale} px-4 pb-14 pt-10 sm:px-8 sm:pt-14`} lang={locale}>
                         <div className="mx-auto max-w-6xl space-y-8">
-                            <header className="space-y-3">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="liquid-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#6e6e73]">
+                            <header className="sb-stage-hero-panel sb-manual-hero liquid-rise space-y-4">
+                                <div className="sb-surface-toolbar flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="liquid-chip sb-surface-kicker inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]">
                                         {copy.layout.badge}
                                     </div>
                                     <LocaleSwitch
@@ -35,11 +35,11 @@ export default function ManualFixturesLayout({ children }: { children: ReactNode
                                 <p className="liquid-copy max-w-3xl text-[15px] sm:text-[16px]">
                                     {copy.layout.description}
                                 </p>
-                                <div className="flex flex-wrap gap-3">
-                                    <Link href={withLangQuery('/manual', locale, FIXTURE_DEFAULT_LOCALE)} className="liquid-btn liquid-btn-secondary">
+                                <div className="sb-action-cluster sb-manual-actions flex flex-wrap gap-3">
+                                    <Link href={withLangQuery('/manual', locale, FIXTURE_DEFAULT_LOCALE)} className="liquid-btn sb-pill-action sb-pill-action-inline sb-pill-action-glass sb-manual-utility sb-manual-utility-secondary">
                                         {copy.layout.backToManual}
                                     </Link>
-                                    <Link href={withLangQuery('/manual/fixtures', locale, FIXTURE_DEFAULT_LOCALE)} className="liquid-btn liquid-btn-primary">
+                                    <Link href={withLangQuery('/manual/fixtures', locale, FIXTURE_DEFAULT_LOCALE)} className="liquid-btn sb-pill-action sb-pill-action-inline sb-pill-action-ivory sb-manual-utility sb-manual-utility-primary">
                                         {copy.layout.viewIndex}
                                     </Link>
                                 </div>

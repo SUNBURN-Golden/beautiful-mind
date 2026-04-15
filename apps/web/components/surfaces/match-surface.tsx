@@ -106,122 +106,131 @@ export function MatchSurface(props: MatchSurfaceProps) {
     const { loading, error, matches, connectionLabel, onRetry, onViewStatus, onOpenConversation } = props;
 
     return (
-        <ActiveSurfaceShell>
-            <ActiveSectionPanel className="space-y-6">
-                <ActiveSurfaceIntro
-                    title={copy.intro.title}
-                    description={copy.intro.description}
-                    meta={<ActiveStatusChip>{copy.intro.metaPrefix} • {connectionLabel}</ActiveStatusChip>}
-                    note={copy.intro.note}
-                />
-
-                <FlowInfoGrid>
-                    <FlowInfoCard
-                        title={copy.infoCards.whatNowTitle}
-                        description={copy.infoCards.whatNowDescription}
+        <div className={`sb-locale-${locale}`} lang={locale}>
+            <ActiveSurfaceShell className="sb-stage-shell sb-match-stage">
+                <ActiveSectionPanel className="sb-surface-panel sb-match-hero space-y-6">
+                    <ActiveSurfaceIntro
+                        title={copy.intro.title}
+                        description={copy.intro.description}
+                        meta={<ActiveStatusChip>{copy.intro.metaPrefix} • {connectionLabel}</ActiveStatusChip>}
+                        note={copy.intro.note}
                     />
-                    <FlowInfoCard
-                        title={copy.infoCards.behaviorTitle}
-                        description={copy.infoCards.behaviorDescription}
-                    />
-                </FlowInfoGrid>
-            </ActiveSectionPanel>
 
-            <div className="space-y-7">
-                {loading && (
-                    <ActiveSectionPanel className="p-6">
-                        <p className="mb-3 text-[13px] text-slate-600">{copy.refresh.loading}</p>
-                        <Skeleton lines={5} />
-                    </ActiveSectionPanel>
-                )}
+                    <FlowInfoGrid>
+                        <FlowInfoCard
+                            className="sb-surface-subpanel sb-match-info-card"
+                            title={copy.infoCards.whatNowTitle}
+                            description={copy.infoCards.whatNowDescription}
+                        />
+                        <FlowInfoCard
+                            className="sb-surface-subpanel sb-match-info-card"
+                            title={copy.infoCards.behaviorTitle}
+                            description={copy.infoCards.behaviorDescription}
+                        />
+                    </FlowInfoGrid>
+                </ActiveSectionPanel>
 
-                {error && (
-                    <RecoverableErrorPanel
-                        title={copy.error.title}
-                        message={error}
-                        retryLabel={copy.refresh.retry}
-                        onRetry={onRetry}
-                        secondaryHref={withLangQuery('/dashboard', locale, LIVE_DEFAULT_LOCALE)}
-                        secondaryLabel={copy.error.secondaryLabel}
-                    />
-                )}
+                <div className="sb-match-feed space-y-7">
+                    {loading && (
+                        <ActiveSectionPanel className="sb-surface-panel sb-match-loading-panel p-6">
+                            <p className="sb-match-loading-copy mb-3 text-[13px]">{copy.refresh.loading}</p>
+                            <Skeleton lines={5} />
+                        </ActiveSectionPanel>
+                    )}
 
-                {!loading && !error && matches.length === 0 && (
-                    <FeedbackPanel
-                        tone="info"
-                        title={copy.empty.title}
-                        description={copy.empty.description}
-                    >
-                        <div className="flex flex-wrap gap-2">
-                            <button type="button" className="liquid-btn liquid-btn-secondary !px-3 !py-1.5 text-[12px]" onClick={onRetry}>
-                                {copy.refresh.retry}
-                            </button>
-                            <button type="button" className="liquid-btn liquid-btn-secondary !px-3 !py-1.5 text-[12px]" onClick={onViewStatus}>
-                                {copy.refresh.viewStatus}
-                            </button>
+                    {error && (
+                        <div className="sb-match-message-panel">
+                            <RecoverableErrorPanel
+                                title={copy.error.title}
+                                message={error}
+                                retryLabel={copy.refresh.retry}
+                                onRetry={onRetry}
+                                secondaryHref={withLangQuery('/dashboard', locale, LIVE_DEFAULT_LOCALE)}
+                                secondaryLabel={copy.error.secondaryLabel}
+                            />
                         </div>
-                    </FeedbackPanel>
-                )}
+                    )}
 
-                <div className="flex flex-col gap-4">
-                    {matches.map((match, index) => (
-                        <Card key={match.id} className="liquid-pane liquid-rise w-full rounded-3xl border-[#e5e5e7]">
-                            <CardHeader className="pb-2">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div className="space-y-1">
-                                        <ActiveMetaRow>
-                                            <ActiveStatusChip tone="neutral" className="px-2.5 py-1 font-semibold">
-                                                {topReasonLabel(index, copy)}
-                                            </ActiveStatusChip>
-                                        </ActiveMetaRow>
-                                        <CardTitle className="text-[22px] font-semibold text-[#1d1d1f]">{match.name}</CardTitle>
-                                        <CardDescription className="text-[14px]">
-                                            {signalSummary(match.trustSignal, copy)} · {match.updatedLabel}
-                                        </CardDescription>
+                    {!loading && !error && matches.length === 0 && (
+                        <div className="sb-match-message-panel">
+                            <FeedbackPanel
+                                tone="info"
+                                title={copy.empty.title}
+                                description={copy.empty.description}
+                            >
+                                <div className="flex flex-wrap gap-2">
+                                    <button type="button" className="liquid-btn liquid-btn-secondary sb-pill-action sb-pill-action-inline sb-pill-action-soft !px-3 !py-1.5 text-[12px]" onClick={onRetry}>
+                                        {copy.refresh.retry}
+                                    </button>
+                                    <button type="button" className="liquid-btn liquid-btn-secondary sb-pill-action sb-pill-action-inline sb-pill-action-soft !px-3 !py-1.5 text-[12px]" onClick={onViewStatus}>
+                                        {copy.refresh.viewStatus}
+                                    </button>
+                                </div>
+                            </FeedbackPanel>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col gap-4">
+                        {matches.map((match, index) => (
+                            <Card key={match.id} className="liquid-pane liquid-rise sb-surface-panel sb-match-card w-full rounded-3xl">
+                                <CardHeader className="pb-2">
+                                    <div className="sb-match-card-head flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="sb-match-card-heading space-y-1.5">
+                                            <ActiveMetaRow>
+                                                <ActiveStatusChip tone="neutral" className="sb-match-reason-chip px-2.5 py-1 font-semibold">
+                                                    {topReasonLabel(index, copy)}
+                                                </ActiveStatusChip>
+                                            </ActiveMetaRow>
+                                            <CardTitle className="sb-match-card-title text-[22px] font-semibold">{match.name}</CardTitle>
+                                            <CardDescription className="sb-match-card-meta text-[14px]">
+                                                {signalSummary(match.trustSignal, copy)} · {match.updatedLabel}
+                                            </CardDescription>
+                                        </div>
+                                        <ActiveStatusChip
+                                            tone={match.trustSignal !== null && match.trustSignal >= 100 ? 'success' : 'warning'}
+                                            className="sb-match-status-chip text-[12px]"
+                                        >
+                                            {match.statusLabel}
+                                        </ActiveStatusChip>
                                     </div>
-                                    <ActiveStatusChip
-                                        tone={match.trustSignal !== null && match.trustSignal >= 100 ? 'success' : 'warning'}
-                                        className="text-[12px]"
-                                    >
-                                        {match.statusLabel}
-                                    </ActiveStatusChip>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-3.5">
-                                <ReferenceDetailsCard
-                                    title={copy.labels.referenceTitle}
-                                    rows={[
-                                        { label: copy.labels.summaryLabel, value: copy.labels.summaryValue },
-                                        { label: copy.labels.trustSignal, value: <>{formatSignal(match.trustSignal, copy.labels.signalUnavailable)}</> },
-                                        { label: copy.labels.status, value: match.statusLabel },
-                                        { label: copy.labels.feedPosition, value: <>#{index + 1}</> },
-                                    ]}
-                                />
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">{copy.labels.visibleSignals}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {match.tags.map((tag) => (
-                                            <ActiveStatusChip key={tag} tone="neutral" className="border-[#d7dce5] bg-white px-2.5 py-1 font-medium text-[#5f6774]">
-                                                {tag}
-                                            </ActiveStatusChip>
-                                        ))}
+                                </CardHeader>
+                                <CardContent className="sb-match-card-content space-y-3.5">
+                                    <ReferenceDetailsCard
+                                        className="sb-surface-reference sb-match-reference-card"
+                                        title={copy.labels.referenceTitle}
+                                        rows={[
+                                            { label: copy.labels.summaryLabel, value: copy.labels.summaryValue },
+                                            { label: copy.labels.trustSignal, value: <>{formatSignal(match.trustSignal, copy.labels.signalUnavailable)}</> },
+                                            { label: copy.labels.status, value: match.statusLabel },
+                                            { label: copy.labels.feedPosition, value: <>#{index + 1}</> },
+                                        ]}
+                                    />
+                                    <div className="sb-match-signal-group space-y-2.5">
+                                        <p className="sb-match-signal-label text-[10px] font-medium uppercase tracking-[0.08em]">{copy.labels.visibleSignals}</p>
+                                        <div className="sb-match-tag-row flex flex-wrap gap-2">
+                                            {match.tags.map((tag) => (
+                                                <ActiveStatusChip key={tag} tone="neutral" className="sb-match-tag px-2.5 py-1 font-medium">
+                                                    {tag}
+                                                </ActiveStatusChip>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="rounded-b-3xl border-t border-[#ececf0] bg-[#fbfbfd] pt-4">
-                                <div className="w-full space-y-2">
-                                    <Button className="h-12 w-full" onClick={() => onOpenConversation(match)}>
-                                        {copy.labels.openConversation}
-                                    </Button>
-                                    <ActiveSupportText className="text-center">
-                                        {copy.labels.supportNote}
-                                    </ActiveSupportText>
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                                </CardContent>
+                                <CardFooter className="sb-match-card-footer rounded-b-3xl pt-4">
+                                    <div className="w-full space-y-2">
+                                        <Button className="sb-pill-action sb-pill-action-block sb-pill-action-dark sb-match-cta h-12 w-full" onClick={() => onOpenConversation(match)}>
+                                            {copy.labels.openConversation}
+                                        </Button>
+                                        <ActiveSupportText className="sb-match-support text-center">
+                                            {copy.labels.supportNote}
+                                        </ActiveSupportText>
+                                    </div>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        </ActiveSurfaceShell>
+            </ActiveSurfaceShell>
+        </div>
     );
 }

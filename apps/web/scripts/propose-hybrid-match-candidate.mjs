@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import * as dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -7,9 +9,44 @@ const __dirname = path.dirname(__filename);
 const WEB_ROOT = path.resolve(__dirname, '..');
 const REPO_ROOT = path.resolve(WEB_ROOT, '..', '..');
 
-const DEFAULT_MODEL = 'gpt-5-mini';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 const DEFAULT_POLICY_PATH = path.join(WEB_ROOT, 'autoresearch', 'CANDIDATE_PROPOSER_POLICY.md');
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const GEMINI_RESPONSE_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        summary: { type: 'STRING' },
+        changes: {
+            type: 'ARRAY',
+            items: {
+                type: 'OBJECT',
+                properties: {
+                    file: { type: 'STRING' },
+                    find: { type: 'STRING' },
+                    replace: { type: 'STRING' },
+                    rationale: { type: 'STRING' },
+                },
+                required: ['file', 'find', 'replace', 'rationale'],
+            },
+        },
+    },
+    required: ['summary', 'changes'],
+};
+
+loadProposerEnv();
+
+function loadProposerEnv() {
+    const envPaths = [
+        path.join(REPO_ROOT, '.env.local'),
+        path.join(WEB_ROOT, '.env.local'),
+        path.join(REPO_ROOT, '.env.test.local'),
+        path.join(WEB_ROOT, '.env.test.local'),
+    ];
+
+    for (const envPath of envPaths) {
+        dotenv.config({ path: envPath, quiet: true });
+    }
+}
 
 function parseArgs(argv) {
     const out = {
@@ -82,6 +119,21 @@ function extractResponseText(payload) {
         }
     }
     throw new Error('OpenAI response did not include text output');
+}
+
+function getGeminiApiKey() {
+    return process.env.GEMINI_API_KEY
+        || process.env.GOOGLE_API_KEY
+        || process.env.GOOGLE_GENERATIVE_AI_API_KEY
+        || null;
+}
+
+function inferProposalProvider(model) {
+    const normalized = String(model || '').trim().toLowerCase();
+    if (normalized.startsWith('gemini-')) {
+        return 'gemini';
+    }
+    return 'openai';
 }
 
 function assertProposalShape(proposal) {
@@ -200,12 +252,45 @@ async function callOpenAIForProposal(options) {
     };
 }
 
+async function callGeminiForProposal(options) {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        throw new Error(
+            'GEMINI_API_KEY (or GOOGLE_API_KEY/GOOGLE_GENERATIVE_AI_API_KEY) is required for Gemini proposal generation',
+        );
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+        model: options.model,
+        contents: options.userPrompt,
+        config: {
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+            responseSchema: GEMINI_RESPONSE_SCHEMA,
+            systemInstruction: `You are proposing exactly one safe hybrid-match candidate patch.\nFollow policy strictly:\n\n${options.policyText}`,
+        },
+    });
+
+    const text = response?.text || '{}';
+    const proposal = JSON.parse(text);
+    assertProposalShape(proposal);
+
+    return {
+        proposal,
+        responseId: response?.responseId || null,
+    };
+}
+
 function buildUserPrompt(options) {
     return [
         'Goal: propose one small code patch to improve offline_hybrid_score.',
         `Baseline metric: ${options.baselineMetric}`,
         `Keep threshold: ${options.threshold}`,
         `Note: ${options.note || 'N/A'}`,
+        'Your `find` snippet must be copied exactly from the current file contents, including whitespace and punctuation.',
+        'Prefer a single focused change with a contiguous `find` snippet of 5-20 lines.',
+        'Do not use ellipses, summaries, or invented context in `find` or `replace`.',
         '',
         'Allowed files:',
         ...options.allowedFiles.map((file) => `- ${file}`),
@@ -235,15 +320,21 @@ export async function proposeHybridMatchCandidate(options) {
         fileContents: options.fileContents,
     });
 
-    const { proposal, responseId } = await callOpenAIForProposal({
-        model: options.model || DEFAULT_MODEL,
+    const proposalModel = options.model || DEFAULT_MODEL;
+    const provider = inferProposalProvider(proposalModel);
+    const proposalCall = provider === 'gemini'
+        ? callGeminiForProposal
+        : callOpenAIForProposal;
+
+    const { proposal, responseId } = await proposalCall({
+        model: proposalModel,
         policyText,
         userPrompt,
     });
 
     return {
-        proposal_source: 'openai_api',
-        proposal_model: options.model || DEFAULT_MODEL,
+        proposal_source: provider === 'gemini' ? 'gemini_api' : 'openai_api',
+        proposal_model: proposalModel,
         prompt_policy_path: path.relative(REPO_ROOT, policyPath).replace(/\\/g, '/'),
         prompt_policy_version: policyVersion,
         proposal_generated_at: new Date().toISOString(),

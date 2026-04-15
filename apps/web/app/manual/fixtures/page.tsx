@@ -39,7 +39,7 @@ export default function ManualFixturesIndexPage() {
 
                 return (
                     <section className="space-y-6">
-                        <div className="liquid-pane rounded-2xl p-5 sm:p-6">
+                        <div className="sb-surface-panel sb-manual-scene liquid-rise rounded-3xl p-5 sm:p-6">
                             <h2 className="liquid-title text-[24px] font-semibold">{copy.index.title}</h2>
                             <p className="liquid-copy mt-2 max-w-3xl text-[14px] sm:text-[15px]">
                                 {copy.index.description}
@@ -48,14 +48,14 @@ export default function ManualFixturesIndexPage() {
 
                         <div className="grid gap-4 md:grid-cols-3">
                             {fixtureGroups.map((group) => (
-                                <article key={group.title} className="liquid-pane rounded-2xl p-5 sm:p-6">
+                                <article key={group.title} className="sb-surface-subpanel sb-manual-index-card liquid-rise rounded-3xl p-5 sm:p-6">
                                     <h3 className="liquid-title text-[20px] font-semibold">{group.title}</h3>
                                     <div className="mt-4 flex flex-col gap-2">
                                         {group.routes.map((route) => (
                                             <Link
                                                 key={route.href}
                                                 href={withLangQuery(route.href, locale, FIXTURE_DEFAULT_LOCALE)}
-                                                className="liquid-btn liquid-btn-secondary text-center"
+                                                className="liquid-btn sb-pill-action sb-pill-action-inline sb-pill-action-soft sb-manual-link text-center"
                                             >
                                                 {route.label}
                                             </Link>

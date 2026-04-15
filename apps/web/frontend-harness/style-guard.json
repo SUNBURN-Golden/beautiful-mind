@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "path_basis": "repo_relative",
+  "token_first_policy": {
+    "authoritative_style_sources": [
+      "apps/web/app/globals.css",
+      "apps/web/components.json"
+    ],
+    "existing_shared_style_files": [
+      "apps/web/components/active-patterns.tsx",
+      "apps/web/components/screen-patterns.tsx",
+      "apps/web/components/ui-kit.tsx",
+      "apps/web/components/ui/**"
+    ],
+    "reference_only_docs": [
+      "docs/uiux/design_system_tokens.md"
+    ]
+  },
+  "stack_assumptions": {
+    "present": [
+      "tailwindcss",
+      "shadcn_ui_components",
+      "tw_animate_css"
+    ],
+    "absent": [
+      "framer_motion"
+    ]
+  },
+  "raw_literal_policy": {
+    "paint_only": {
+      "allow_new_color_literals": false,
+      "allow_new_shadow_literals": false,
+      "allow_new_backdrop_filter_literals": false,
+      "allow_new_gradient_literals": false
+    },
+    "composition": {
+      "allow_new_color_literals": false,
+      "allow_new_shadow_literals": false,
+      "allow_new_backdrop_filter_literals": false,
+      "allow_new_gradient_literals": false
+    },
+    "component_extension": {
+      "allow_new_color_literals": false,
+      "allow_new_shadow_literals": false,
+      "allow_new_backdrop_filter_literals": false,
+      "allow_new_gradient_literals": false
+    },
+    "system_update": {
+      "allow_new_color_literals": false,
+      "allow_new_shadow_literals": false,
+      "allow_new_backdrop_filter_literals": false,
+      "allow_new_gradient_literals": false
+    }
+  },
+  "forbidden_effect_patterns": [
+    "glassmorphism",
+    "backdrop-blur",
+    "backdrop-filter",
+    "mix-blend-mode",
+    "neon_glow",
+    "random_3d_tilt"
+  ],
+  "dependency_policy": {
+    "new_dependencies_for_ui_only_tasks_forbidden": true,
+    "forbidden_manifest_files": [
+      "apps/web/package.json",
+      "pnpm-lock.yaml"
+    ]
+  }
+}
