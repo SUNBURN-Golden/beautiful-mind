@@ -80,6 +80,41 @@
   --sidebar-accent-foreground: oklch(0.28 0.008 252);
   --sidebar-border: oklch(0.9 0.002 252);
   --sidebar-ring: oklch(0.62 0.13 252);
+  --sb-font-body:
+    "SF Pro Display",
+    "SF Pro Text",
+    "Avenir Next",
+    "Pretendard",
+    "Noto Sans KR",
+    "Segoe UI",
+    sans-serif;
+  --sb-font-display:
+    "SF Pro Display",
+    "SF Pro Text",
+    "Pretendard",
+    "Noto Sans KR",
+    "Segoe UI",
+    sans-serif;
+  --sb-surface-canvas: #f5f5f7;
+  --sb-surface-panel: #ffffff;
+  --sb-surface-muted: #fbfbfd;
+  --sb-surface-chip: #f5f5f7;
+  --sb-text-strong: #1d1d1f;
+  --sb-text-muted: #6e6e73;
+  --sb-text-soft: #8a8a8f;
+  --sb-border-soft: #d2d2d7;
+  --sb-border-strong: #e5e5e7;
+  --sb-accent-action: #1d1d1f;
+  --sb-accent-action-hover: #2a2a2c;
+  --sb-accent-link: #06c;
+  --sb-accent-link-hover: #0077ed;
+  --sb-focus-ring: rgba(0, 102, 204, 0.2);
+  --sb-focus-ring-soft: rgba(0, 102, 204, 0.16);
+  --sb-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sb-shadow-panel: 0 8px 26px rgba(0, 0, 0, 0.04);
+  --sb-shadow-elevated: 0 5px 10px rgba(0, 0, 0, 0.18);
+  --sb-radius-panel: 1rem;
+  --sb-radius-pill: 999px;
 }
 
 .dark {
@@ -114,6 +149,24 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --sb-surface-canvas: oklch(0.18 0.01 255);
+  --sb-surface-panel: oklch(0.22 0.01 255);
+  --sb-surface-muted: oklch(0.26 0.01 255);
+  --sb-surface-chip: oklch(0.24 0.01 255);
+  --sb-text-strong: oklch(0.96 0.003 255);
+  --sb-text-muted: oklch(0.78 0.008 255);
+  --sb-text-soft: oklch(0.68 0.008 255);
+  --sb-border-soft: oklch(0.34 0.01 255);
+  --sb-border-strong: oklch(0.28 0.01 255);
+  --sb-accent-action: oklch(0.92 0.01 255);
+  --sb-accent-action-hover: oklch(0.84 0.01 255);
+  --sb-accent-link: #8ab4ff;
+  --sb-accent-link-hover: #a8c7ff;
+  --sb-focus-ring: rgba(138, 180, 255, 0.22);
+  --sb-focus-ring-soft: rgba(138, 180, 255, 0.18);
+  --sb-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sb-shadow-panel: 0 12px 28px rgba(0, 0, 0, 0.28);
+  --sb-shadow-elevated: 0 16px 36px rgba(0, 0, 0, 0.34);
 }
 
 @layer base {
@@ -124,23 +177,16 @@
     @apply bg-background text-foreground;
     min-height: 100dvh;
     overflow-x: hidden;
-    font-family:
-      "SF Pro Display",
-      "SF Pro Text",
-      "Avenir Next",
-      "Pretendard",
-      "Noto Sans KR",
-      "Segoe UI",
-      sans-serif;
-    background: linear-gradient(180deg, #f5f5f7 0%, #ffffff 42%, #f5f5f7 100%);
+    font-family: var(--sb-font-body);
+    background: linear-gradient(180deg, var(--sb-surface-canvas) 0%, var(--sb-surface-panel) 42%, var(--sb-surface-canvas) 100%);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   a {
-    color: #06c;
+    color: var(--sb-accent-link);
   }
   a:hover {
-    color: #0077ed;
+    color: var(--sb-accent-link-hover);
   }
 }
 
@@ -151,41 +197,42 @@
   }
 
   .liquid-pane {
-    border: 1px solid #e5e5e7;
-    background: #fff;
-    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--sb-border-strong);
+    background: var(--sb-surface-panel);
+    box-shadow: var(--sb-shadow-panel);
   }
 
   .liquid-pane-muted {
-    border: 1px solid #e8e8ed;
-    background: #fbfbfd;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.035);
+    border: 1px solid var(--sb-border-strong);
+    background: var(--sb-surface-muted);
+    box-shadow: var(--sb-shadow-soft);
   }
 
   .liquid-chip {
-    border: 1px solid #d2d2d7;
-    background: #f5f5f7;
+    border: 1px solid var(--sb-border-soft);
+    background: var(--sb-surface-chip);
     box-shadow: none;
   }
 
   .liquid-title {
-    color: #1d1d1f;
+    color: var(--sb-text-strong);
+    font-family: var(--sb-font-display);
     letter-spacing: -0.03em;
   }
 
   .liquid-copy {
-    color: #6e6e73;
+    color: var(--sb-text-muted);
     line-height: 1.58;
   }
 
   .liquid-divider {
-    border-color: #e5e5e7;
+    border-color: var(--sb-border-strong);
   }
 
   .liquid-stepper {
-    border: 1px solid #d2d2d7;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--sb-border-soft);
+    background: var(--sb-surface-panel);
+    box-shadow: var(--sb-shadow-soft);
   }
 
   .liquid-btn {
@@ -212,40 +259,40 @@
   .liquid-btn:focus-visible {
     outline: none;
     box-shadow:
-      0 0 0 4px rgba(0, 102, 204, 0.2);
+      0 0 0 4px var(--sb-focus-ring);
   }
 
   .liquid-btn-primary {
-    border: 1px solid #1d1d1f;
+    border: 1px solid var(--sb-accent-action);
     color: #fff;
-    background: #1d1d1f;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    background: var(--sb-accent-action);
+    box-shadow: var(--sb-shadow-soft);
   }
 
   .liquid-btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
-    background: #2a2a2c;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.18);
+    background: var(--sb-accent-action-hover);
+    box-shadow: var(--sb-shadow-elevated);
   }
 
   .liquid-btn-secondary {
-    border: 1px solid #d2d2d7;
-    color: #1d1d1f;
-    background: #fff;
+    border: 1px solid var(--sb-border-soft);
+    color: var(--sb-text-strong);
+    background: var(--sb-surface-panel);
     box-shadow: none;
   }
 
   .liquid-btn-secondary:hover:not(:disabled) {
     transform: translateY(-1px);
-    background: #f5f5f7;
+    background: var(--sb-surface-chip);
   }
 
   .liquid-input {
     width: 100%;
-    border: 1px solid #d2d2d7;
-    background: #fff;
+    border: 1px solid var(--sb-border-soft);
+    background: var(--sb-surface-panel);
     border-radius: 0.9rem;
-    color: #1d1d1f;
+    color: var(--sb-text-strong);
     font-size: 0.95rem;
     padding: 0.74rem 0.9rem;
     box-shadow: none;
@@ -254,9 +301,9 @@
 
   .liquid-input:focus {
     outline: none;
-    border-color: #06c;
+    border-color: var(--sb-accent-link);
     box-shadow:
-      0 0 0 3px rgba(0, 102, 204, 0.16);
+      0 0 0 3px var(--sb-focus-ring-soft);
   }
 
   .liquid-input:focus-visible {
