@@ -967,3 +967,241 @@
     animation: none !important;
   }
 }
+/* === PHASE 7 VOCABULARY TOKENS START === */
+@layer components {
+  .sb-type-display-xl {
+    color: var(--sb-text-warm-strong);
+    font-family: var(--sb-font-display);
+    font-size: clamp(2rem, 3.8vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1.04;
+  }
+
+  .sb-type-display-lg {
+    color: var(--sb-text-warm-strong);
+    font-family: var(--sb-font-display);
+    font-size: clamp(1.45rem, 2.6vw, 1.95rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  .sb-type-headline {
+    color: var(--sb-text-warm-strong);
+    font-family: var(--sb-font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.35;
+  }
+
+  .sb-type-body-lg {
+    color: var(--sb-text-warm-muted);
+    font-size: 0.95rem;
+    line-height: 1.68;
+  }
+
+  .sb-type-body {
+    color: var(--sb-text-warm-muted);
+    font-size: 0.875rem;
+    line-height: 1.62;
+  }
+
+  .sb-type-meta {
+    color: var(--sb-text-warm-soft);
+    font-size: 0.76rem;
+    line-height: 1.56;
+    letter-spacing: 0.03em;
+  }
+
+  .sb-type-hash {
+    color: var(--sb-text-warm-strong);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.58;
+    word-break: break-all;
+  }
+
+  .sb-space-stage {
+    border: 1px solid var(--sb-border-stage);
+    background: var(--sb-surface-stage-elevated);
+  }
+
+  .sb-space-warm {
+    border: 1px solid var(--sb-border-warm);
+    background: rgba(252, 248, 242, 0.96);
+  }
+
+  .sb-space-document {
+    border: 1px solid var(--sb-border-warm);
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  .sb-accent-frost {
+    border: 1px solid var(--sb-border-warm);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--sb-text-warm-soft);
+  }
+
+  .sb-vocab-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--sb-border-warm);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--sb-text-warm-soft);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .sb-vocab-label {
+    color: var(--sb-text-warm-soft);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .sb-vocab-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--sb-border-warm);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--sb-text-warm-strong) !important;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-align: center;
+  }
+
+  .sb-vocab-link:hover {
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .sb-vocab-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    padding: 0.48rem 0.82rem;
+    border-radius: 999px;
+    border: 1px solid var(--sb-border-warm);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .sb-vocab-chip-met {
+    background: rgba(255, 255, 255, 0.84);
+    color: var(--sb-text-warm-strong);
+  }
+
+  .sb-vocab-chip-pending {
+    background: rgba(255, 255, 255, 0.64);
+    color: var(--sb-text-warm-muted);
+  }
+
+  .sb-vocab-chip-locked {
+    border-color: var(--sb-border-stage);
+    background: rgba(11, 18, 32, 0.88);
+    color: rgba(246, 239, 230, 0.82);
+  }
+
+  .sb-space-stage .sb-type-display-xl,
+  .sb-space-stage .sb-type-display-lg,
+  .sb-space-stage .sb-type-headline,
+  .sb-space-stage .sb-type-hash {
+    color: var(--sb-surface-warm);
+  }
+
+  .sb-space-stage .sb-type-body-lg,
+  .sb-space-stage .sb-type-body,
+  .sb-space-stage .sb-type-meta,
+  .sb-space-stage .sb-vocab-label {
+    color: rgba(246, 239, 230, 0.72);
+  }
+
+  .sb-space-stage .sb-vocab-badge {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(246, 239, 230, 0.76);
+  }
+
+  .sb-space-stage .sb-space-document {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+/* === PHASE 7 VOCABULARY TOKENS END === */
+/* === PHASE 5.3 ANTIQUARIAN TOKENS START === */
+:root {
+  --sb-antiquarian-orange: #C15A2B;
+  --sb-antiquarian-orange-soft: rgba(193, 90, 43, 0.18);
+  --sb-antiquarian-green: #3B4A3E;
+  --sb-antiquarian-green-soft: rgba(59, 74, 62, 0.12);
+  --sb-antiquarian-grey: #8A8578;
+  --sb-antiquarian-grey-soft: rgba(138, 133, 120, 0.22);
+  --sb-antiquarian-burgundy: #5C2A2A;
+  --sb-antiquarian-burgundy-soft: rgba(92, 42, 42, 0.14);
+  --sb-stage-depth: #1E2823;
+  --sb-stage-ink-strong: #F1E9DB;
+  --sb-stage-ink-muted: rgba(241, 233, 219, 0.74);
+  --sb-stage-ink-soft: rgba(241, 233, 219, 0.52);
+  --sb-surface-warm-panel: #F0E5D2;
+  --sb-font-serif-display: "GT Sectra", "Prata", "EB Garamond",
+    "Cormorant Garamond", "Noto Serif KR",
+    "Nanum Myeongjo", serif;
+  --sb-font-serif-reading: "EB Garamond", "Source Serif Pro",
+    "Noto Serif KR", "Nanum Myeongjo", serif;
+}
+
+.dark {
+  --sb-stage-depth: #151D19;
+  --sb-stage-ink-strong: #F1E9DB;
+  --sb-antiquarian-orange: #C15A2B;
+  --sb-antiquarian-burgundy: #6E3434;
+  --sb-surface-warm-panel: oklch(0.24 0.02 60);
+}
+
+.sb-space-stage-antiquarian {
+  background: var(--sb-stage-depth);
+  color: var(--sb-stage-ink-strong);
+}
+
+.sb-type-serif-display {
+  font-family: var(--sb-font-serif-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.sb-type-serif-reading {
+  font-family: var(--sb-font-serif-reading);
+  font-size: 1.02rem;
+  line-height: 1.72;
+}
+
+.sb-accent-seal-orange {
+  color: var(--sb-antiquarian-orange);
+}
+
+.sb-accent-seal-burgundy {
+  color: var(--sb-antiquarian-burgundy);
+}
+
+.sb-rule-orange {
+  border-bottom: 2px solid var(--sb-antiquarian-orange);
+}
+
+.sb-rule-burgundy {
+  border-bottom: 2px solid var(--sb-antiquarian-burgundy);
+}
+/* === PHASE 5.3 ANTIQUARIAN TOKENS END === */
