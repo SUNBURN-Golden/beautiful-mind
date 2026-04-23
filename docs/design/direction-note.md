@@ -1,3 +1,5 @@
+> **Layer 4 (Surface / UX)** — historical design memo, subordinate to `docs/design/tone.md`. See `docs/architecture/ARCHITECTURE.md` for layer definitions.
+
 # SoulBound Direction Note
 
 ## 1. Current Direction

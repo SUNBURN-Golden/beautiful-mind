@@ -1,3 +1,5 @@
+> **Layer 4 (Surface / UX)** — authoritative design document. See `docs/architecture/ARCHITECTURE.md` for layer definitions.
+
 # SoulBound Tone — Antiquarian
 
 ## §1. Anchor

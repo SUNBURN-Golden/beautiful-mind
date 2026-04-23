@@ -29,3 +29,10 @@ When a phase is responsible for producing a judgment, such as compatibility, sco
 This file may only be amended in a dedicated operational hygiene pass.
 Amendments are not carried out inside design or implementation phases.
 If a running phase prompt and this file conflict in interpretation, the work must stop and wait for human re-authorization rather than auto-resolving the conflict in favor of either document.
+
+## 8. Layer Discipline 원칙
+Every document and every code change is performed with explicit awareness of which of the four layers it belongs to (see `docs/architecture/ARCHITECTURE.md`).
+Layer 4 documents do not embed Layer 3 vocabulary (token ledger, slashing, Merkle, L1, ZK).
+Layer 3 documents do not embed Layer 4 vocabulary (tone, copy, vocabulary, motion).
+Cross-layer references are always explicit and name the target layer and document.
+Phase prompts state which layer they operate in.
