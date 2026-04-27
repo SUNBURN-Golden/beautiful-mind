@@ -6,13 +6,27 @@ const { STATUS_BLOCKER_CODES } = await import('../../lib/contracts/status-codes.
 const { STATUS_DECISION_REASON_CODES } = await import('../../lib/contracts/status-reasons.ts');
 const {
     formatConsentTypeLabel,
+    formatConsentTypeLabelForLocale,
+    formatActionLabel,
+    formatAdmissionStatusLabel,
+    formatContractIdentifierLabel,
     formatDocumentTypeLabel,
+    formatDocumentTypeLabelForLocale,
+    formatProcessingStateLabel,
+    formatStandingStatusLabel,
+    formatTrustLevelLabel,
+    formatUnavailableReasonLabel,
     getKnownStatusBlockerCodes,
     getStatusBlockerCopy,
+    getStatusBlockerCopyForLocale,
     getStatusDecisionReasonCopy,
+    getStatusDecisionReasonCopyForLocale,
     getStatusErrorCopy,
+    getStatusErrorCopyForLocale,
     getStatusRecoveryActions,
     getStatusStageCopy,
+    getStatusStageCopyForLocale,
+    normalizeStatusCopyLocale,
 } = await import('../../lib/contracts/status-copy.ts');
 
 test('known blocker codes map to stable copy and recovery actions', () => {
@@ -105,4 +119,101 @@ test('known blocker code registry stays explicit and non-empty', () => {
     assert.equal(knownCodes.length > 0, true);
     assert.equal(knownCodes.includes(STATUS_BLOCKER_CODES.APPLICATION_NOT_STARTED), true);
     assert.equal(knownCodes.includes(STATUS_BLOCKER_CODES.ACCOUNT_FROZEN), true);
+});
+
+test('locale-aware helpers preserve Korean defaults and add English labels', () => {
+    assert.equal(normalizeStatusCopyLocale('en'), 'en');
+    assert.equal(normalizeStatusCopyLocale('ko'), 'ko');
+    assert.equal(normalizeStatusCopyLocale('fr'), 'ko');
+
+    assert.equal(
+        getStatusStageCopyForLocale(ADMISSION_STAGES.ACTIVE, 'en').label,
+        'Active user status',
+    );
+    assert.equal(
+        getStatusStageCopyForLocale(ADMISSION_STAGES.ACTIVE, 'ko').label,
+        '활성 사용자 상태',
+    );
+
+    const blocker = getStatusBlockerCopyForLocale(STATUS_BLOCKER_CODES.DOCUMENTS_REQUIRED, 'en');
+    assert.equal(blocker.title, 'Official documents required');
+    assert.equal(blocker.action?.label, 'Submit documents');
+
+    assert.equal(
+        getStatusDecisionReasonCopyForLocale(STATUS_DECISION_REASON_CODES.MISSING_REQUIRED_DOCUMENTS, 'en'),
+        'Required documents are missing, so resubmission is needed.',
+    );
+    assert.equal(getStatusErrorCopyForLocale('AUTH_REQUIRED', 'en').title, 'Sign in required.');
+});
+
+test('ordinary locale-aware fallbacks do not expose raw enum or internal identifiers', () => {
+    assert.equal(formatDocumentTypeLabelForLocale('UNKNOWN_DOC', 'en'), 'Other document type');
+    assert.equal(formatDocumentTypeLabelForLocale('UNKNOWN_DOC', 'ko'), '기타 문서 유형');
+    assert.equal(formatConsentTypeLabelForLocale('UNKNOWN_CONSENT', 'en'), 'Other consent record');
+    assert.equal(formatProcessingStateLabel('AI_PASSED', 'en'), 'AI review passed');
+    assert.equal(formatProcessingStateLabel('UNKNOWN_STATE', 'en'), 'Other review state');
+    assert.equal(formatProcessingStateLabel('UNKNOWN_STATE', 'ko'), '기타 검토 상태');
+
+    const unknownBlocker = getStatusBlockerCopyForLocale('UNEXPECTED_BLOCKER', 'en');
+    assert.equal(unknownBlocker.title, 'Additional review required');
+    assert.doesNotMatch(unknownBlocker.title, /UNEXPECTED_BLOCKER/);
+
+    assert.equal(getStatusDecisionReasonCopyForLocale('UNMAPPED_REASON', 'en'), 'Additional review required');
+    assert.equal(getStatusErrorCopyForLocale('RANDOM_ERROR', 'en').message.includes('RANDOM_ERROR'), false);
+});
+
+test('new mapping domains cover statuses, actions, and contract identifiers', () => {
+    assert.equal(formatAdmissionStatusLabel('ADMISSION_VERIFIED', 'en'), 'Admission verified');
+    assert.equal(formatStandingStatusLabel('ACTIVE', 'ko'), '활성 standing');
+    assert.equal(formatTrustLevelLabel('ADMISSION_VERIFIED', 'en'), 'Admission verified');
+    assert.equal(formatActionLabel('SUBMIT', 'ko'), '제출');
+    assert.equal(formatUnavailableReasonLabel('ACCOUNT_FROZEN', 'en'), 'Account frozen');
+
+    assert.equal(
+        formatContractIdentifierLabel('identity.active', 'en'),
+        'Identity verification record',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('documents.4.verified', 'ko'),
+        '필수 문서 검증 기록',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('consent.recorded', 'en'),
+        'Consent record',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('credential.active', 'ko'),
+        '활성 자격증명 기록',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('dashboard.access-board.v1', 'en'),
+        'Access board record',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('stage5.landing.invitation.v1', 'ko'),
+        'Landing invitation 기록',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('standing-active', 'en'),
+        'Active standing record',
+    );
+    assert.equal(
+        formatContractIdentifierLabel('standing:active:admission-verified:active', 'ko'),
+        '활성 입장 standing 기록',
+    );
+});
+
+test('support and diagnostic fallbacks preserve auditability for new helpers', () => {
+    assert.match(
+        formatDocumentTypeLabelForLocale('UNKNOWN_DOC', 'ko', { audience: 'support' }),
+        /문서 코드 \(UNKNOWN_DOC\)/,
+    );
+    assert.match(
+        formatConsentTypeLabelForLocale('UNKNOWN_CONSENT', 'ko', { audience: 'diagnostic' }),
+        /동의 코드 \(UNKNOWN_CONSENT\)/,
+    );
+    assert.match(
+        formatContractIdentifierLabel('unknown.contract.v1', 'en', { audience: 'support' }),
+        /Contract reference \(unknown\.contract\.v1\)/,
+    );
 });
