@@ -6,8 +6,6 @@ import { getDashboardActiveFixture } from '@/dev-fixtures/dashboard.fixture';
 import { getManualFixturesCopy } from '@/i18n/manual-fixtures';
 import { FixtureScene } from '../../_components/fixture-scene';
 
-function handleNoopSignOut() {}
-
 export default function ManualDashboardActiveFixturePage() {
     return (
         <FixtureLocaleBoundary>
@@ -27,7 +25,7 @@ export default function ManualDashboardActiveFixturePage() {
                         indexLabel={copy.scene.backToIndex}
                         links={dashboardLinks}
                     >
-                        <DashboardSurface {...getDashboardActiveFixture(locale)} locale={locale} onSignOut={handleNoopSignOut} />
+                        <DashboardSurface {...getDashboardActiveFixture(locale)} locale={locale} />
                     </FixtureScene>
                 );
             }}

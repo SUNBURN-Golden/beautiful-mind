@@ -1,20 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { EligibilityChip, type EligibilityChipKind } from '@/components/domain/eligibility-chip';
+import { EligibilityChip, type EligibilityChipKind, type EligibilityChipState } from '@/components/domain/eligibility-chip';
 import { ReceiptCard } from '@/components/domain/receipt-card';
 import { SignalStack, type SignalStackItem } from '@/components/domain/signal-stack';
 import { TrustRibbon, type TrustRibbonEvidence, type TrustRibbonLevel } from '@/components/domain/trust-ribbon';
 import { MicroSlide, SoftFade } from '@/components/motion';
 import { LIVE_DEFAULT_LOCALE, withLangQuery, type AppLocale } from '@/i18n/config';
 import { getDashboardCopy } from '@/i18n/dashboard';
+import {
+    formatAdmissionStatusLabel,
+    formatDocumentTypeLabelForLocale,
+    formatTrustLevelLabel,
+    formatProcessingStateLabel,
+    formatContractIdentifierLabel,
+} from '@/lib/contracts/status-copy';
 
 export type DashboardRequiredDocument = {
-    type?: string;
-    status?: string;
-    processing_status?: string;
-    ai_confidence?: number | null;
-    purged_at?: string | null;
+    type: string;
+    status: string;
+    processing_status: string;
+    ai_confidence: number;
+    purged_at: string | null;
+    created_at?: string;
+};
+
+type DashboardSurfaceActiveProps = {
+    locale: AppLocale;
+    admissionStatus: string;
+    trustLevel: string;
+    sbtStatus: string;
+    sbtIsActive: boolean;
+    soulIssued: boolean;
+    soulIssuedAt: string | null;
+    requiredDocuments: DashboardRequiredDocument[];
 };
 
 type DashboardSurfaceLoadingProps = {
@@ -28,47 +47,67 @@ type DashboardSurfaceNonActiveGateProps = {
     locale?: AppLocale;
 };
 
-type DashboardSurfaceActiveProps = {
-    view: 'active';
-    locale?: AppLocale;
-    admissionStatus: string;
-    trustLevel: string;
-    sbtStatus: string;
-    sbtIsActive: boolean;
-    soulIssued: boolean;
-    soulIssuedAt: string | null;
-    requiredDocuments: DashboardRequiredDocument[];
-    isSigningOut: boolean;
-    onSignOut: () => void;
-};
-
 export type DashboardSurfaceProps =
     | DashboardSurfaceLoadingProps
     | DashboardSurfaceNonActiveGateProps
-    | DashboardSurfaceActiveProps;
+    | ({ view: 'active' } & DashboardSurfaceActiveProps);
 
-type DashboardLinkKey =
-    | 'counterpart'
-    | 'correspondence'
-    | 'attestation'
-    | 'report'
-    | 'revoke';
+function formatConfidence(value: number): string {
+    if (value >= 1) return '100%';
+    return `${Math.round(value * 100)}%`;
+}
 
-const DASHBOARD_ROOM_ROUTES: Record<DashboardLinkKey, string> = {
-    counterpart: '/match',
-    correspondence: '/chat',
-    attestation: '/review',
-    report: '/report',
-    revoke: '/revoke',
-};
+function formatTimestamp(iso: string | null, locale: AppLocale): string {
+    if (!iso) return '—';
+    try {
+        return new Date(iso).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    } catch {
+        return iso;
+    }
+}
 
-const DASHBOARD_ELIGIBILITY_KINDS: EligibilityChipKind[] = [
-    'identity',
-    'consent',
-    'document',
-    'contract',
-    'standing',
-];
+function buildSignalItems(
+    admissionStatus: string,
+    requiredDocuments: DashboardRequiredDocument[],
+    trustLevel: string,
+    sbtStatus: string,
+    soulIssuedAt: string | null,
+    locale: AppLocale,
+): SignalStackItem[] {
+    return [
+        {
+            id: 'sig-identity',
+            kind: 'verify.id.completed',
+            contractVersion: formatContractIdentifierLabel(`identity.${admissionStatus}`, locale),
+            occurredAt: undefined,
+        },
+        {
+            id: 'sig-documents',
+            kind: 'verify.doc.completed',
+            contractVersion: formatContractIdentifierLabel(`documents.${requiredDocuments.length}.verified`, locale),
+            receiptId: requiredDocuments.length > 0 ? `${requiredDocuments.length}` : undefined,
+            occurredAt: undefined,
+        },
+        {
+            id: 'sig-consent',
+            kind: 'consent.clause.signed',
+            contractVersion: formatContractIdentifierLabel('consent.recorded', locale),
+            occurredAt: undefined,
+        },
+        {
+            id: 'sig-credential',
+            kind: 'contract.signed',
+            contractVersion: formatContractIdentifierLabel(`credential.${sbtStatus}`, locale),
+            occurredAt: soulIssuedAt ? formatTimestamp(soulIssuedAt, locale) : undefined,
+        },
+    ];
+}
 
 export function DashboardSurface(props: DashboardSurfaceProps) {
     const locale = props.locale ?? LIVE_DEFAULT_LOCALE;
@@ -149,313 +188,193 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
         );
     }
 
-    const {
-        admissionStatus,
-        trustLevel,
-        sbtStatus,
-        sbtIsActive,
-        soulIssued,
-        soulIssuedAt,
-        requiredDocuments,
-        isSigningOut,
-        onSignOut,
-    } = props;
+    // ——— ACTIVE VIEW ———
+    const { admissionStatus, trustLevel, sbtStatus, sbtIsActive, soulIssued, soulIssuedAt, requiredDocuments } = props;
 
-    const ribbonLevel = resolveTrustRibbonLevel({ trustLevel, sbtIsActive, soulIssued });
-    const ribbonEvidence = buildTrustEvidence({
-        admissionStatus,
-        trustLevel,
-        soulIssuedAt,
-        locale,
-    });
-    const roomKeys = Object.keys(DASHBOARD_ROOM_ROUTES) as DashboardLinkKey[];
-    const signalItems = buildSignalItems({
-        admissionStatus,
-        trustLevel,
-        sbtStatus,
-        soulIssued,
-        soulIssuedAt,
-        requiredDocuments,
-        locale,
-    });
-    const standingReceiptId = `standing-${toRecordToken(admissionStatus, 'active')}`;
-    const standingHash = [
-        'standing',
-        toRecordToken(admissionStatus, 'active'),
-        toRecordToken(trustLevel, 'verified'),
-        toRecordToken(sbtStatus, 'credential'),
-    ].join(':');
+    const trustRibbonLevel: TrustRibbonLevel = sbtIsActive ? 'verified' : trustLevel ? 'verified' : 'pending';
+    const trustRibbonEvidence: TrustRibbonEvidence[] = [
+        { label: copy.rows.admissionStatus, ts: formatAdmissionStatusLabel(admissionStatus, locale) },
+        { label: copy.rows.trustLevel, ts: formatTrustLevelLabel(trustLevel, locale) },
+        ...(soulIssuedAt ? [{ label: copy.rows.issuedAt, ts: formatTimestamp(soulIssuedAt, locale) }] : []),
+    ];
+
+    const eligibilityChips: { kind: EligibilityChipKind; state: EligibilityChipState }[] = [
+        { kind: 'identity', state: 'met' },
+        { kind: 'consent', state: 'met' },
+        { kind: 'document', state: 'met' },
+        { kind: 'contract', state: 'met' },
+        { kind: 'standing', state: 'met' },
+    ];
+
+    const roomItems = [
+        { key: 'counterpart', ...copy.rooms.counterpart },
+        { key: 'correspondence', ...copy.rooms.correspondence },
+        { key: 'attestation', ...copy.rooms.attestation },
+        { key: 'report', ...copy.rooms.report },
+        { key: 'revoke', ...copy.rooms.revoke },
+    ];
+
+    const signalItems = buildSignalItems(admissionStatus, requiredDocuments, trustLevel, sbtStatus, soulIssuedAt, locale);
+
+    const maskedReceiptId = formatContractIdentifierLabel(`standing-${admissionStatus}`, locale);
+    const maskedHash = formatContractIdentifierLabel(admissionStatus, locale);
+    const maskedContractVersion = formatContractIdentifierLabel(copy.receipt.contractVersion, locale);
 
     return (
-        <main className={`sb-space-warm sb-locale-${locale} min-h-screen border-0 px-4 py-6 sm:px-8 sm:py-10`} lang={locale}>
-            <div className="mx-auto max-w-6xl space-y-6">
-                <SoftFade>
-                    <section className="rounded-[1.75rem] border border-[color:var(--sb-border-warm)] bg-[color:var(--sb-surface-warm-panel)] p-6 sm:p-8">
-                        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="max-w-3xl space-y-3">
-                                <span className="sb-vocab-badge">{copy.intro.badge}</span>
-                                <h1 className="sb-type-serif-display text-[clamp(2.2rem,4.5vw,3.9rem)] leading-[1.02] text-[color:var(--sb-text-warm-strong)]">
-                                    {copy.intro.title}
-                                </h1>
-                                <p className="sb-type-body-lg max-w-2xl">{copy.intro.description}</p>
-                                <p className="sb-type-body max-w-2xl">{copy.intro.note}</p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={onSignOut}
-                                disabled={isSigningOut}
-                                className="inline-flex w-fit text-sm font-medium text-[color:var(--sb-text-warm-muted)] underline-offset-4 transition-colors hover:text-[color:var(--sb-text-warm-strong)] hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {isSigningOut ? copy.signOut.busy : copy.signOut.idle}
-                            </button>
+        <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-8">
+                {/* Section 1 — Current standing summary */}
+                <section className="sb-space-warm rounded-3xl border p-6 sm:p-8">
+                    <div className="flex flex-col gap-4">
+                        <div>
+                            <span className="sb-vocab-badge inline-flex items-center rounded-full border border-[#d4c5a9] bg-[#f5f0e8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5e50]">
+                                {copy.intro.badge}
+                            </span>
                         </div>
+                        <h1 className="sb-type-serif-display text-[28px] leading-[1.18] sm:text-[32px]">
+                            {copy.intro.title}
+                        </h1>
+                        <p className="sb-type-body-lg max-w-2xl leading-[1.6]">
+                            {copy.intro.description}
+                        </p>
+                        <TrustRibbon level={trustRibbonLevel} evidence={trustRibbonEvidence} locale={locale} />
+                        <p className="sb-type-body max-w-2xl leading-[1.6]">
+                            {copy.intro.note}
+                        </p>
+                    </div>
+                </section>
 
-                        <div className="mt-6">
-                            <TrustRibbon
-                                locale={locale}
-                                level={ribbonLevel}
-                                evidence={ribbonEvidence}
-                            />
+                {/* Section 2 — Disabled action cards */}
+                <section>
+                    <div className="mb-4 flex flex-col gap-1">
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                            {copy.rooms.title}
+                        </h2>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {roomItems.map((room, i) => (
+                            <MicroSlide key={room.key} delayMs={i * 60}>
+                                <div
+                                    className="sb-space-warm flex flex-col gap-2 rounded-2xl border p-5 opacity-60"
+                                    aria-disabled="true"
+                                    role="button"
+                                    tabIndex={-1}
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <h3 className="sb-type-headline text-[16px] leading-[1.3]">
+                                            {room.title}
+                                        </h3>
+                                        <span className="sb-type-meta shrink-0 text-[11px] font-medium uppercase tracking-[0.1em] text-[#9a8c7a]">
+                                            {copy.actions.disabledReason}
+                                        </span>
+                                    </div>
+                                    <p className="sb-type-body text-[14px] leading-[1.5]">
+                                        {room.description}
+                                    </p>
+                                </div>
+                            </MicroSlide>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Section 3 — Eligibility / record summary */}
+                <section>
+                    <div className="mb-4 flex flex-col gap-1">
+                        <span className="sb-vocab-badge inline-flex items-center rounded-full border border-[#d4c5a9] bg-[#f5f0e8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5e50]">
+                            {copy.access.badge}
+                        </span>
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                            {copy.access.title}
+                        </h2>
+                        <p className="sb-type-body text-[14px] leading-[1.5]">
+                            {copy.access.description}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {eligibilityChips.map((chip) => (
+                            <EligibilityChip key={chip.kind} kind={chip.kind} state={chip.state} locale={locale} />
+                        ))}
+                    </div>
+                </section>
+
+                {/* Section 4 — Document record summary */}
+                <section>
+                    <div className="mb-4 flex flex-col gap-1">
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                            {copy.documentRecord.title}
+                        </h2>
+                    </div>
+                    {requiredDocuments.length === 0 ? (
+                        <div className="sb-space-document rounded-2xl border p-5">
+                            <p className="sb-type-body text-[14px] leading-[1.5]">
+                                {copy.documentRecord.emptyDescription}
+                            </p>
                         </div>
-                    </section>
-                </SoftFade>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {requiredDocuments.map((doc, i) => (
+                                <MicroSlide key={`${doc.type}-${i}`} delayMs={i * 50}>
+                                    <div className="sb-space-document flex flex-col gap-2 rounded-2xl border p-5">
+                                        <p className="sb-type-headline">
+                                            {formatDocumentTypeLabelForLocale(doc.type, locale)}
+                                        </p>
+                                        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2" style={{ gridTemplateColumns: 'minmax(7rem, auto) minmax(0, 1fr)' }}>
+                                            <dt className="sb-type-meta text-[12px] font-medium text-[#9a8c7a]">{copy.rows.status}</dt>
+                                            <dd className="sb-type-body text-[14px]">{formatAdmissionStatusLabel(doc.status, locale)}</dd>
 
-                <SoftFade delayMs={50}>
-                    <section className="rounded-[1.75rem] border border-[color:var(--sb-border-warm)] bg-[rgba(255,255,255,0.42)] p-6">
-                        <div className="space-y-3">
-                            <span className="sb-vocab-badge">{copy.access.badge}</span>
-                            <h2 className="sb-type-display-lg">{copy.access.title}</h2>
-                            <p className="sb-type-body-lg max-w-3xl">{copy.access.description}</p>
-                        </div>
+                                            <dt className="sb-type-meta text-[12px] font-medium text-[#9a8c7a]">{copy.rows.processing}</dt>
+                                            <dd className="sb-type-body text-[14px]">{formatProcessingStateLabel(doc.processing_status, locale)}</dd>
 
-                        <div className="mt-5 flex flex-wrap gap-2">
-                            {DASHBOARD_ELIGIBILITY_KINDS.map((kind) => (
-                                <EligibilityChip
-                                    key={kind}
-                                    locale={locale}
-                                    kind={kind}
-                                    state="met"
-                                />
+                                            <dt className="sb-type-meta text-[12px] font-medium text-[#9a8c7a]">{copy.rows.confidence}</dt>
+                                            <dd className="sb-type-body text-[14px]">{formatConfidence(doc.ai_confidence)}</dd>
+
+                                            <dt className="sb-type-meta text-[12px] font-medium text-[#9a8c7a]">{copy.rows.purgedAt}</dt>
+                                            <dd className="sb-type-body text-[14px]">
+                                                {doc.purged_at ? formatTimestamp(doc.purged_at, locale) : copy.rows.notPurged}
+                                            </dd>
+                                        </div>
+                                    </div>
+                                </MicroSlide>
                             ))}
                         </div>
+                    )}
+                </section>
 
-                        <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                            <div className="sb-space-document rounded-[1.25rem] p-5">
-                                <p className="sb-vocab-label">{copy.rooms.title}</p>
-                                <ul className="mt-4 space-y-3">
-                                    {roomKeys.map((key, index) => (
-                                        <li key={key}>
-                                            <MicroSlide
-                                                delayMs={index * 25}
-                                                className={index < roomKeys.length - 1 ? 'border-b border-[color:var(--sb-border-warm)] pb-3' : ''}
-                                            >
-                                                <div className="space-y-1">
-                                                    <Link
-                                                        href={withLangQuery(DASHBOARD_ROOM_ROUTES[key], locale, LIVE_DEFAULT_LOCALE)}
-                                                        className="sb-type-headline inline-flex underline-offset-4 transition-colors hover:text-[color:var(--sb-text-warm-strong)] hover:underline"
-                                                    >
-                                                        {copy.rooms[key].title}
-                                                    </Link>
-                                                    <p className="sb-type-body">{copy.rooms[key].description}</p>
-                                                </div>
-                                            </MicroSlide>
-                                        </li>
-                                    ))}
-                                </ul>
+                {/* Section 5 — Collapsible evidence / audit trail */}
+                <section>
+                    <details className="group">
+                        <summary className="sb-space-warm flex cursor-pointer items-center gap-3 rounded-2xl border p-5 transition hover:border-[#c4b89a] select-none list-none">
+                            <svg
+                                width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                className="shrink-0 transition-transform group-open:rotate-90"
+                            >
+                                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <div className="flex flex-col gap-0.5">
+                                <span className="sb-vocab-badge inline-flex items-center rounded-full border border-[#d4c5a9] bg-[#f5f0e8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5e50]">
+                                    {copy.evidence.badge}
+                                </span>
+                                <p className="sb-type-body text-[14px] leading-[1.5]">
+                                    {copy.evidence.summaryLabel}
+                                </p>
                             </div>
-
-                            <div className="sb-space-document rounded-[1.25rem] p-5">
-                                <p className="sb-vocab-label">{copy.documentRecord.title}</p>
-                                {requiredDocuments.length > 0 ? (
-                                    <ul className="mt-4 space-y-4">
-                                        {requiredDocuments.map((doc, index) => (
-                                            <li key={`${doc.type ?? 'document'}-${index}`} className="border-b border-[color:var(--sb-border-warm)] pb-4 last:border-b-0 last:pb-0">
-                                                <p className="sb-type-headline">
-                                                    {doc.type || copy.documentRecord.fallbackTitle}
-                                                </p>
-                                                <dl className="mt-3 grid gap-2">
-                                                    <div className="flex items-baseline justify-between gap-4">
-                                                        <dt className="sb-vocab-label">{copy.rows.status}</dt>
-                                                        <dd className="sb-type-body">{doc.status || copy.rows.notAvailable}</dd>
-                                                    </div>
-                                                    <div className="flex items-baseline justify-between gap-4">
-                                                        <dt className="sb-vocab-label">{copy.rows.processing}</dt>
-                                                        <dd className="sb-type-body">{doc.processing_status || copy.rows.pending}</dd>
-                                                    </div>
-                                                    <div className="flex items-baseline justify-between gap-4">
-                                                        <dt className="sb-vocab-label">{copy.rows.confidence}</dt>
-                                                        <dd className="sb-type-body">
-                                                            {typeof doc.ai_confidence === 'number'
-                                                                ? doc.ai_confidence.toFixed(2)
-                                                                : copy.rows.notAvailable}
-                                                        </dd>
-                                                    </div>
-                                                    <div className="flex items-baseline justify-between gap-4">
-                                                        <dt className="sb-vocab-label">{copy.rows.purgedAt}</dt>
-                                                        <dd className="sb-type-body">{doc.purged_at || copy.rows.notPurged}</dd>
-                                                    </div>
-                                                </dl>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="sb-type-body mt-4">{copy.documentRecord.emptyDescription}</p>
-                                )}
-                            </div>
+                        </summary>
+                        <div className="mt-4 flex flex-col gap-6 pl-2">
+                            <ReceiptCard
+                                locale={locale}
+                                title={copy.receipt.title}
+                                receiptId={maskedReceiptId}
+                                issuedAt={soulIssuedAt ? formatTimestamp(soulIssuedAt, locale) : copy.receipt.issuedPending}
+                                hash={maskedHash}
+                                contractVersion={maskedContractVersion}
+                                signatory={copy.receipt.signatory}
+                                status={soulIssued ? 'signed' : 'updated'}
+                            />
+                            <SignalStack locale={locale} items={signalItems} />
                         </div>
-                    </section>
-                </SoftFade>
-
-                <SoftFade delayMs={100}>
-                    <ReceiptCard
-                        locale={locale}
-                        title={copy.receipt.title}
-                        receiptId={standingReceiptId}
-                        issuedAt={soulIssuedAt || copy.receipt.issuedPending}
-                        hash={standingHash}
-                        contractVersion={copy.receipt.contractVersion}
-                        signatory={copy.receipt.signatory}
-                        status={soulIssued ? 'signed' : 'updated'}
-                    />
-                </SoftFade>
-
-                <SoftFade delayMs={140}>
-                    <SignalStack locale={locale} items={signalItems} />
-                </SoftFade>
+                    </details>
+                </section>
             </div>
         </main>
     );
-}
-
-function resolveTrustRibbonLevel({
-    trustLevel,
-    sbtIsActive,
-    soulIssued,
-}: {
-    trustLevel: string;
-    sbtIsActive: boolean;
-    soulIssued: boolean;
-}): TrustRibbonLevel {
-    if (soulIssued || sbtIsActive) {
-        return 'verified';
-    }
-
-    const normalized = trustLevel.toLowerCase();
-    if (normalized.includes('partial')) {
-        return 'partial';
-    }
-
-    if (normalized.includes('pending') || normalized.includes('review')) {
-        return 'pending';
-    }
-
-    return 'partial';
-}
-
-function buildTrustEvidence({
-    admissionStatus,
-    trustLevel,
-    soulIssuedAt,
-    locale,
-}: {
-    admissionStatus: string;
-    trustLevel: string;
-    soulIssuedAt: string | null;
-    locale: AppLocale;
-}): TrustRibbonEvidence[] {
-    const copy = getDashboardCopy(locale);
-
-    return [
-        { label: `${copy.rows.admissionStatus}: ${admissionStatus}` },
-        { label: `${copy.rows.trustLevel}: ${trustLevel}` },
-        { label: `${copy.rows.issuedAt}: ${soulIssuedAt || copy.rows.notAvailable}` },
-    ];
-}
-
-function buildSignalItems({
-    admissionStatus,
-    trustLevel,
-    sbtStatus,
-    soulIssued,
-    soulIssuedAt,
-    requiredDocuments,
-    locale,
-}: {
-    admissionStatus: string;
-    trustLevel: string;
-    sbtStatus: string;
-    soulIssued: boolean;
-    soulIssuedAt: string | null;
-    requiredDocuments: DashboardRequiredDocument[];
-    locale: AppLocale;
-}): SignalStackItem[] {
-    const copy = getDashboardCopy(locale);
-    const documentCountReceipt = locale === 'ko'
-        ? `${requiredDocuments.length}건 기록`
-        : `${requiredDocuments.length} records`;
-
-    const items: SignalStackItem[] = [
-        {
-            id: 'identity-verified',
-            kind: 'verify.id.completed' as const,
-            contractVersion: `identity.${toRecordToken(admissionStatus, 'verified')}`,
-            receiptId: admissionStatus,
-        },
-        {
-            id: 'consent-recorded',
-            kind: 'consent.clause.signed' as const,
-            contractVersion: 'consent.recorded',
-            receiptId: trustLevel,
-        },
-        {
-            id: 'contract-recorded',
-            kind: soulIssued ? ('contract.signed' as const) : ('contract.updated' as const),
-            contractVersion: `credential.${toRecordToken(sbtStatus, 'active')}`,
-            occurredAt: soulIssuedAt || undefined,
-            receiptId: sbtStatus,
-        },
-    ];
-
-    if (requiredDocuments.length > 0) {
-        items.splice(1, 0, {
-            id: 'document-verified',
-            kind: 'verify.doc.completed' as const,
-            contractVersion: `documents.${requiredDocuments.length}.verified`,
-            occurredAt: firstDocumentTimestamp(requiredDocuments) || undefined,
-            receiptId: documentCountReceipt,
-        });
-    }
-
-    if (soulIssued || soulIssuedAt) {
-        items.push({
-            id: 'receipt-generated',
-            kind: 'receipt.generated' as const,
-            contractVersion: copy.receipt.contractVersion,
-            occurredAt: soulIssuedAt || undefined,
-            receiptId: `standing-${toRecordToken(admissionStatus, 'active')}`,
-        });
-    }
-
-    return items;
-}
-
-function firstDocumentTimestamp(requiredDocuments: DashboardRequiredDocument[]) {
-    for (const document of requiredDocuments) {
-        if (document.purged_at) {
-            return document.purged_at;
-        }
-    }
-
-    return null;
-}
-
-function toRecordToken(value: string, fallback: string) {
-    const normalized = value
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9가-힣]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-
-    return normalized || fallback;
 }

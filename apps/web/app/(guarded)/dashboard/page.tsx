@@ -1,11 +1,9 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import { DashboardSurface, type DashboardRequiredDocument } from '@/components/surfaces/dashboard-surface';
-import { LIVE_DEFAULT_LOCALE, withLangQuery } from '@/i18n/config';
+import { LIVE_DEFAULT_LOCALE } from '@/i18n/config';
 import { useAppLocale } from '@/i18n/use-app-locale';
-import { createClient } from '@/utils/supabase/client';
 import { ADMISSION_STAGES } from '@/lib/contracts/status-stages';
 import { useStatus } from '@/lib/useStatus';
 
@@ -23,8 +21,6 @@ type DashboardPageContentProps = {
 function DashboardPageContent({ locale }: DashboardPageContentProps) {
     const { status, isLoading, currentStage } = useStatus();
     const stage = currentStage;
-    const router = useRouter();
-    const [isSigningOut, setIsSigningOut] = useState(false);
 
     if (isLoading) {
         return <DashboardSurface view="loading" locale={locale} />;
@@ -42,19 +38,6 @@ function DashboardPageContent({ locale }: DashboardPageContentProps) {
     const soulIssuedAt = typeof meta.soul_credential_issued_at === 'string' ? meta.soul_credential_issued_at : null;
     const admissionStatus = typeof meta.admission_status === 'string' ? meta.admission_status : ADMISSION_STAGES.ACTIVE;
 
-    const handleLogout = async () => {
-        if (isSigningOut) return;
-        setIsSigningOut(true);
-        try {
-            const supabase = createClient();
-            await supabase.auth.signOut();
-        } finally {
-            router.replace(withLangQuery('/login', locale, LIVE_DEFAULT_LOCALE));
-            router.refresh();
-            setIsSigningOut(false);
-        }
-    };
-
     return (
         <DashboardSurface
             view="active"
@@ -66,8 +49,6 @@ function DashboardPageContent({ locale }: DashboardPageContentProps) {
             soulIssued={soulIssued}
             soulIssuedAt={soulIssuedAt}
             requiredDocuments={requiredDocuments}
-            isSigningOut={isSigningOut}
-            onSignOut={handleLogout}
         />
     );
 }

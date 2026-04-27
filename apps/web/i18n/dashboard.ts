@@ -21,10 +21,6 @@ const dashboardCopy = {
             description: 'This room gathers the current trust state, the satisfied thresholds, and the documentary traces that keep the next rooms open.',
             note: 'Original source documents do not remain here. What stays is the minimal record required for standing, credential issuance, and audit.',
         },
-        signOut: {
-            idle: 'Close this session',
-            busy: 'Closing this session...',
-        },
         access: {
             badge: 'Recorded thresholds',
             title: 'Eligibility and open rooms',
@@ -52,6 +48,13 @@ const dashboardCopy = {
                 title: 'Participation record',
                 description: 'Review or revise the current participation controls.',
             },
+        },
+        actions: {
+            disabledReason: 'Not available yet',
+        },
+        evidence: {
+            badge: 'Audit trail',
+            summaryLabel: 'Receipt records and signal traces that support the current standing.',
         },
         documentRecord: {
             title: 'Document record',
@@ -97,10 +100,6 @@ const dashboardCopy = {
             description: '이 방은 현재의 신뢰 상태, 이미 충족된 문턱, 다음 방을 열어 두는 문서 흔적을 함께 모아 둡니다.',
             note: '원본 서류는 이곳에 남지 않습니다. 남는 것은 상태, 크리덴셜 발급, 감사에 필요한 최소 기록뿐입니다.',
         },
-        signOut: {
-            idle: '이 세션을 닫습니다',
-            busy: '이 세션을 닫는 중입니다...',
-        },
         access: {
             badge: '기록된 문턱',
             title: '자격과 열려 있는 방',
@@ -128,6 +127,13 @@ const dashboardCopy = {
                 title: '참여 기록',
                 description: '현재 참여 제어 상태를 검토하거나 조정합니다.',
             },
+        },
+        actions: {
+            disabledReason: '아직 열리지 않았습니다',
+        },
+        evidence: {
+            badge: '감사 추적',
+            summaryLabel: '현재 상태를 뒷받침하는 영수증 기록과 신호 추적입니다.',
         },
         documentRecord: {
             title: '문서 기록',

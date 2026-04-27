@@ -10,7 +10,6 @@ type DashboardActiveFixture = {
     soulIssued: boolean;
     soulIssuedAt: string | null;
     requiredDocuments: DashboardRequiredDocument[];
-    isSigningOut: boolean;
 };
 
 const dashboardFixtureStrings: Record<AppLocale, {
@@ -73,10 +72,9 @@ export const dashboardLoadingFixture = {
     view: 'loading',
 } as const;
 
-export function getDashboardNonActiveFixture(locale: AppLocale) {
+export function getDashboardNonActiveFixture(_locale: AppLocale) {
     return {
         view: 'non_active_gate' as const,
-        currentStage: dashboardFixtureStrings[locale].nonActiveStage,
     };
 }
 
@@ -91,7 +89,6 @@ export function getDashboardActiveFixture(locale: AppLocale): DashboardActiveFix
         sbtIsActive: true,
         soulIssued: true,
         soulIssuedAt: copy.soulIssuedAt,
-        isSigningOut: false,
         requiredDocuments: copy.requiredDocuments,
     };
 }
