@@ -23,29 +23,84 @@ export const STAGE_ROUTES = {
     [ADMISSION_STAGES.ACTIVE]: '/dashboard',
 } as const satisfies Record<Stage, string>;
 
+export const ACTIVE_SURFACE_ROUTES = [
+    '/dashboard',
+    '/wallet',
+    '/match',
+    '/chat',
+    '/review',
+    '/report',
+    '/revoke',
+] as const;
+
+const STATUS_ROUTE = '/apply/status';
+
+const STAGE_ALLOWED_EXACT_ROUTES: Record<Stage, readonly string[]> = {
+    [ADMISSION_STAGES.LOGIN]: [STAGE_ROUTES[ADMISSION_STAGES.LOGIN]],
+    [ADMISSION_STAGES.APPLY_START]: [
+        STAGE_ROUTES[ADMISSION_STAGES.APPLY_START],
+        STATUS_ROUTE,
+        STAGE_ROUTES[ADMISSION_STAGES.IDENTITY],
+    ],
+    [ADMISSION_STAGES.IDENTITY]: [
+        STAGE_ROUTES[ADMISSION_STAGES.IDENTITY],
+        STATUS_ROUTE,
+        '/apply/identity/callback',
+    ],
+    [ADMISSION_STAGES.LIVENESS]: [
+        STAGE_ROUTES[ADMISSION_STAGES.LIVENESS],
+        STATUS_ROUTE,
+        '/apply/identity/callback',
+        '/apply/liveness/callback',
+    ],
+    [ADMISSION_STAGES.CONSENTS]: [
+        STAGE_ROUTES[ADMISSION_STAGES.CONSENTS],
+        STATUS_ROUTE,
+        '/apply/liveness/callback',
+    ],
+    [ADMISSION_STAGES.DOCUMENTS]: [
+        STAGE_ROUTES[ADMISSION_STAGES.DOCUMENTS],
+        STATUS_ROUTE,
+    ],
+    [ADMISSION_STAGES.AI_DECISION]: [
+        STAGE_ROUTES[ADMISSION_STAGES.AI_DECISION],
+        STATUS_ROUTE,
+    ],
+    [ADMISSION_STAGES.RESUBMIT_REQUIRED]: [
+        STAGE_ROUTES[ADMISSION_STAGES.RESUBMIT_REQUIRED],
+        STATUS_ROUTE,
+        '/apply/appeal',
+    ],
+    [ADMISSION_STAGES.REJECTED]: [
+        STAGE_ROUTES[ADMISSION_STAGES.REJECTED],
+        '/apply/appeal',
+    ],
+    [ADMISSION_STAGES.EXCEPTION_REVIEW]: [
+        STAGE_ROUTES[ADMISSION_STAGES.EXCEPTION_REVIEW],
+        '/apply/appeal',
+    ],
+    [ADMISSION_STAGES.APPEAL_PENDING]: [
+        STAGE_ROUTES[ADMISSION_STAGES.APPEAL_PENDING],
+        '/apply/appeal',
+    ],
+    [ADMISSION_STAGES.AUDIT_REVIEW]: [
+        STAGE_ROUTES[ADMISSION_STAGES.AUDIT_REVIEW],
+    ],
+    [ADMISSION_STAGES.APPROVED]: [
+        STAGE_ROUTES[ADMISSION_STAGES.APPROVED],
+    ],
+    [ADMISSION_STAGES.SOUL_ISSUED]: [
+        STAGE_ROUTES[ADMISSION_STAGES.SOUL_ISSUED],
+    ],
+    [ADMISSION_STAGES.ACTIVE]: ACTIVE_SURFACE_ROUTES,
+};
+
 export type { Stage };
 
 type StatusShape = {
     stage?: unknown;
     step?: unknown;
 };
-
-const STATUS_SCREEN_ALLOWED_STAGES: Stage[] = [ADMISSION_STAGES.LOGIN, ADMISSION_STAGES.ACTIVE];
-const IDENTITY_CALLBACK_ALLOWED_STAGES: Stage[] = [
-    ADMISSION_STAGES.APPLY_START,
-    ADMISSION_STAGES.IDENTITY,
-    ADMISSION_STAGES.LIVENESS,
-];
-const LIVENESS_CALLBACK_ALLOWED_STAGES: Stage[] = [
-    ADMISSION_STAGES.LIVENESS,
-    ADMISSION_STAGES.CONSENTS,
-];
-const APPEAL_ALLOWED_STAGES: Stage[] = [
-    ADMISSION_STAGES.REJECTED,
-    ADMISSION_STAGES.RESUBMIT_REQUIRED,
-    ADMISSION_STAGES.EXCEPTION_REVIEW,
-    ADMISSION_STAGES.APPEAL_PENDING,
-];
 
 export function isStage(value: string): value is Stage {
     return isAdmissionStage(value) && Object.prototype.hasOwnProperty.call(STAGE_ROUTES, value);
@@ -65,35 +120,27 @@ export function getExpectedRoute(stage: Stage): string {
     return STAGE_ROUTES[stage];
 }
 
+export function getAllowedRoutes(stage: Stage): readonly string[] {
+    return STAGE_ALLOWED_EXACT_ROUTES[stage];
+}
+
+function isRouteOrDescendant(pathname: string, route: string): boolean {
+    return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+export function isActiveSurfaceRoute(pathname: string): boolean {
+    return ACTIVE_SURFACE_ROUTES.some((route) => isRouteOrDescendant(pathname, route));
+}
+
+export function isAllowedStageRoute(stage: Stage, pathname: string): boolean {
+    if (stage === ADMISSION_STAGES.ACTIVE) {
+        return isActiveSurfaceRoute(pathname);
+    }
+    return getAllowedRoutes(stage).includes(pathname);
+}
+
 export function isAllowedSiblingRoute(stage: Stage, pathname: string): boolean {
-    if (pathname === '/apply/status' && !STATUS_SCREEN_ALLOWED_STAGES.includes(stage)) {
-        return true;
-    }
-
-    if (stage === ADMISSION_STAGES.APPLY_START && pathname === '/apply/identity') {
-        return true;
-    }
-
-    if (
-        IDENTITY_CALLBACK_ALLOWED_STAGES.includes(stage)
-        && pathname === '/apply/identity/callback'
-    ) {
-        return true;
-    }
-
-    if (LIVENESS_CALLBACK_ALLOWED_STAGES.includes(stage) && pathname === '/apply/liveness/callback') {
-        return true;
-    }
-
-    if (APPEAL_ALLOWED_STAGES.includes(stage) && pathname === '/apply/appeal') {
-        return true;
-    }
-
-    if (stage === ADMISSION_STAGES.RESUBMIT_REQUIRED && pathname === '/apply/documents') {
-        return true;
-    }
-
-    return false;
+    return isAllowedStageRoute(stage, pathname);
 }
 
 export function resolveGuardRedirect(params: {
@@ -114,7 +161,7 @@ export function resolveGuardRedirect(params: {
     }
 
     const expected = getExpectedRoute(params.stage);
-    if (params.pathname !== expected && !isAllowedSiblingRoute(params.stage, params.pathname)) {
+    if (!isAllowedStageRoute(params.stage, params.pathname)) {
         return expected;
     }
     return null;

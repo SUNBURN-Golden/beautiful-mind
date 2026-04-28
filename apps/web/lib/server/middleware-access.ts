@@ -1,4 +1,5 @@
 import { LEGACY_REDIRECT_PREFIXES } from '../legacy-routes.ts';
+import { ACTIVE_SURFACE_ROUTES, STAGE_ROUTES } from '../stageRoutes.ts';
 
 export type MiddlewareRedirectDecision = {
     pathname: string;
@@ -16,7 +17,7 @@ export type MiddlewareRedirectInput = {
 };
 
 export const PROTECTED_PREFIXES = [
-    '/dashboard',
+    ...ACTIVE_SURFACE_ROUTES,
     '/apply',
     '/onboarding',
     '/contract',
@@ -24,15 +25,10 @@ export const PROTECTED_PREFIXES = [
     '/interview',
     '/osint',
     '/admin-verify',
-    '/match',
-    '/chat',
-    '/review',
-    '/report',
-    '/revoke',
     '/banned',
 ] as const;
 
-export const ACTIVE_ONLY_PREFIXES = ['/dashboard', '/match', '/chat', '/review', '/report', '/revoke'] as const;
+export const ACTIVE_ONLY_PREFIXES = ACTIVE_SURFACE_ROUTES;
 export const AUTH_ENTRY_PREFIXES = ['/login', '/signup'] as const;
 
 function isRoutePrefixed(pathname: string, prefixes: readonly string[]): boolean {
@@ -76,7 +72,7 @@ export function resolveMiddlewareRedirect(input: MiddlewareRedirectInput): Middl
     }
 
     if (!isFrozen && input.pathname === '/banned') {
-        return { pathname: isActive ? '/dashboard' : '/apply/status' };
+        return { pathname: isActive ? STAGE_ROUTES.ACTIVE : '/apply/status' };
     }
 
     if (isAdminRoute && !isAdmin) {
@@ -84,7 +80,7 @@ export function resolveMiddlewareRedirect(input: MiddlewareRedirectInput): Middl
     }
 
     if (isRoutePrefixed(input.pathname, AUTH_ENTRY_PREFIXES)) {
-        return { pathname: isActive ? '/dashboard' : '/apply/status' };
+        return { pathname: isActive ? STAGE_ROUTES.ACTIVE : '/apply/status' };
     }
 
     if (isRoutePrefixed(input.pathname, ACTIVE_ONLY_PREFIXES) && !isActive) {
@@ -92,11 +88,11 @@ export function resolveMiddlewareRedirect(input: MiddlewareRedirectInput): Middl
     }
 
     if (input.pathname.startsWith('/apply') && isActive) {
-        return { pathname: '/dashboard' };
+        return { pathname: STAGE_ROUTES.ACTIVE };
     }
 
     if (isRoutePrefixed(input.pathname, LEGACY_REDIRECT_PREFIXES)) {
-        return { pathname: isActive ? '/dashboard' : '/apply/status' };
+        return { pathname: isActive ? STAGE_ROUTES.ACTIVE : '/apply/status' };
     }
 
     return null;

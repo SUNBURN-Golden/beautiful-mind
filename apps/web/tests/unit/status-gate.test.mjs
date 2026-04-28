@@ -3,16 +3,27 @@ import assert from 'node:assert/strict';
 
 const { ADMISSION_STAGES, LEGACY_ADMISSION_STAGE_CODES } = await import('../../lib/contracts/status-stages.ts');
 const {
+    ACTIVE_SURFACE_ROUTES,
     STAGE_ROUTES,
+    getAllowedRoutes,
     getExpectedRoute,
+    isActiveSurfaceRoute,
     normalizeStage,
     resolveStatusStage,
     resolveGuardRedirect,
 } = await import('../../lib/stageRoutes.ts');
 
-test('admission stage routes map ACTIVE to dashboard', () => {
+test('admission stage routes keep dashboard as ACTIVE primary route and allow ACTIVE surfaces', () => {
     assert.equal(STAGE_ROUTES[ADMISSION_STAGES.ACTIVE], '/dashboard');
     assert.equal(getExpectedRoute(ADMISSION_STAGES.ACTIVE), '/dashboard');
+    assert.deepEqual(
+        ACTIVE_SURFACE_ROUTES,
+        ['/dashboard', '/wallet', '/match', '/chat', '/review', '/report', '/revoke'],
+    );
+    assert.deepEqual(getAllowedRoutes(ADMISSION_STAGES.ACTIVE), ACTIVE_SURFACE_ROUTES);
+    assert.equal(isActiveSurfaceRoute('/wallet'), true);
+    assert.equal(isActiveSurfaceRoute('/wallet/activity'), true);
+    assert.equal(isActiveSurfaceRoute('/apply/status'), false);
 });
 
 test('admission stage routes map DOCUMENTS and RESUBMIT_REQUIRED to apply/documents', () => {
@@ -70,6 +81,14 @@ test('resolveGuardRedirect preserves representative route-guard behavior', () =>
         '/dashboard',
     );
     assert.equal(
+        resolveGuardRedirect({ pathname: '/wallet', stage: ADMISSION_STAGES.ACTIVE, isFrozen: false }),
+        null,
+    );
+    assert.equal(
+        resolveGuardRedirect({ pathname: '/wallet/activity', stage: ADMISSION_STAGES.ACTIVE, isFrozen: false }),
+        null,
+    );
+    assert.equal(
         resolveGuardRedirect({ pathname: '/apply/appeal', stage: ADMISSION_STAGES.REJECTED, isFrozen: false }),
         null,
     );
@@ -87,6 +106,10 @@ test('resolveGuardRedirect preserves representative route-guard behavior', () =>
     );
     assert.equal(
         resolveGuardRedirect({ pathname: '/dashboard', stage: ADMISSION_STAGES.DOCUMENTS, isFrozen: false }),
+        '/apply/documents',
+    );
+    assert.equal(
+        resolveGuardRedirect({ pathname: '/wallet', stage: ADMISSION_STAGES.DOCUMENTS, isFrozen: false }),
         '/apply/documents',
     );
     assert.equal(

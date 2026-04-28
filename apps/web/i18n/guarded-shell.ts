@@ -39,7 +39,7 @@ const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
         nav: {
             dashboard: { label: 'My space' },
             wallet: { label: 'Wallet' },
-            status: { label: 'My access' },
+            status: { label: 'Review status' },
             proposals: { label: 'Friend recommendations', reason: 'Not open yet' },
             correspondence: { label: 'Direct messages', reason: 'Not open yet' },
             trustRecords: { label: 'Trust notes', reason: 'Not open yet' },
@@ -59,7 +59,7 @@ const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
         nav: {
             dashboard: { label: '내 스페이스' },
             wallet: { label: '월렛' },
-            status: { label: '내 입장' },
+            status: { label: '심사 현황' },
             proposals: { label: '친구 추천', reason: '아직 열리지 않음' },
             correspondence: { label: '다이렉트 메시지', reason: '아직 열리지 않음' },
             trustRecords: { label: '신뢰 노트', reason: '아직 열리지 않음' },

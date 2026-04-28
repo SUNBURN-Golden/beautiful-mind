@@ -46,6 +46,10 @@ test('authenticated non-active users are routed to admission recovery paths', ()
         { pathname: '/apply/status', searchParams: {} },
     );
     assert.deepEqual(
+        evaluate({ ...nonActive, pathname: '/wallet' }),
+        { pathname: '/apply/status', searchParams: {} },
+    );
+    assert.deepEqual(
         evaluate({ ...nonActive, pathname: '/login' }),
         { pathname: '/apply/status', searchParams: {} },
     );
@@ -62,6 +66,7 @@ test('authenticated non-active users are routed to admission recovery paths', ()
 test('identity/liveness pending, resubmit, and exception-review (all non-active) stay blocked from ACTIVE routes', () => {
     const nonActiveVariants = [
         { label: 'IDENTITY_OR_LIVENESS_PENDING', pathname: '/match' },
+        { label: 'WALLET_REQUIRES_ACTIVE', pathname: '/wallet' },
         { label: ADMISSION_STAGES.RESUBMIT_REQUIRED, pathname: '/report' },
         { label: ADMISSION_STAGES.EXCEPTION_REVIEW, pathname: '/review' },
     ];
@@ -119,6 +124,14 @@ test('ACTIVE users bypass admission pages and legacy routes to dashboard', () =>
 
     assert.equal(
         evaluate({ ...active, pathname: STAGE_ROUTES.ACTIVE }),
+        null,
+    );
+    assert.equal(
+        evaluate({ ...active, pathname: '/wallet' }),
+        null,
+    );
+    assert.equal(
+        evaluate({ ...active, pathname: '/wallet/activity' }),
         null,
     );
     assert.deepEqual(

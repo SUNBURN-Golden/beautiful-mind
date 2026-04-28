@@ -27,6 +27,7 @@ test('guarded shell keeps locale switcher, sign out, and disabled nav explicit',
     assert.match(shell, /formatActionLabel\('SIGN_OUT', locale\)/);
     assert.match(shell, /aria-disabled="true"/);
     assert.match(shell, /withLangQuery\('\/dashboard', locale, LIVE_DEFAULT_LOCALE\)/);
+    assert.match(shell, /withLangQuery\('\/wallet', locale, LIVE_DEFAULT_LOCALE\)/);
     assert.match(shell, /withLangQuery\('\/apply\/status', locale, LIVE_DEFAULT_LOCALE\)/);
     assert.doesNotMatch(shell, /href: withLangQuery\('\/match'/);
     assert.doesNotMatch(shell, /href: withLangQuery\('\/chat'/);
@@ -42,4 +43,8 @@ test('guarded shell copy includes bilingual unavailable reasons', () => {
     assert.match(copy, /아직 열리지 않음/);
     assert.match(copy, /Designed for safety\./);
     assert.match(copy, /안전 기반 커뮤니티/);
+    assert.match(copy, /Review status/);
+    assert.match(copy, /심사 현황/);
+    assert.doesNotMatch(copy, /My access/);
+    assert.doesNotMatch(copy, /내 입장/);
 });
