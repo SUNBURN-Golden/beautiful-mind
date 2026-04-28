@@ -115,7 +115,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
 
     if (props.view === 'loading') {
         return (
-            <main className={`sb-space-warm sb-locale-${locale} min-h-screen border-0 px-4 py-6 sm:px-8 sm:py-10`} lang={locale}>
+            <main className={`sb-space-stage-antiquarian sb-locale-${locale} min-h-screen border-0 px-4 py-6 sm:px-8 sm:py-10`} lang={locale}>
                 <div className="mx-auto max-w-5xl">
                     <SoftFade>
                         <section className="rounded-[1.75rem] border border-[color:var(--sb-border-warm)] bg-[color:var(--sb-surface-warm-panel)] p-6 sm:p-8">
@@ -150,7 +150,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
 
     if (props.view === 'non_active_gate') {
         return (
-            <main className={`sb-space-warm sb-locale-${locale} min-h-screen border-0 px-4 py-6 sm:px-8 sm:py-10`} lang={locale}>
+            <main className={`sb-space-stage-antiquarian sb-locale-${locale} min-h-screen border-0 px-4 py-6 sm:px-8 sm:py-10`} lang={locale}>
                 <div className="mx-auto max-w-4xl">
                     <SoftFade>
                         <section className="rounded-[1.75rem] border border-[color:var(--sb-border-warm)] bg-[color:var(--sb-surface-warm-panel)] p-6 sm:p-8">
@@ -221,7 +221,8 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
     const maskedContractVersion = formatContractIdentifierLabel(copy.receipt.contractVersion, locale);
 
     return (
-        <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <main className={`sb-space-stage-antiquarian sb-locale-${locale} min-h-screen px-4 py-10 sm:px-6 lg:px-8`} lang={locale}>
+            <div className="mx-auto max-w-6xl">
             <div className="flex flex-col gap-8">
                 {/* Section 1 — Current standing summary */}
                 <section className="sb-space-warm rounded-3xl border p-6 sm:p-8">
@@ -247,7 +248,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
                 {/* Section 2 — Disabled action cards */}
                 <section>
                     <div className="mb-4 flex flex-col gap-1">
-                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3] text-[color:var(--sb-stage-ink-strong)]">
                             {copy.rooms.title}
                         </h2>
                     </div>
@@ -280,13 +281,13 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
                 {/* Section 3 — Eligibility / record summary */}
                 <section>
                     <div className="mb-4 flex flex-col gap-1">
-                        <span className="sb-vocab-badge inline-flex items-center rounded-full border border-[#d4c5a9] bg-[#f5f0e8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6b5e50]">
+                        <span className="sb-vocab-badge inline-flex items-center rounded-full border border-[rgba(241,233,219,0.12)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--sb-stage-ink-soft)]">
                             {copy.access.badge}
                         </span>
-                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3] text-[color:var(--sb-stage-ink-strong)]">
                             {copy.access.title}
                         </h2>
-                        <p className="sb-type-body text-[14px] leading-[1.5]">
+                        <p className="sb-type-body text-[14px] leading-[1.5] text-[color:var(--sb-stage-ink-muted)]">
                             {copy.access.description}
                         </p>
                     </div>
@@ -300,7 +301,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
                 {/* Section 4 — Document record summary */}
                 <section>
                     <div className="mb-4 flex flex-col gap-1">
-                        <h2 className="sb-type-headline text-[20px] leading-[1.3]">
+                        <h2 className="sb-type-headline text-[20px] leading-[1.3] text-[color:var(--sb-stage-ink-strong)]">
                             {copy.documentRecord.title}
                         </h2>
                     </div>
@@ -374,6 +375,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
                         </div>
                     </details>
                 </section>
+            </div>
             </div>
         </main>
     );
