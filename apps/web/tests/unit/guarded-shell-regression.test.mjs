@@ -38,8 +38,8 @@ test('guarded shell keeps locale switcher, sign out, and disabled nav explicit',
 test('guarded shell copy includes bilingual unavailable reasons', () => {
     const copy = read('i18n/guarded-shell.ts');
 
-    assert.match(copy, /Not available yet/);
-    assert.match(copy, /아직 열리지 않았습니다/);
-    assert.match(copy, /Admission-first access/);
-    assert.match(copy, /입장 우선 접근/);
+    assert.match(copy, /Not open yet/);
+    assert.match(copy, /아직 열리지 않음/);
+    assert.match(copy, /Designed for safety\./);
+    assert.match(copy, /안전 기반 커뮤니티/);
 });
