@@ -40,6 +40,12 @@ function buildNavigation(locale: AppLocale): GuardedNavItem[] {
             enabled: true,
         },
         {
+            key: 'wallet',
+            label: copy.nav.wallet.label,
+            href: withLangQuery('/wallet', locale, LIVE_DEFAULT_LOCALE),
+            enabled: true,
+        },
+        {
             key: 'status',
             label: copy.nav.status.label,
             href: withLangQuery('/apply/status', locale, LIVE_DEFAULT_LOCALE),

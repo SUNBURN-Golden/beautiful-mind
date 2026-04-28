@@ -16,6 +16,7 @@ type GuardedShellCopy = {
     signOutBusy: string;
     nav: {
         dashboard: GuardedShellNavItem;
+        wallet: GuardedShellNavItem;
         status: GuardedShellNavItem;
         proposals: GuardedShellNavItem;
         correspondence: GuardedShellNavItem;
@@ -37,6 +38,7 @@ const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
         signOutBusy: 'Signing out',
         nav: {
             dashboard: { label: 'My space' },
+            wallet: { label: 'Wallet' },
             status: { label: 'My access' },
             proposals: { label: 'Friend recommendations', reason: 'Not open yet' },
             correspondence: { label: 'Direct messages', reason: 'Not open yet' },
@@ -56,6 +58,7 @@ const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
         signOutBusy: '로그아웃 중',
         nav: {
             dashboard: { label: '내 스페이스' },
+            wallet: { label: '월렛' },
             status: { label: '내 입장' },
             proposals: { label: '친구 추천', reason: '아직 열리지 않음' },
             correspondence: { label: '다이렉트 메시지', reason: '아직 열리지 않음' },
