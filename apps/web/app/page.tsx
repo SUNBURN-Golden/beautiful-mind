@@ -23,10 +23,8 @@ async function hasActiveSession(): Promise<boolean> {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
     const isSignedIn = await hasActiveSession();
-    const commit = process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
-    const commitShort = commit && commit.length >= 7 ? commit.slice(0, 7) : 'local';
     const params = searchParams ? await searchParams : undefined;
     const locale = resolveAppLocale(params?.lang, LIVE_DEFAULT_LOCALE);
 
-    return <LandingSurface isSignedIn={isSignedIn} commitShort={commitShort} locale={locale} />;
+    return <LandingSurface isSignedIn={isSignedIn} locale={locale} />;
 }

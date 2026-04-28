@@ -10,6 +10,7 @@ const landingCopy = {
         badge: 'Private invitation',
         wordmark: 'SoulBound',
         title: 'We write the terms before we exchange a word.',
+        titlePhrases: ['We write the terms', 'before we exchange a word.'],
         description:
             'SoulBound opens as a private invitation stage. The room remains closed until identity, consent, and documentary review are in order.',
         actionNote:
@@ -24,21 +25,9 @@ const landingCopy = {
         },
         support: {
             badge: 'Recorded before access',
+            title: 'Access follows a recorded admission process.',
             description:
-                'Each invitation begins as a receipted record. The room stays closed until the terms, consent trail, and review state can be held on file.',
-        },
-        receipt: {
-            title: 'Invitation terms on file',
-            receiptId: 'INV-5.5-LANDING',
-            issuedAt: '20 Apr 2026 / Stage 5',
-            hash: '0x8b29c4d917f4a8e1d55a62b3c7145f09',
-            contractVersion: 'stage5.landing.invitation.v1',
-            signatory: 'SoulBound registry',
-            status: 'signed',
-        },
-        meta: {
-            build: 'build',
-            commit: 'commit',
+                'Technical references stay on file for support and audit. The ordinary view keeps the terms, consent trail, and review boundary clear before entry.',
         },
     },
     ko: {
@@ -50,6 +39,7 @@ const landingCopy = {
         badge: '사적인 초대',
         wordmark: 'SoulBound',
         title: '우리는 한 마디를 건네기 전에 약속을 적어둡니다.',
+        titlePhrases: ['우리는', '한 마디를 건네기 전에', '약속을 적어둡니다.'],
         description:
             'SoulBound는 사적인 초대의 문턱에서 시작됩니다. 신원, 동의, 문서 검토가 정돈되기 전에는 이 방이 열리지 않습니다.',
         actionNote:
@@ -59,26 +49,14 @@ const landingCopy = {
             secondary: null,
         },
         signedOutCtas: {
-            primary: '입회 약관을 검토합니다',
-            secondary: '기존 기록을 이어갑니다',
+            primary: '입회 약관 검토하기',
+            secondary: '기존 기록 이어가기',
         },
         support: {
             badge: '접근보다 먼저 기록',
+            title: '접근은 기록된 입회 절차 위에서 열립니다.',
             description:
-                '모든 초대는 영수증처럼 남는 기록으로 시작됩니다. 약관, 동의 이력, 검토 상태가 문서로 정리되기 전에는 이 방이 열리지 않습니다.',
-        },
-        receipt: {
-            title: '초대 약관이 기록되어 있습니다',
-            receiptId: 'INV-5.5-LANDING',
-            issuedAt: '2026년 4월 20일 / Stage 5',
-            hash: '0x8b29c4d917f4a8e1d55a62b3c7145f09',
-            contractVersion: 'stage5.landing.invitation.v1',
-            signatory: 'SoulBound 등록부',
-            status: 'signed',
-        },
-        meta: {
-            build: '빌드',
-            commit: '커밋',
+                '기술 식별자는 지원과 감사 기록 안에 보관합니다. 일반 화면에는 입장 전에 확인해야 할 약관, 동의 이력, 검토 경계만 분명하게 남깁니다.',
         },
     },
 } as const;
