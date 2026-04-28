@@ -7,27 +7,27 @@ const landingCopy = {
             english: 'English',
             korean: '한국어',
         },
-        badge: 'Private invitation',
+        badge: 'Designed for safety.',
         wordmark: 'SoulBound',
-        title: 'We write the terms before we exchange a word.',
-        titlePhrases: ['We write the terms', 'before we exchange a word.'],
+        title: 'Limited access. Boundless conversation.',
+        titlePhrases: ['Limited access.', 'Boundless conversation.'],
         description:
-            'SoulBound opens as a private invitation stage. The room remains closed until identity, consent, and documentary review are in order.',
+            'SoulBound requires supporting documents to join. Submitting forged documents may result in civil or criminal liability.',
         actionNote:
-            'Access follows the record. Conversation begins only after the terms can be held by both parties.',
+            'Open conversation, built on safety.',
         signedInCtas: {
-            primary: 'Review your admission record',
+            primary: 'Open your space',
             secondary: null,
         },
         signedOutCtas: {
-            primary: 'Review the admission terms',
-            secondary: 'Resume an existing record',
+            primary: 'Join SoulBound',
+            secondary: 'Dive into SoulBound',
         },
         support: {
-            badge: 'Recorded before access',
-            title: 'Access follows a recorded admission process.',
+            badge: 'Trust is the asset.',
+            title: 'A social-bounding commune for verified people.',
             description:
-                'Technical references stay on file for support and audit. The ordinary view keeps the terms, consent trail, and review boundary clear before entry.',
+                'Submitted documents are deleted after review.\nOnly the fact of verification remains.',
         },
     },
     ko: {
@@ -36,27 +36,27 @@ const landingCopy = {
             english: 'English',
             korean: '한국어',
         },
-        badge: '사적인 초대',
+        badge: '안전 기반 SoulBound 커뮤니티',
         wordmark: 'SoulBound',
-        title: '우리는 한 마디를 건네기 전에 약속을 적어둡니다.',
-        titlePhrases: ['우리는', '한 마디를 건네기 전에', '약속을 적어둡니다.'],
+        title: '입장은 까다롭게. 대화는 자유롭게.',
+        titlePhrases: ['입장은 까다롭게.', '대화는 자유롭게.'],
         description:
-            'SoulBound는 사적인 초대의 문턱에서 시작됩니다. 신원, 동의, 문서 검토가 정돈되기 전에는 이 방이 열리지 않습니다.',
+            'SoulBound 가입시 증빙서류들이 필요합니다. 위조 서류 제출시 민형사상 책임을 질 수 있습니다.',
         actionNote:
-            '접근은 기록 뒤에 옵니다. 대화는 두 사람의 조건이 같은 문서 위에 놓인 뒤에만 시작됩니다.',
+            '안전 설계, 자유 대화.',
         signedInCtas: {
-            primary: '입회 기록을 검토합니다',
+            primary: '내 스페이스 열기',
             secondary: null,
         },
         signedOutCtas: {
-            primary: '입회 약관 검토하기',
-            secondary: '기존 기록 이어가기',
+            primary: 'SoulBound 가입하기',
+            secondary: 'SoulBound로 들어가기',
         },
         support: {
-            badge: '접근보다 먼저 기록',
-            title: '접근은 기록된 입회 절차 위에서 열립니다.',
+            badge: '신뢰가 자산.',
+            title: '검증된 사람들의 소셜바운딩 꼬뮨.',
             description:
-                '기술 식별자는 지원과 감사 기록 안에 보관합니다. 일반 화면에는 입장 전에 확인해야 할 약관, 동의 이력, 검토 경계만 분명하게 남깁니다.',
+                '제출서류는 검토 즉시 삭제됩니다.\n검토 완료 사실만 기록됩니다.',
         },
     },
 } as const;

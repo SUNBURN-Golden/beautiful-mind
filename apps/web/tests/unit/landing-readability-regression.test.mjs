@@ -31,9 +31,8 @@ test('landing headline is phrase-based and Korean-safe without changing locale r
     const localeSwitch = read('components/surfaces/locale-switch.tsx');
 
     assert.match(copy, /titlePhrases/);
-    assert.match(copy, /'우리는'/);
-    assert.match(copy, /'한 마디를 건네기 전에'/);
-    assert.match(copy, /'약속을 적어둡니다\.'/);
+    assert.match(copy, /'입장은 까다롭게\.'/);
+    assert.match(copy, /'대화는 자유롭게\.'/);
     assert.match(surface, /copy\.titlePhrases\.map/);
     assert.match(surface, /\[word-break:keep-all\]/);
     assert.match(surface, /\[line-break:strict\]/);
