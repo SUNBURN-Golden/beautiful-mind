@@ -8,6 +8,8 @@ import { LIVE_DEFAULT_LOCALE, withLangQuery, type AppLocale } from '@/i18n/confi
 import { getGuardedShellCopy } from '@/i18n/guarded-shell';
 import { useAppLocale } from '@/i18n/use-app-locale';
 import { formatActionLabel } from '@/lib/contracts/status-copy';
+import { ADMISSION_STAGES } from '@/lib/contracts/status-stages';
+import { useStatus } from '@/lib/useStatus';
 import { createClient } from '@/utils/supabase/client';
 
 type GuardedShellProps = {
@@ -30,9 +32,9 @@ type DisabledNavItem = {
 
 type GuardedNavItem = EnabledNavItem | DisabledNavItem;
 
-function buildNavigation(locale: AppLocale): GuardedNavItem[] {
+function buildNavigation(locale: AppLocale, options: { showReviewStatus: boolean }): GuardedNavItem[] {
     const copy = getGuardedShellCopy(locale);
-    return [
+    const navItems: GuardedNavItem[] = [
         {
             key: 'dashboard',
             label: copy.nav.dashboard.label,
@@ -43,12 +45,6 @@ function buildNavigation(locale: AppLocale): GuardedNavItem[] {
             key: 'wallet',
             label: copy.nav.wallet.label,
             href: withLangQuery('/wallet', locale, LIVE_DEFAULT_LOCALE),
-            enabled: true,
-        },
-        {
-            key: 'status',
-            label: copy.nav.status.label,
-            href: withLangQuery('/apply/status', locale, LIVE_DEFAULT_LOCALE),
             enabled: true,
         },
         {
@@ -82,14 +78,28 @@ function buildNavigation(locale: AppLocale): GuardedNavItem[] {
             enabled: false,
         },
     ];
+
+    if (options.showReviewStatus) {
+        navItems.splice(2, 0, {
+            key: 'status',
+            label: copy.nav.status.label,
+            href: withLangQuery('/apply/status', locale, LIVE_DEFAULT_LOCALE),
+            enabled: true,
+        });
+    }
+
+    return navItems;
 }
 
 export function GuardedShell({ children }: GuardedShellProps) {
     const locale = useAppLocale(LIVE_DEFAULT_LOCALE);
     const copy = getGuardedShellCopy(locale);
     const router = useRouter();
+    const { currentStage, isLoading: isStatusLoading } = useStatus({ redirectOnUnauthorized: false });
     const [isSigningOut, setIsSigningOut] = useState(false);
-    const navItems = buildNavigation(locale);
+    const navItems = buildNavigation(locale, {
+        showReviewStatus: !isStatusLoading && currentStage !== ADMISSION_STAGES.ACTIVE,
+    });
 
     const handleSignOut = async () => {
         if (isSigningOut) return;

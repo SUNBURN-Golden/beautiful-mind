@@ -22,6 +22,8 @@ test('guarded shell keeps locale switcher, sign out, and disabled nav explicit',
     const shell = read('components/shell/guarded-shell.tsx');
 
     assert.match(shell, /LocaleSwitch/);
+    assert.match(shell, /useStatus\(\{ redirectOnUnauthorized: false \}\)/);
+    assert.match(shell, /currentStage !== ADMISSION_STAGES\.ACTIVE/);
     assert.match(shell, /createClient\(\)/);
     assert.match(shell, /supabase\.auth\.signOut\(\)/);
     assert.match(shell, /formatActionLabel\('SIGN_OUT', locale\)/);
