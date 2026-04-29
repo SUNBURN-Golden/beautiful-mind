@@ -71,6 +71,13 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                     <p className="break-all text-xs text-[#6e6e73]">{profile.id}</p>
                 </div>
                 {!profile.banned && <BanButton userId={profile.id} />}
+                <a
+                    href={`/api/admin/export-evidence?userId=${encodeURIComponent(profile.id)}`}
+                    download
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7]"
+                >
+                    Export Evidence
+                </a>
             </header>
 
             <section className="grid grid-cols-1 gap-6 md:grid-cols-3">

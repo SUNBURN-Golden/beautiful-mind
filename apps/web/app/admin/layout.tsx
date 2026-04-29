@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Users, Activity, LogOut, FileCheck2, Gauge, FlaskConical } from 'lucide-react';
+import { ShieldCheck, Users, Activity, LogOut, FileCheck2, Gauge, FlaskConical, Shield, Siren, Coins } from 'lucide-react';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -58,6 +58,27 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                     >
                         <FlaskConical className="h-4 w-4" />
                         Policy Proposals
+                    </Link>
+                    <Link
+                        href="/admin/audits"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Shield className="h-4 w-4" />
+                        Audits
+                    </Link>
+                    <Link
+                        href="/admin/enforcement"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Siren className="h-4 w-4" />
+                        Enforcement
+                    </Link>
+                    <Link
+                        href="/admin/treasury"
+                        className="inline-flex h-11 min-w-fit items-center gap-3 rounded-xl border border-[#d2d2d7] bg-white px-4 text-[14px] font-medium text-[#3a3a3c] transition-colors hover:bg-[#f5f5f7] md:flex"
+                    >
+                        <Coins className="h-4 w-4" />
+                        Treasury
                     </Link>
                 </nav>
 
