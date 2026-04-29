@@ -73,11 +73,11 @@ function buildStatusOverlayMeta(overlays: StatusOverlayInputs): JsonObject {
             return typeof value === 'string' ? value : null;
         })(),
         ai_decision_escalation_reason: overlays.latestDecisionRun?.escalation_reason_code || null,
-        trust_level: overlays.latestSbtClaim?.trust_level || null,
-        sbt_status: overlays.latestSbtClaim?.status || null,
-        sbt_claim_type: overlays.latestSbtClaim?.claim_type || null,
-        sbt_issuer: overlays.latestSbtClaim?.issuer || null,
-        sbt_issued_at: overlays.latestSbtClaim?.issued_at || null,
+        trust_level: overlays.latestSoulClaim?.trust_level || null,
+        soul_claim_status: overlays.latestSoulClaim?.status || null,
+        soul_claim_type: overlays.latestSoulClaim?.claim_type || null,
+        soul_claim_issuer: overlays.latestSoulClaim?.issuer || null,
+        soul_claim_issued_at: overlays.latestSoulClaim?.issued_at || null,
     } satisfies JsonObject;
 }
 

@@ -33,7 +33,7 @@ function DashboardPageContent({ locale }: DashboardPageContentProps) {
     const meta = status?.meta || {};
     const requiredDocuments = toDocumentList(meta.required_documents);
     const trustLevel = typeof meta.trust_level === 'string' ? meta.trust_level : 'ADMISSION_VERIFIED';
-    const sbtStatus = typeof meta.sbt_status === 'string' ? meta.sbt_status : ADMISSION_STAGES.ACTIVE;
+    const soulClaimStatus = typeof meta.soul_claim_status === 'string' ? meta.soul_claim_status : ADMISSION_STAGES.ACTIVE;
     const soulIssued = meta.soul_credential_issued === true;
     const soulIssuedAt = typeof meta.soul_credential_issued_at === 'string' ? meta.soul_credential_issued_at : null;
     const admissionStatus = typeof meta.admission_status === 'string' ? meta.admission_status : ADMISSION_STAGES.ACTIVE;
@@ -44,8 +44,8 @@ function DashboardPageContent({ locale }: DashboardPageContentProps) {
             locale={locale}
             admissionStatus={admissionStatus}
             trustLevel={trustLevel}
-            sbtStatus={sbtStatus}
-            sbtIsActive={sbtStatus === ADMISSION_STAGES.ACTIVE}
+            soulClaimStatus={soulClaimStatus}
+            soulClaimActive={soulClaimStatus === ADMISSION_STAGES.ACTIVE}
             soulIssued={soulIssued}
             soulIssuedAt={soulIssuedAt}
             requiredDocuments={requiredDocuments}

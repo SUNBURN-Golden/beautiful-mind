@@ -90,7 +90,7 @@ export type AuditSampleRow = {
     reviewed_at: string | null;
 };
 
-export type SbtClaim = {
+export type SoulClaim = {
     id: string;
     claim_type: string;
     trust_level: string;
@@ -139,7 +139,7 @@ export type StatusTruthOverlayInputs = {
 
 export type StatusOverlayInputs = {
     reviewCase: ReviewCase | null;
-    latestSbtClaim: SbtClaim | null;
+    latestSoulClaim: SoulClaim | null;
     latestDecisionRun: DecisionRun | null;
 };
 

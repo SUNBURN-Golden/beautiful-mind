@@ -52,7 +52,7 @@ function makeStatusInputs(overrides = {}) {
         },
         overlays: {
             reviewCase: null,
-            latestSbtClaim: null,
+            latestSoulClaim: null,
             latestDecisionRun: null,
         },
         ...overrides,

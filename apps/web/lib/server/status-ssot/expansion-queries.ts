@@ -6,7 +6,7 @@ import type {
     DecisionRun,
     ExceptionCaseRow,
     ReviewCase,
-    SbtClaim,
+    SoulClaim,
     StatusOverlayInputs,
     StatusTruthOverlayInputs,
 } from './types.ts';
@@ -21,7 +21,7 @@ export async function fetchStatusExpansionInputs(
         exceptionCaseResult,
         auditSampleResult,
         reviewCaseResult,
-        sbtClaimResult,
+        soulClaimResult,
         decisionRunResult,
     ] = await Promise.all([
         admin
@@ -65,7 +65,7 @@ export async function fetchStatusExpansionInputs(
             .in('claim_type', ['ADMISSION_SOUL', 'SOUL_TRUST'])
             .order('created_at', { ascending: false })
             .limit(1)
-            .maybeSingle<SbtClaim>(),
+            .maybeSingle<SoulClaim>(),
         admin
             .from('admission_decision_runs')
             .select('id,final_decision,confidence_score,escalation_reason_code,ai_outputs_json,created_at')
@@ -83,7 +83,7 @@ export async function fetchStatusExpansionInputs(
     };
     const overlays: StatusOverlayInputs = {
         reviewCase: reviewCaseResult.data ?? null,
-        latestSbtClaim: sbtClaimResult.data ?? null,
+        latestSoulClaim: soulClaimResult.data ?? null,
         latestDecisionRun: decisionRunResult.data ?? null,
     };
 

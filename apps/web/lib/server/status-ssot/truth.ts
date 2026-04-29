@@ -28,7 +28,7 @@ export const EMPTY_STATUS_TRUTH_OVERLAYS: StatusTruthOverlayInputs = {
 
 export const EMPTY_STATUS_OVERLAYS: StatusOverlayInputs = {
     reviewCase: null,
-    latestSbtClaim: null,
+    latestSoulClaim: null,
     latestDecisionRun: null,
 };
 

@@ -5,8 +5,8 @@ type DashboardActiveFixture = {
     view: 'active';
     admissionStatus: string;
     trustLevel: string;
-    sbtStatus: string;
-    sbtIsActive: boolean;
+    soulClaimStatus: string;
+    soulClaimActive: boolean;
     soulIssued: boolean;
     soulIssuedAt: string | null;
     requiredDocuments: DashboardRequiredDocument[];
@@ -16,7 +16,7 @@ const dashboardFixtureStrings: Record<AppLocale, {
     nonActiveStage: string;
     admissionStatus: string;
     trustLevel: string;
-    sbtStatus: string;
+    soulClaimStatus: string;
     soulIssuedAt: string;
     requiredDocuments: DashboardRequiredDocument[];
 }> = {
@@ -24,7 +24,7 @@ const dashboardFixtureStrings: Record<AppLocale, {
         nonActiveStage: 'REVIEW_PENDING',
         admissionStatus: 'APPROVED',
         trustLevel: 'LEVEL_3',
-        sbtStatus: 'ACTIVE',
+        soulClaimStatus: 'ACTIVE',
         soulIssuedAt: '2026-04-10 19:40 KST',
         requiredDocuments: [
             {
@@ -47,7 +47,7 @@ const dashboardFixtureStrings: Record<AppLocale, {
         nonActiveStage: '심사 대기',
         admissionStatus: '승인 완료',
         trustLevel: '3단계',
-        sbtStatus: '정상 발급',
+        soulClaimStatus: '정상 발급',
         soulIssuedAt: '2026-04-10 19:40 KST',
         requiredDocuments: [
             {
@@ -85,8 +85,8 @@ export function getDashboardActiveFixture(locale: AppLocale): DashboardActiveFix
         view: 'active',
         admissionStatus: copy.admissionStatus,
         trustLevel: copy.trustLevel,
-        sbtStatus: copy.sbtStatus,
-        sbtIsActive: true,
+        soulClaimStatus: copy.soulClaimStatus,
+        soulClaimActive: true,
         soulIssued: true,
         soulIssuedAt: copy.soulIssuedAt,
         requiredDocuments: copy.requiredDocuments,

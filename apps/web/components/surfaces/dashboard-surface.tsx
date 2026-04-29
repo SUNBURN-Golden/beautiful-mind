@@ -29,8 +29,8 @@ type DashboardSurfaceActiveProps = {
     locale: AppLocale;
     admissionStatus: string;
     trustLevel: string;
-    sbtStatus: string;
-    sbtIsActive: boolean;
+    soulClaimStatus: string;
+    soulClaimActive: boolean;
     soulIssued: boolean;
     soulIssuedAt: string | null;
     requiredDocuments: DashboardRequiredDocument[];
@@ -76,7 +76,7 @@ function buildSignalItems(
     admissionStatus: string,
     requiredDocuments: DashboardRequiredDocument[],
     trustLevel: string,
-    sbtStatus: string,
+    soulClaimStatus: string,
     soulIssuedAt: string | null,
     locale: AppLocale,
 ): SignalStackItem[] {
@@ -103,7 +103,7 @@ function buildSignalItems(
         {
             id: 'sig-credential',
             kind: 'contract.signed',
-            contractVersion: formatContractIdentifierLabel(`credential.${sbtStatus}`, locale),
+            contractVersion: formatContractIdentifierLabel(`credential.${soulClaimStatus}`, locale),
             occurredAt: soulIssuedAt ? formatTimestamp(soulIssuedAt, locale) : undefined,
         },
     ];
@@ -189,9 +189,9 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
     }
 
     // ——— ACTIVE VIEW ———
-    const { admissionStatus, trustLevel, sbtStatus, sbtIsActive, soulIssued, soulIssuedAt, requiredDocuments } = props;
+    const { admissionStatus, trustLevel, soulClaimStatus, soulClaimActive, soulIssued, soulIssuedAt, requiredDocuments } = props;
 
-    const trustRibbonLevel: TrustRibbonLevel = sbtIsActive ? 'verified' : trustLevel ? 'verified' : 'pending';
+    const trustRibbonLevel: TrustRibbonLevel = soulClaimActive ? 'verified' : trustLevel ? 'verified' : 'pending';
     const trustRibbonEvidence: TrustRibbonEvidence[] = [
         { label: copy.rows.admissionStatus, ts: formatAdmissionStatusLabel(admissionStatus, locale) },
         { label: copy.rows.trustLevel, ts: formatTrustLevelLabel(trustLevel, locale) },
@@ -214,7 +214,7 @@ export function DashboardSurface(props: DashboardSurfaceProps) {
         { key: 'revoke', ...copy.rooms.revoke },
     ];
 
-    const signalItems = buildSignalItems(admissionStatus, requiredDocuments, trustLevel, sbtStatus, soulIssuedAt, locale);
+    const signalItems = buildSignalItems(admissionStatus, requiredDocuments, trustLevel, soulClaimStatus, soulIssuedAt, locale);
 
     const maskedReceiptId = formatContractIdentifierLabel(`standing-${admissionStatus}`, locale);
     const maskedHash = formatContractIdentifierLabel(admissionStatus, locale);
