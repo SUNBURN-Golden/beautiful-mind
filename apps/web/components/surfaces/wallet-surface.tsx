@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { AppLocale } from '@/i18n/config';
 import { getWalletCopy } from '@/i18n/wallet';
 
@@ -61,20 +61,27 @@ export function WalletSurface({ locale }: WalletSurfaceProps) {
     const [data, setData] = useState<WalletData | null>(null);
     const [error, setError] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [claimingWelcome, setClaimingWelcome] = useState(false);
+    const [claimError, setClaimError] = useState(false);
+
+    const loadWallet = useCallback(async (signal?: AbortSignal) => {
+        const res = await fetch(`/api/me/wallet?lang=${locale}`, {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            signal,
+        });
+        if (!res.ok) throw new Error(`wallet api ${res.status}`);
+        return res.json() as Promise<WalletData>;
+    }, [locale]);
 
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
         setLoading(true);
         setError(false);
+        setClaimError(false);
 
-        fetch(`/api/me/wallet?lang=${locale}`, {
-            credentials: 'same-origin',
-            cache: 'no-store',
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error(`wallet api ${res.status}`);
-                return res.json();
-            })
+        loadWallet(controller.signal)
             .then((json: WalletData) => {
                 if (!cancelled) {
                     setData(json);
@@ -90,8 +97,31 @@ export function WalletSurface({ locale }: WalletSurfaceProps) {
 
         return () => {
             cancelled = true;
+            controller.abort();
         };
-    }, [locale]);
+    }, [loadWallet]);
+
+    const handleClaimWelcomeSoul = async () => {
+        if (claimingWelcome) return;
+        setClaimingWelcome(true);
+        setClaimError(false);
+        try {
+            const claimRes = await fetch('/api/airdrop/claim', {
+                method: 'POST',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            });
+            if (!claimRes.ok) throw new Error(`airdrop claim ${claimRes.status}`);
+            const nextWallet = await loadWallet();
+            setData(nextWallet);
+        } catch {
+            setClaimError(true);
+        } finally {
+            setClaimingWelcome(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -139,6 +169,19 @@ export function WalletSurface({ locale }: WalletSurfaceProps) {
                 <div className="sb-space-warm rounded-2xl px-8 py-10 text-center">
                     <p className="sb-type-headline mb-2 text-slate-800">{copy.emptyTitle}</p>
                     <p className="text-sm text-slate-500">{copy.emptyBody}</p>
+                    <button
+                        type="button"
+                        onClick={() => void handleClaimWelcomeSoul()}
+                        disabled={claimingWelcome}
+                        className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {claimingWelcome ? copy.claimingWelcomeLabel : copy.claimWelcomeLabel}
+                    </button>
+                    {claimError && (
+                        <p className="mt-3 text-xs font-medium text-red-700">
+                            {copy.claimWelcomeError}
+                        </p>
+                    )}
                 </div>
             </div>
         );
