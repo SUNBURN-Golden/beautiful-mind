@@ -18,12 +18,16 @@ test('admission stage routes keep dashboard as ACTIVE primary route and allow AC
     assert.equal(getExpectedRoute(ADMISSION_STAGES.ACTIVE), '/dashboard');
     assert.deepEqual(
         ACTIVE_SURFACE_ROUTES,
-        ['/dashboard', '/wallet', '/match', '/chat', '/review', '/report', '/revoke'],
+        ['/dashboard', '/wallet', '/match', '/chat', '/review', '/report', '/revoke', '/collateral', '/challenge', '/claim', '/unlock'],
     );
     assert.deepEqual(getAllowedRoutes(ADMISSION_STAGES.ACTIVE), ACTIVE_SURFACE_ROUTES);
     assert.equal(isActiveSurfaceRoute('/wallet'), true);
     assert.equal(isActiveSurfaceRoute('/wallet/activity'), true);
     assert.equal(isActiveSurfaceRoute('/apply/status'), false);
+    assert.equal(isActiveSurfaceRoute('/collateral'), true);
+    assert.equal(isActiveSurfaceRoute('/challenge'), true);
+    assert.equal(isActiveSurfaceRoute('/claim'), true);
+    assert.equal(isActiveSurfaceRoute('/unlock'), true);
 });
 
 test('admission stage routes map DOCUMENTS and RESUBMIT_REQUIRED to apply/documents', () => {

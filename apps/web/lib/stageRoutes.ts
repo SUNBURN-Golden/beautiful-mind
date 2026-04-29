@@ -31,6 +31,10 @@ export const ACTIVE_SURFACE_ROUTES = [
     '/review',
     '/report',
     '/revoke',
+    '/collateral',
+    '/challenge',
+    '/claim',
+    '/unlock',
 ] as const;
 
 const STATUS_ROUTE = '/apply/status';

@@ -69,6 +69,10 @@ test('identity/liveness pending, resubmit, and exception-review (all non-active)
         { label: 'WALLET_REQUIRES_ACTIVE', pathname: '/wallet' },
         { label: ADMISSION_STAGES.RESUBMIT_REQUIRED, pathname: '/report' },
         { label: ADMISSION_STAGES.EXCEPTION_REVIEW, pathname: '/review' },
+        { label: 'COLLATERAL_REQUIRES_ACTIVE', pathname: '/collateral' },
+        { label: 'CHALLENGE_REQUIRES_ACTIVE', pathname: '/challenge' },
+        { label: 'CLAIM_REQUIRES_ACTIVE', pathname: '/claim' },
+        { label: 'UNLOCK_REQUIRES_ACTIVE', pathname: '/unlock' },
     ];
 
     for (const variant of nonActiveVariants) {
@@ -141,6 +145,23 @@ test('ACTIVE users bypass admission pages and legacy routes to dashboard', () =>
     assert.deepEqual(
         evaluate({ ...active, pathname: '/onboarding/qualification' }),
         { pathname: '/dashboard', searchParams: {} },
+    );
+
+    assert.equal(
+        evaluate({ ...active, pathname: '/collateral' }),
+        null,
+    );
+    assert.equal(
+        evaluate({ ...active, pathname: '/challenge' }),
+        null,
+    );
+    assert.equal(
+        evaluate({ ...active, pathname: '/claim' }),
+        null,
+    );
+    assert.equal(
+        evaluate({ ...active, pathname: '/unlock' }),
+        null,
     );
 });
 
