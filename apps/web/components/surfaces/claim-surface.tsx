@@ -58,8 +58,8 @@ export function ClaimSurface({ locale }: ClaimSurfaceProps) {
                 className={`sb-space-stage-antiquarian sb-locale-${locale} flex min-h-screen items-center justify-center px-4 py-12`}
                 lang={locale}
             >
-                <div className="sb-space-warm rounded-2xl px-8 py-10 text-center">
-                    <h1 className="sb-type-serif-display mb-3 text-[color:var(--sb-stage-ink-strong)]">
+                <div className="sb-space-warm rounded-[1.75rem] px-8 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                    <h1 className="sb-type-serif-display mb-3 text-[#1E2823]">
                         {copy.successTitle}
                     </h1>
                     <p className="text-sm text-slate-600">{copy.successBody}</p>
@@ -74,16 +74,30 @@ export function ClaimSurface({ locale }: ClaimSurfaceProps) {
             lang={locale}
         >
             <div className="mx-auto max-w-3xl">
-                <h1 className="sb-type-serif-display mb-8 text-[color:var(--sb-stage-ink-strong)]">
-                    {copy.title}
-                </h1>
+                <header className="mb-8 max-w-2xl">
+                    <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
+                        {copy.eyebrow}
+                    </p>
+                    <h1 className="sb-type-serif-display text-[clamp(2.35rem,6vw,4.1rem)] leading-[1.04] text-[color:var(--sb-stage-ink-strong)]">
+                        {copy.title}
+                    </h1>
+                    <p className="mt-4 text-[0.98rem] leading-7 text-[color:var(--sb-stage-ink-muted)]">
+                        {copy.description}
+                    </p>
+                </header>
 
-                <form onSubmit={handleSubmit} className="sb-space-warm rounded-2xl px-6 py-6">
+                <form onSubmit={handleSubmit} className="sb-space-warm rounded-[1.75rem] px-6 py-6 shadow-[0_20px_54px_rgba(0,0,0,0.2)]">
                     <div className="flex flex-col gap-4">
+                        <p className="rounded-2xl border border-slate-200 bg-white/65 px-4 py-3 text-xs leading-5 text-slate-600">
+                            {copy.operationalNote}
+                        </p>
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="claim-type" className="text-sm font-medium text-slate-700">
                                 {copy.typeLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.typeHelper}
+                            </p>
                             <input
                                 id="claim-type"
                                 type="text"
@@ -97,6 +111,9 @@ export function ClaimSurface({ locale }: ClaimSurfaceProps) {
                             <label htmlFor="claim-payload" className="text-sm font-medium text-slate-700">
                                 {copy.payloadLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.payloadHelper}
+                            </p>
                             <textarea
                                 id="claim-payload"
                                 value={claimPayload}

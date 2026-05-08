@@ -43,8 +43,8 @@ export function CollateralSurface({ locale }: CollateralSurfaceProps) {
                 className={`sb-space-stage-antiquarian sb-locale-${locale} flex min-h-screen items-center justify-center px-4 py-12`}
                 lang={locale}
             >
-                <div className="sb-space-warm rounded-2xl px-8 py-10 text-center">
-                    <h1 className="sb-type-serif-display mb-3 text-[color:var(--sb-stage-ink-strong)]">
+                <div className="sb-space-warm rounded-[1.75rem] px-8 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                    <h1 className="sb-type-serif-display mb-3 text-[#1E2823]">
                         {copy.successTitle}
                     </h1>
                     <p className="text-sm text-slate-600">{copy.successBody}</p>
@@ -59,19 +59,33 @@ export function CollateralSurface({ locale }: CollateralSurfaceProps) {
             lang={locale}
         >
             <div className="mx-auto max-w-3xl">
-                <h1 className="sb-type-serif-display mb-8 text-[color:var(--sb-stage-ink-strong)]">
-                    {copy.title}
-                </h1>
+                <header className="mb-8 max-w-2xl">
+                    <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
+                        {copy.eyebrow}
+                    </p>
+                    <h1 className="sb-type-serif-display text-[clamp(2.35rem,6vw,4.1rem)] leading-[1.04] text-[color:var(--sb-stage-ink-strong)]">
+                        {copy.title}
+                    </h1>
+                    <p className="mt-4 text-[0.98rem] leading-7 text-[color:var(--sb-stage-ink-muted)]">
+                        {copy.description}
+                    </p>
+                </header>
 
-                <form onSubmit={handleSubmit} className="sb-space-warm rounded-2xl px-6 py-6">
+                <form onSubmit={handleSubmit} className="sb-space-warm rounded-[1.75rem] px-6 py-6 shadow-[0_20px_54px_rgba(0,0,0,0.2)]">
                     <h2 className="sb-type-headline mb-4 text-slate-900">
                         {copy.depositTitle}
                     </h2>
+                    <p className="mb-5 text-sm leading-7 text-slate-600">
+                        {copy.depositDescription}
+                    </p>
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="collateral-amount" className="text-sm font-medium text-slate-700">
                                 {copy.amountLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.amountHelper}
+                            </p>
                             <input
                                 id="collateral-amount"
                                 type="number"
@@ -83,6 +97,9 @@ export function CollateralSurface({ locale }: CollateralSurfaceProps) {
                                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none"
                             />
                         </div>
+                        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-xs leading-5 text-amber-900">
+                            {copy.riskNote}
+                        </p>
                         {error && (
                             <p className="text-xs font-medium text-red-700">{copy.depositError}</p>
                         )}

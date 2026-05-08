@@ -51,8 +51,8 @@ export function ChallengeSurface({ locale }: ChallengeSurfaceProps) {
                 className={`sb-space-stage-antiquarian sb-locale-${locale} flex min-h-screen items-center justify-center px-4 py-12`}
                 lang={locale}
             >
-                <div className="sb-space-warm rounded-2xl px-8 py-10 text-center">
-                    <h1 className="sb-type-serif-display mb-3 text-[color:var(--sb-stage-ink-strong)]">
+                <div className="sb-space-warm rounded-[1.75rem] px-8 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                    <h1 className="sb-type-serif-display mb-3 text-[#1E2823]">
                         {copy.successTitle}
                     </h1>
                     <p className="text-sm text-slate-600">{copy.successBody}</p>
@@ -67,16 +67,31 @@ export function ChallengeSurface({ locale }: ChallengeSurfaceProps) {
             lang={locale}
         >
             <div className="mx-auto max-w-3xl">
-                <h1 className="sb-type-serif-display mb-8 text-[color:var(--sb-stage-ink-strong)]">
-                    {copy.title}
-                </h1>
+                <header className="mb-8 max-w-2xl">
+                    <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
+                        {copy.eyebrow}
+                    </p>
+                    <h1 className="sb-type-serif-display text-[clamp(2.35rem,6vw,4.1rem)] leading-[1.04] text-[color:var(--sb-stage-ink-strong)]">
+                        {copy.title}
+                    </h1>
+                    <p className="mt-4 text-[0.98rem] leading-7 text-[color:var(--sb-stage-ink-muted)]">
+                        {copy.description}
+                    </p>
+                </header>
 
-                <form onSubmit={handleSubmit} className="sb-space-warm rounded-2xl px-6 py-6">
+                <form onSubmit={handleSubmit} className="sb-space-warm rounded-[1.75rem] px-6 py-6 shadow-[0_20px_54px_rgba(0,0,0,0.2)]">
                     <div className="flex flex-col gap-4">
+                        <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3">
+                            <p className="text-sm font-semibold text-amber-950">{copy.warningTitle}</p>
+                            <p className="mt-1 text-xs leading-5 text-amber-900">{copy.warningBody}</p>
+                        </div>
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor="challenge-target" className="text-sm font-medium text-slate-700">
                                 {copy.targetLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.targetHelper}
+                            </p>
                             <input
                                 id="challenge-target"
                                 type="text"
@@ -90,6 +105,9 @@ export function ChallengeSurface({ locale }: ChallengeSurfaceProps) {
                             <label htmlFor="challenge-claim" className="text-sm font-medium text-slate-700">
                                 {copy.claimLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.claimHelper}
+                            </p>
                             <input
                                 id="challenge-claim"
                                 type="text"
@@ -103,6 +121,9 @@ export function ChallengeSurface({ locale }: ChallengeSurfaceProps) {
                             <label htmlFor="challenge-evidence" className="text-sm font-medium text-slate-700">
                                 {copy.evidenceLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.evidenceHelper}
+                            </p>
                             <input
                                 id="challenge-evidence"
                                 type="text"
@@ -116,6 +137,9 @@ export function ChallengeSurface({ locale }: ChallengeSurfaceProps) {
                             <label htmlFor="challenge-note" className="text-sm font-medium text-slate-700">
                                 {copy.noteLabel}
                             </label>
+                            <p className="text-xs leading-5 text-slate-500">
+                                {copy.noteHelper}
+                            </p>
                             <input
                                 id="challenge-note"
                                 type="text"
