@@ -115,17 +115,17 @@ export function GuardedShell({ children }: GuardedShellProps) {
     };
 
     return (
-        <div className={`sb-guarded-shell sb-locale-${locale} min-h-screen`} lang={locale}>
-            <header className="sb-guarded-header relative z-20 border-b border-slate-200/70 bg-slate-950 px-4 py-4 text-white shadow-[0_14px_34px_rgba(15,23,42,0.18)] sm:px-6 lg:px-8">
+        <div className={`sb-space-stage-antiquarian sb-guarded-shell sb-locale-${locale} min-h-screen`} lang={locale}>
+            <header className="sb-guarded-header relative z-20 border-b border-[rgba(241,233,219,0.12)] bg-[color:var(--sb-stage-depth)] px-4 py-4 text-[color:var(--sb-stage-ink-strong)] shadow-[0_18px_42px_rgba(0,0,0,0.24)] sm:px-6 lg:px-8">
                 <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex flex-col gap-1">
                         <Link
                             href={withLangQuery('/dashboard', locale, LIVE_DEFAULT_LOCALE)}
-                            className="text-[20px] font-semibold tracking-[-0.03em] text-white"
+                            className="sb-type-serif-display text-[22px] font-semibold tracking-[-0.04em] text-[color:var(--sb-stage-ink-strong)]"
                         >
                             {copy.brand}
                         </Link>
-                        <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-white/[0.54]">
+                        <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
                             {copy.eyebrow}
                         </p>
                     </div>
@@ -138,18 +138,18 @@ export function GuardedShell({ children }: GuardedShellProps) {
                                         {item.enabled ? (
                                             <Link
                                                 href={item.href}
-                                                className="inline-flex min-h-10 items-center rounded-full border border-white/[0.14] bg-white/[0.08] px-3.5 py-2 text-[13px] font-semibold text-white/[0.86] transition hover:bg-white/[0.14] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                                className="inline-flex min-h-10 items-center rounded-full border border-[rgba(241,233,219,0.16)] bg-white/[0.07] px-3.5 py-2 text-[13px] font-semibold text-[color:var(--sb-stage-ink-muted)] transition hover:bg-white/[0.12] hover:text-[color:var(--sb-stage-ink-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(241,233,219,0.58)]"
                                             >
                                                 {item.label}
                                             </Link>
                                         ) : (
                                             <span
-                                                className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-[13px] font-semibold text-white/[0.42]"
+                                                className="inline-flex min-h-10 cursor-not-allowed items-center gap-2 rounded-full border border-[rgba(241,233,219,0.08)] bg-white/[0.025] px-3.5 py-2 text-[13px] font-semibold text-[color:var(--sb-stage-ink-soft)]"
                                                 aria-disabled="true"
                                                 title={item.reason}
                                             >
                                                 <span>{item.label}</span>
-                                                <span className="text-[11px] font-medium text-white/[0.34]">
+                                                <span className="text-[11px] font-medium text-[rgba(241,233,219,0.36)]">
                                                     {item.reason}
                                                 </span>
                                             </span>
@@ -171,7 +171,7 @@ export function GuardedShell({ children }: GuardedShellProps) {
                                 type="button"
                                 onClick={() => void handleSignOut()}
                                 disabled={isSigningOut}
-                                className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.94] px-3.5 py-2 text-[13px] font-semibold text-slate-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex min-h-10 items-center justify-center rounded-full border border-[rgba(241,233,219,0.38)] bg-[color:var(--sb-stage-ink-strong)] px-3.5 py-2 text-[13px] font-semibold text-[#1E2823] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isSigningOut ? copy.signOutBusy : formatActionLabel('SIGN_OUT', locale)}
                             </button>

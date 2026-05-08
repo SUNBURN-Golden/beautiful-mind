@@ -29,8 +29,8 @@ type GuardedShellCopy = {
 const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
     en: {
         brand: 'SoulBound',
-        eyebrow: 'Designed for safety.',
-        navLabel: 'Guarded navigation',
+        eyebrow: 'Designed for safety. Trust becomes SOUL.',
+        navLabel: 'SoulBound space navigation',
         languageLabel: 'Language',
         englishLabel: 'EN',
         koreanLabel: 'KO',
@@ -49,8 +49,8 @@ const GUARDED_SHELL_COPY: Record<AppLocale, GuardedShellCopy> = {
     },
     ko: {
         brand: 'SoulBound',
-        eyebrow: '안전 기반 커뮤니티',
-        navLabel: 'Guarded navigation',
+        eyebrow: '안전 기반 커뮤니티 · 신뢰가 SOUL이 됩니다',
+        navLabel: 'SoulBound 스페이스 내비게이션',
         languageLabel: '언어',
         englishLabel: 'EN',
         koreanLabel: 'KO',

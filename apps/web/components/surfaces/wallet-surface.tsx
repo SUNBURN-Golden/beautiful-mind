@@ -163,12 +163,20 @@ export function WalletSurface({ locale }: WalletSurfaceProps) {
                 className={`sb-space-stage-antiquarian sb-locale-${locale} flex min-h-screen flex-col items-center justify-center px-4 py-12`}
                 lang={locale}
             >
-                <h1 className="sb-type-serif-display mb-3 text-center text-[color:var(--sb-stage-ink-strong)]">
-                    {copy.title}
-                </h1>
-                <div className="sb-space-warm rounded-2xl px-8 py-10 text-center">
-                    <p className="sb-type-headline mb-2 text-slate-800">{copy.emptyTitle}</p>
-                    <p className="text-sm text-slate-500">{copy.emptyBody}</p>
+                <div className="mb-7 max-w-2xl text-center">
+                    <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
+                        {copy.eyebrow}
+                    </p>
+                    <h1 className="sb-type-serif-display text-[clamp(2.35rem,6vw,4.2rem)] leading-[1.04] text-[color:var(--sb-stage-ink-strong)]">
+                        {copy.title}
+                    </h1>
+                    <p className="mt-4 text-[0.98rem] leading-7 text-[color:var(--sb-stage-ink-muted)]">
+                        {copy.description}
+                    </p>
+                </div>
+                <div className="sb-space-warm w-full max-w-xl rounded-[1.75rem] px-8 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+                    <p className="sb-type-serif-display mb-2 text-[1.9rem] leading-tight text-[#1E2823]">{copy.emptyTitle}</p>
+                    <p className="mx-auto max-w-sm text-sm leading-7 text-slate-600">{copy.emptyBody}</p>
                     <button
                         type="button"
                         onClick={() => void handleClaimWelcomeSoul()}
@@ -193,15 +201,26 @@ export function WalletSurface({ locale }: WalletSurfaceProps) {
             lang={locale}
         >
             <div className="mx-auto max-w-3xl">
-                <h1 className="sb-type-serif-display mb-8 text-[color:var(--sb-stage-ink-strong)]">
-                    {copy.title}
-                </h1>
+                <header className="mb-8 max-w-2xl">
+                    <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--sb-stage-ink-soft)]">
+                        {copy.eyebrow}
+                    </p>
+                    <h1 className="sb-type-serif-display text-[clamp(2.35rem,6vw,4rem)] leading-[1.04] text-[color:var(--sb-stage-ink-strong)]">
+                        {copy.title}
+                    </h1>
+                    <p className="mt-4 text-[0.98rem] leading-7 text-[color:var(--sb-stage-ink-muted)]">
+                        {copy.description}
+                    </p>
+                </header>
 
                 {/* Balance overview */}
-                <div className="sb-space-warm mb-6 rounded-2xl px-6 py-6">
+                <div className="sb-space-warm mb-6 rounded-[1.75rem] px-6 py-6 shadow-[0_20px_54px_rgba(0,0,0,0.2)]">
                     <h2 className="sb-type-headline mb-4 text-slate-900">
                         {copy.balanceTitle}
                     </h2>
+                    <p className="mb-5 text-sm leading-7 text-slate-600">
+                        {copy.balanceDescription}
+                    </p>
                     <div className="flex flex-col gap-3">
                         <div className="flex items-baseline justify-between">
                             <span className="text-sm text-slate-500">{copy.totalLabel}</span>
