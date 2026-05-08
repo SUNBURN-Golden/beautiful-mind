@@ -24,20 +24,28 @@ export default function SignupPage() {
     }, [state, router]);
 
     return (
-        <div className="liquid-shell flex min-h-screen items-center justify-center p-4 sm:p-6">
-            <Card className="liquid-rise w-full max-w-md border-[#e5e5e7]">
-                <CardHeader>
-                    <CardTitle className="text-center text-3xl font-semibold tracking-tight">회원가입</CardTitle>
-                    <CardDescription className="text-center">
-                        계정 생성 후 즉시 admission 신청 절차(`/apply/*`)로 진입합니다.
-                    </CardDescription>
+        <div className="sb-space-stage-antiquarian flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+            <Card className="liquid-rise w-full max-w-md overflow-hidden rounded-[1.75rem] border border-[rgba(241,233,219,0.16)] bg-[rgba(240,229,210,0.96)] shadow-[0_28px_80px_rgba(0,0,0,0.32)]">
+                <CardHeader className="space-y-4 pb-5 text-center">
+                    <div className="mx-auto inline-flex rounded-full border border-[rgba(30,40,35,0.14)] bg-white/55 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[#6e6254]">
+                        Trust becomes SOUL.
+                    </div>
+                    <div className="space-y-2">
+                        <CardTitle className="sb-type-serif-display text-center text-[2.2rem] leading-tight tracking-[-0.04em] text-[#1E2823]">
+                            증명에서 시작해,
+                            <span className="block">신뢰를 SOUL로 얻습니다.</span>
+                        </CardTitle>
+                        <CardDescription className="mx-auto max-w-sm text-center text-[0.95rem] leading-7 text-[#63594c]">
+                            SoulBound는 먼저 안전을 확인하고, 검증된 사람에게 대화 공간을 엽니다.
+                        </CardDescription>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="mb-4">
                         <FeedbackPanel
                             tone="info"
-                            title="가입 후 흐름"
-                            description="가입 완료 후 로그인 페이지로 이동하며, 로그인 시 `/apply/status`로 자동 정렬됩니다."
+                            title="입장은 까다롭게. 대화는 자유롭게."
+                            description="계정을 만든 뒤 증명과 검증을 이어가면 SOUL이 신뢰의 기록이 됩니다."
                         />
                     </div>
                     <form action={formAction} className="space-y-4">
@@ -59,13 +67,13 @@ export default function SignupPage() {
                             </div>
                         )}
                         <Button type="submit" disabled={isPending} className="w-full">
-                            {isPending ? '가입 중...' : '가입하기'}
+                            {isPending ? '시작하는 중...' : 'SoulBound 시작하기'}
                         </Button>
                         <Button type="button" variant="outline" disabled={isPending} className="w-full" onClick={() => router.push('/login')}>
-                            취소
+                            로그인으로 돌아가기
                         </Button>
                         <Button asChild type="button" variant="link" disabled={isPending} className="w-full">
-                            <Link href="/manual">가입 전 admission 매뉴얼 보기</Link>
+                            <Link href="/manual">가입 전 신뢰 가이드 읽기</Link>
                         </Button>
                     </form>
                 </CardContent>
