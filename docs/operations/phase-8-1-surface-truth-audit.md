@@ -254,3 +254,55 @@ Excessive empty space above the fold creates "still loading?" impression.
 - `apps/web/i18n/landing.ts`
 - `apps/web/lib/contracts/status-copy.ts`
 - `apps/web/lib/contracts/status-stages.ts`
+
+---
+
+## Post-audit status addendum — after Phase 10.2b copy/theme renovation
+
+**Status:** This addendum was appended after Phase 10.2b public/auth/manual renovation (10.2b-1), guarded core/dashboard/wallet renovation (10.2b-2), and user skeleton copy/theme polish (10.2b-3). It does not rewrite the original Phase 8.1 findings. The original audit above remains the historical record of the surface state at the time of Phase 8.1.
+
+### Commit baseline
+
+| Phase | Commit | Pushed | Scope |
+| --- | --- | --- | --- |
+| 10.2b-1 | `3cb293e` | YES — origin/main | Public, auth, manual surfaces |
+| 10.2b-2 | `ebe17d3` | YES — HEAD == origin/main | Guarded shell, dashboard, wallet surfaces |
+| 10.2b-3 | `c3da72e` | local / push pending | Collateral, challenge, claim, unlock surfaces |
+
+### Original finding status
+
+| Original finding | Original priority | Post-10.2b status | Evidence | Remaining debt | Next owner |
+| --- | --- | --- | --- | --- | --- |
+| Dashboard action clarity | P0 | PARTIALLY_RESOLVED | Dashboard copy renovated (verified trust / SOUL vocabulary); guarded shell provides persistent nav with clear enabled/disabled pill buttons; rooms marked "Not open yet" with `aria-disabled` | Authenticated browser QA pending; room IA unchanged by design; evidence/receipt/signal in collapsible `<details>` but support views still carry receipt/hash/contract vocabulary | 10.2b closeout or later dashboard IA pass |
+| Language toggle consistency | P0 | PARTIALLY_RESOLVED | `GuardedShell` renders `LocaleSwitch` on all guarded routes (dashboard, wallet, apply flow, user skeletons) with full EN/KO copy | Login, signup, manual pages remain hardcoded single-language (Korean for login/signup, English for manual); apply flow `status-copy.ts` remains Korean-only with no English mapping file | Later i18n pass for unguarded routes |
+| Internal identifier masking | P1 | PARTIALLY_RESOLVED | Dashboard copy softened via trust/SOUL vocabulary; `formatContractIdentifierLabel()`, `formatConfidence()`, `formatProcessingStateLabel()` mask raw values; collateral/challenge/claim/unlock copy reframed | Landing footer still exposes build name, commit SHA, receipt card identifiers; support-domain collapsible views still carry receipt/hash/contract terminology; raw operational IDs remain in user skeleton surfaces because backend contract requires them | Later support/evidence pass; landing cleanup |
+| Guarded shell absence | P1 | RESOLVED_FOR_GUARDED_CORE | `GuardedShell` component wraps all `(guarded)` routes with persistent header: brand/eyebrow, nav pills (enabled + disabled with reasons), `LocaleSwitch`, sign-out button | Verify full route coverage under guarded layout; authenticated browser QA pending | Authenticated QA |
+| Korean typography | P2 | UNRESOLVED | Landing not touched in Phase 10.2b | `word-break: keep-all` not applied to Korean display headings | Landing readability pass |
+| Landing hero spacing | P2 | UNRESOLVED | Landing not touched in Phase 10.2b | Excessive empty space above the fold | Landing readability pass |
+
+### Newly covered routes after Phase 10.2b
+
+These routes were not part of the original Phase 8.1 audit. They are listed here because Phase 10.2b created or renovated them. This section does not imply Phase 8.1 originally audited these routes.
+
+| Route | Phase | Status | Notes |
+| --- | --- | --- | --- |
+| `/wallet` | 10.2b-2 | COPY_THEME_UPDATED | "trust becomes SOUL" wallet copy; claim button behavior unchanged; seeded wallet state QA pending |
+| `/collateral` | 10.2b-3 | COPY_THEME_UPDATED (uncommitted) | Reframed as early operational commitment; mutation not tested; authenticated visual QA pending |
+| `/challenge` | 10.2b-3 | COPY_THEME_UPDATED (uncommitted) | Raw target/claim ID labels softened; structured trust review framing; authenticated visual QA pending |
+| `/claim` | 10.2b-3 | COPY_THEME_UPDATED (uncommitted) | Proof-backed SOUL claim framing; JSON input noted as "operational format"; authenticated visual QA pending |
+| `/unlock` | 10.2b-3 | COPY_THEME_UPDATED (uncommitted) | Access request framing; admin override feeling reduced; authenticated visual QA pending |
+
+### Deferred verification
+
+The following items could not be verified during Phase 10.2b due to the absence of an authenticated browser session:
+
+- Authenticated browser QA for guarded shell navigation flow
+- Authenticated visual QA for dashboard copy and section order
+- Authenticated visual QA for wallet empty/non-empty/welcome-SOUL states with seeded data
+- Authenticated visual QA for collateral, challenge, claim, unlock surfaces
+- Remaining support-domain receipt/hash/contract terminology in collapsible evidence views
+- Apply flow language toggle and `status-copy.ts` English parity — unresolved unless separately handled
+
+### Audit integrity note
+
+This addendum is append-only. It does not alter the original Phase 8.1 route sections, cross-route tables, priority summary, or files inspected list. The original audit remains the historical evidence of surface state at Phase 8.1 time. All status updates and newly covered routes are documented exclusively in this addendum section.
