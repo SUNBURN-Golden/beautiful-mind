@@ -266,7 +266,7 @@ Excessive empty space above the fold creates "still loading?" impression.
 | Phase | Commit | Pushed | Scope |
 | --- | --- | --- | --- |
 | 10.2b-1 | `3cb293e` | YES — origin/main | Public, auth, manual surfaces |
-| 10.2b-2 | `ebe17d3` | YES — HEAD == origin/main | Guarded shell, dashboard, wallet surfaces |
+| 10.2b-2 | `ebe17d3` | YES — origin/main | Guarded shell, dashboard, wallet surfaces |
 | 10.2b-3 | `c3da72e` | YES — origin/main | Collateral, challenge, claim, unlock surfaces |
 
 ### Original finding status
