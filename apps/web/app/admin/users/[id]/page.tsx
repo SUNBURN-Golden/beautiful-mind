@@ -69,6 +69,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 <div className="space-y-1">
                     <h1 className="liquid-title text-[34px] font-semibold tracking-tight">Trust Account Detail</h1>
                     <p className="break-all text-xs text-[#6e6e73]">{profile.id}</p>
+                    <p className="text-xs text-[#6e6e73]">
+                        Operational view — verify account and related evidence before action.
+                    </p>
                 </div>
                 {!profile.banned && <BanButton userId={profile.id} />}
                 <a
@@ -102,9 +105,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                     <CardContent className="space-y-2 text-sm text-[#3a3a3c]">
                         <p>Status: {latestApplication?.status || 'NO_APPLICATION'}</p>
                         <p>Step: {latestApplication?.current_step || 'N/A'}</p>
-                        <p>Submitted: {latestApplication?.submitted_at || 'N/A'}</p>
-                        <p>Approved: {latestApplication?.approved_at || 'N/A'}</p>
-                        <p>Rejected: {latestApplication?.rejected_at || 'N/A'}</p>
+                        <p>Submitted: {latestApplication?.submitted_at ? new Date(latestApplication.submitted_at).toLocaleString() : 'N/A'}</p>
+                        <p>Approved: {latestApplication?.approved_at ? new Date(latestApplication.approved_at).toLocaleString() : 'N/A'}</p>
+                        <p>Rejected: {latestApplication?.rejected_at ? new Date(latestApplication.rejected_at).toLocaleString() : 'N/A'}</p>
                     </CardContent>
                 </Card>
 
@@ -115,7 +118,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                     <CardContent className="space-y-2 text-sm text-[#3a3a3c]">
                         <p>Status: {latestSoulCredential?.status || 'NOT_ISSUED'}</p>
                         <p>Trust Level: {latestSoulCredential?.trust_level || 'N/A'}</p>
-                        <p>Issued: {latestSoulCredential?.issued_at || 'N/A'}</p>
+                        <p>Issued: {latestSoulCredential?.issued_at ? new Date(latestSoulCredential.issued_at).toLocaleString() : 'N/A'}</p>
                     </CardContent>
                 </Card>
             </section>
@@ -132,7 +135,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                         {(verifiedClaims || []).map((claim) => (
                             <div key={claim.id} className="rounded-lg border border-[#ececf0] bg-[#fbfbfd] p-3">
                                 <p className="font-medium text-[#1d1d1f]">{claim.claim_type}</p>
-                                <p className="text-xs text-[#6e6e73]">{claim.verification_status} / {claim.verified_at || 'N/A'}</p>
+                                <p className="text-xs text-[#6e6e73]">
+                                    {claim.verification_status}
+                                    <span className="mx-1 text-[#d2d2d7]">·</span>
+                                    {claim.verified_at ? new Date(claim.verified_at).toLocaleString() : 'Not verified'}
+                                </p>
                             </div>
                         ))}
                     </CardContent>
@@ -148,9 +155,16 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                         )}
                         {(reviewCases || []).map((row) => (
                             <div key={row.id} className="rounded-lg border border-[#ececf0] bg-[#fbfbfd] p-3">
-                                <p className="font-medium text-[#1d1d1f]">{row.state}</p>
-                                <p className="text-xs text-[#6e6e73]">opened={row.opened_at || 'N/A'} / decided={row.decided_at || 'N/A'}</p>
-                                <p className="text-xs text-[#6e6e73]">queue={String(row.ai_summary_json?.queue_type || 'UNKNOWN')}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-medium text-[#1d1d1f]">{row.state}</p>
+                                    <span className="text-xs text-[#d2d2d7]">queue: {String(row.ai_summary_json?.queue_type || 'UNKNOWN')}</span>
+                                </div>
+                                <p className="text-xs text-[#6e6e73]">
+                                    Opened: {row.opened_at ? new Date(row.opened_at).toLocaleString() : 'N/A'}
+                                </p>
+                                <p className="text-xs text-[#6e6e73]">
+                                    Decided: {row.decided_at ? new Date(row.decided_at).toLocaleString() : 'Pending'}
+                                </p>
                             </div>
                         ))}
                     </CardContent>

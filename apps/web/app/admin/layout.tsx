@@ -88,7 +88,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#d2d2d7] bg-[#fbfbfd] px-4 text-sm font-medium text-[#6e6e73] transition-colors hover:bg-[#f5f5f7]"
                     >
                         <LogOut className="h-4 w-4" />
-                        Exit to Trust Home
+                        Return to Dashboard
                     </Link>
                 </div>
             </aside>

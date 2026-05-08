@@ -62,13 +62,13 @@ export default function AuditsPage() {
 
             <div className="rounded-2xl border border-[#e5e5e7] bg-white p-6">
                 <p className="text-sm text-[#6e6e73]">
-                    Skeleton page — audit listing will be connected when audit query API is available.
-                    Use the form below to decide an audit manually.
+                    Review audit evidence and decide outcomes for open audits.
+                    Audit records are operational evidence, not public profile copy.
                 </p>
 
                 <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    Random audit opening requires a target subject_user_id and claim_id.
-                    This action is disabled until the form supports those inputs.
+                    Check the target, evidence, and outcome before taking action.
+                    Random audit opening requires a target subject_user_id and claim_id — that action is disabled until the form supports those inputs.
                 </div>
 
                 <div className="mt-6 space-y-4">
@@ -82,7 +82,13 @@ export default function AuditsPage() {
                             placeholder="Enter audit ID"
                             className="mt-1 w-full max-w-md rounded-lg border border-[#d2d2d7] px-3 py-2 text-sm focus:border-[#06c] focus:outline-none"
                         />
+                        <p className="mt-1 text-xs text-[#6e6e73]">
+                            Use the exact audit ID from the reviewed evidence.
+                        </p>
                     </div>
+                    <p className="text-xs text-[#6e6e73]">
+                        Confirm the audit record and evidence before deciding. This action is recorded in the operational audit trail.
+                    </p>
                     <div className="flex gap-3">
                         <button
                             type="button"
@@ -93,7 +99,7 @@ export default function AuditsPage() {
                             disabled={!!deciding}
                             className="inline-flex h-10 items-center rounded-lg bg-green-600 px-4 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
                         >
-                            {deciding ? 'Processing...' : 'PASS'}
+                            {deciding ? 'Processing...' : 'Mark PASS'}
                         </button>
                         <button
                             type="button"
@@ -104,7 +110,7 @@ export default function AuditsPage() {
                             disabled={!!deciding}
                             className="inline-flex h-10 items-center rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
                         >
-                            {deciding ? 'Processing...' : 'FAIL'}
+                            {deciding ? 'Processing...' : 'Mark FAIL'}
                         </button>
                     </div>
                 </div>

@@ -64,7 +64,10 @@ export default function TreasuryPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-[34px] font-semibold tracking-tight">Treasury</h1>
+            <div className="flex flex-col gap-1">
+                <h1 className="text-[34px] font-semibold tracking-tight">Treasury</h1>
+                <p className="text-sm text-[#6e6e73]">SOUL accounting operations</p>
+            </div>
 
             {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -81,6 +84,10 @@ export default function TreasuryPage() {
             <form onSubmit={handleSpend} className="rounded-2xl border border-[#e5e5e7] bg-white p-6">
                 <h2 className="mb-4 text-[20px] font-semibold">Spend from vault</h2>
 
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    This screen affects ledger-visible SOUL accounting. Review vault, amount, and reason before execution.
+                </div>
+
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="treasury-vault" className="block text-sm font-medium text-[#3a3a3c]">
@@ -96,6 +103,9 @@ export default function TreasuryPage() {
                                 <option key={v} value={v}>{v}</option>
                             ))}
                         </select>
+                        <p className="mt-1 text-xs text-[#6e6e73]">
+                            Select the vault for this spend operation.
+                        </p>
                     </div>
 
                     <div>
@@ -112,6 +122,9 @@ export default function TreasuryPage() {
                             placeholder="Enter amount"
                             className="mt-1 w-full max-w-md rounded-lg border border-[#d2d2d7] px-3 py-2 text-sm focus:border-[#06c] focus:outline-none"
                         />
+                        <p className="mt-1 text-xs text-[#6e6e73]">
+                            Review the SOUL amount before execution.
+                        </p>
                     </div>
 
                     <div>
@@ -126,6 +139,9 @@ export default function TreasuryPage() {
                             placeholder="Reason for spend"
                             className="mt-1 w-full max-w-md rounded-lg border border-[#d2d2d7] px-3 py-2 text-sm focus:border-[#06c] focus:outline-none"
                         />
+                        <p className="mt-1 text-xs text-[#6e6e73]">
+                            Required. This reason is recorded in the ledger trail.
+                        </p>
                     </div>
 
                     <button
