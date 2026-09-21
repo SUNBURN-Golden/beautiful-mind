@@ -453,16 +453,20 @@ Grok이나 작성자는 auditor를 지정하거나 audit floor를 낮출 수 없
 AUDITOR_DESIGNATION_POINTER와 함께 기록되며, Astra 결과로 기록되지 않는다.
 HEAD 변경은 누가 발급했든 이전 PASS를 무효화한다.
 
-Astra FAIL:
+AUDIT_RESULT=FAIL:
 finding을 변경 없이 같은 writer에게 중계한다.
 
-Astra DECISION_REQUIRED:
+AUDIT_RESULT=DECISION_REQUIRED:
 blocker를 기록하고 정규화 decision request를 emit한다.
 
 audit 결과는 미결 AUDIT_REQUEST_ID와도 일치해야 한다.
 re-audit은 이전 감사 SHA와의 delta 및 미해결 finding에서 시작해, 영향 받는
 의존성/계약을 확인한 뒤 현재 SHA에 대한 새 결과를 발급한다.
 writer의 evidence index는 navigation이며 절대 독립 증명이 아니다.
+
+감사 요청은 수락 auditor identity와 해당 User 지정 pointer를 고정한다.
+결과의 identity/session은 인증된 발신자 및 요청에 고정된 auditor와 일치해야
+한다. 지정 철회·변경 시 미결 요청과 해당 지정의 gate 결과를 무효화한다.
 
 ## 15. Consequential decision gate
 

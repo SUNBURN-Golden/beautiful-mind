@@ -212,6 +212,10 @@ Devin 구현 가능 → 독립 리뷰 → A3 audit.
 stop → Astra 분석 → User 결정 → durable GitHub decision/task revision
 → resume.
 
+이 세 문서의 audit 실행·증거 검증·결과 처리에서 Astra라는 표현은 작성자
+충돌 시 위 절차로 지정된 독립 감사자에게 동일하게 적용된다. 아키텍처 분석과
+User의 결정 권한은 이전되지 않는다.
+
 ## 9. Audit 결과
 
 다음만 허용:
