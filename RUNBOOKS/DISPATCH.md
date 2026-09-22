@@ -67,12 +67,13 @@ automation을 활성화하기 전에 mechanical layer는 다음을 갖추어야 
 - 설정된 USER actor identity;
 - 설정된 ASTRA actor identity;
 - 설정된 action-adapter identity(Grok은 명시적 override에만 해당);
-- 설정된 Devin/provider identity;
+- 활성화된 각 builder provider(DEVIN / GROK_BUILD / GLM 중 해당 항목)의
+  configured identity/adapter;
 - 설정된 독립 reviewer identity/lane;
 - TASK_KEY별 single-writer 직렬화;
 - canonical-control-record 읽기/쓰기 지원;
 - self-event 필터링;
-- provider launch reconciliation 또는 명시적 UNKNOWN 처리.
+- builder/reviewer provider launch reconciliation 또는 명시적 UNKNOWN 처리.
 
 구현은 위 검사 후 독립 exact-SHA audit과 명시적 User 활성화를 받아야 한다.
 문서 승인은 automation을 활성화하지 않는다.
@@ -130,7 +131,7 @@ builder/reviewer 선택은 canonical config에서 오며 Grok의 의미론적 �
 
 ## 5. TASK_KEY와 canonical control record
 
-`TASK_KEY = REPO + TASK_ID`
+TASK_KEY = REPO + TASK_ID
 
 각 TASK_KEY는 정확히 하나의 canonical control record를 가지며, 이는 canonical
 GitHub task/issue의 고정된 machine-owned record pointer에 durable하게
@@ -138,7 +139,7 @@ projection된다.
 
 GitHub projection은 durable evidence이며 직렬화 primitive가 아니다.
 
-control record 최소 사실(fact):
+control record 최소 fact:
 
 - TASK_KEY
 - TASK_REVISION
@@ -155,16 +156,19 @@ control record 최소 사실(fact):
 - PR_POINTER
 - CURRENT_HEAD_SHA
 - verification 정책 및 current-head verification fact
-- review 정책, REVIEW_REQUEST_ID, REVIEW_LAUNCH_STATE, reviewer lane/session,
-  review attempt ID 및 current-head 결과
-- audit floor, AUDIT_REQUEST_ID, AUDIT_REQUEST_STATE, 검증된 audit depth,
-  감사한 SHA/evidence SHA 및 결과
-- 미해결 blocker/decision pointer
+- review policy, configured audit floor, REVIEW_REQUEST_ID, REVIEW_LAUNCH_STATE,
+  reviewer lane/session, review attempt ID, VERIFIED_REVIEW_DEPTH,
+  VERIFIED_REQUIRED_DEPTH, EFFECTIVE_AUDIT_FLOOR, verified touched areas,
+  contract-change flag 및 current-head result
+- ASTRA_GATE, AUDIT_REQUEST_ID, AUDIT_ATTEMPT_ID, AUDIT_REQUEST_STATE,
+  ACCEPTED_AUDITOR_IDENTITY, AUDITOR_DESIGNATION_POINTER, verified audit depth,
+  audited SHA/evidence SHA 및 Astra gate result
+- unresolved blocker/decision pointer
 - merge SHA
-- post-merge 결과/후속 pointer
-- 마지막으로 수락한 event ID
+- post-merge result/follow-up pointer
+- last accepted event ID
 
-상태는 이 사실들에서 도출된다. 도착 순서가 상태를 무조건 덮어쓰지 않는다.
+상태는 이 fact에서 도출된다. 도착 순서가 상태를 무조건 덮어쓰지 않는다.
 
 ## 6. Task별 직렬화
 
@@ -322,7 +326,7 @@ CI/verification 실패:
 review launch는 writer와 같은 NOT_STARTED → SUBMITTING → CONFIRMED/UNKNOWN
 idempotent protocol을 사용하고 REVIEW_REQUEST_ID/REVIEW_ATTEMPT_ID에 고정한다.
 
-현재 task revision + HEAD/evidence SHA에 이미 matching result/request가 있으면
+현재 task revision + HEAD/evidence SHA에 matching accepted result/request가 있으면
 재사용한다. 없으면 stable IDs를 만들고 NOT_STARTED를 persist한 뒤 정확히 하나의
 REVIEW_DISPATCH_ALLOWED를 emit한다.
 
@@ -336,22 +340,42 @@ ambiguous launch는 REVIEW_LAUNCH_STATE=UNKNOWN이며 자동 relaunch를 금지�
 요구한다.
 
 exact revision/head에 대해 reviewer는 다음을 반환한다:
+
 REVIEW_RESULT: PASS | PASS_WITH_NOTES | FAIL | DECISION_REQUIRED
 REVIEWER_IDENTITY_OR_SESSION:
 REVIEWED_TASK_REVISION:
 REVIEWED_HEAD_OR_EVIDENCE_SHA:
 VERIFIED_REVIEW_DEPTH:
+VERIFIED_REQUIRED_DEPTH: A1 | A2 | A3
 VERIFIED_TOUCHED_AREAS:
 VERIFIED_CONTRACT_CHANGE_REQUIRED:
 FINDING_POINTERS:
 
-새 HEAD는 이전 review를 무효화한다.
+VERIFIED_REQUIRED_DEPTH는 task에 미리 적힌 AUDIT_FLOOR와 별개로, 실제 diff와
+authoritative 저장소 규칙이 요구하는 최소 review/audit depth를 reviewer가
+의미론적으로 판정한 값이다.
+
+current-head review를 수락한 뒤 mechanical layer는:
+
+EFFECTIVE_AUDIT_FLOOR =
+  max(configured AUDIT_FLOOR, VERIFIED_REQUIRED_DEPTH)
+
+를 A0 < A1 < A2 < A3 순서로 계산한다.
+
+EFFECTIVE_AUDIT_FLOOR=A3이면 merge predicate를 다시 계산하기 전에 current
+task revision/current HEAD의 ASTRA_GATE를 ARCHITECTURE로 강제한다. predeclared
+NONE/MILESTONE가 이 승격을 막을 수 없다. 저장소 규칙이 더 강한 gate를 요구하면
+그 gate를 유지한다.
+
+새 relevant HEAD는 prior review와 그 review에서 도출된 EFFECTIVE_AUDIT_FLOOR를
+무효화한다.
+
 FAIL은 exact finding을 같은 writer에게 돌려보낸다.
 DECISION_REQUIRED 또는 VERIFIED_CONTRACT_CHANGE_REQUIRED=YES면 merge를 막고
-Astra/decision path로 진입한다.
+required Astra/decision path로 진입한다.
 
 PASS/PASS_WITH_NOTES이고 consequential contract change가 없으면:
-- Astra gate가 필요한 task/head는 AUDIT_REQUIRED emit;
+- EFFECTIVE_AUDIT_FLOOR=A3 또는 다른 Astra gate가 필요하면 AUDIT_REQUIRED emit;
 - 아니면 Astra 호출 없이 READY_FOR_MERGE predicate를 다시 계산한다.
 
 ## 14. Astra gate
@@ -359,24 +383,56 @@ PASS/PASS_WITH_NOTES이고 consequential contract change가 없으면:
 Astra는 routine A1/A2의 기본 reviewer가 아니다.
 
 이 section은 다음 중 하나일 때만 적용한다:
-- AUDIT_FLOOR=A3;
+
+- EFFECTIVE_AUDIT_FLOOR=A3;
 - ASTRA_GATE=MILESTONE | ARCHITECTURE | RELEASE;
 - architecture exception/consequential contract change가 Astra 분석을 요구;
 - 저장소 authoritative rule이 Astra를 명시적으로 요구.
 
-A3는 ASTRA_GATE=ARCHITECTURE를 의미한다.
+EFFECTIVE_AUDIT_FLOOR=A3는 current task revision/current HEAD의
+ASTRA_GATE=ARCHITECTURE를 의미한다.
 
-Astra request delivery는 적용 task/milestone identity로 직렬화한다. matching
-accepted/outstanding request는 재사용하고, 없으면 stable AUDIT_REQUEST_ID 하나를
-persist하여 AUDIT_REQUIRED 하나만 emit한다. ambiguous delivery는 UNKNOWN으로
-남기고 reconcile 전 재전송하지 않는다.
+Astra request delivery는 writer/reviewer launch와 같은 fail-closed send discipline을
+사용하며 task revision + current HEAD/evidence SHA 또는 명시된 milestone/release
+evidence identity로 직렬화한다.
 
-packet은 exact revision, repo, PR/evidence pointer, 해당 시 base/head SHA,
-authoritative docs, verification/review facts, touched area/contract-change,
-audit floor, ASTRA_GATE를 포함한다.
+각 request는 생성 시 다음에 고정된다:
+
+AUDIT_REQUEST_ID
+AUDIT_ATTEMPT_ID
+ACCEPTED_AUDITOR_IDENTITY
+AUDITOR_DESIGNATION_POINTER (configured Astra면 N/A)
+AUDITED_TASK_REVISION_OR_MILESTONE
+AUDITED_HEAD_OR_EVIDENCE_SHA
+
+AUDIT_REQUIRED emit 전 mechanical layer는:
+
+1. request identity, accepted auditor/designation, task/milestone identity,
+   exact HEAD/evidence SHA가 모두 일치하는 accepted result만 재사용;
+2. matching AUDIT_REQUEST_ID/AUDIT_ATTEMPT_ID가 SUBMITTING/CONFIRMED/UNKNOWN이면
+   새 request를 만들지 않고 기존 request를 reuse/reconcile;
+3. 그 외에는 stable AUDIT_REQUEST_ID/AUDIT_ATTEMPT_ID를 만들고 accepted auditor
+   identity/designation을 bind하고 AUDIT_REQUEST_STATE=NOT_STARTED로 설정한 뒤
+   pending action을 atomic persist;
+4. 외부 send 직전에 pending action을 atomic consume하고
+   AUDIT_REQUEST_STATE=SUBMITTING을 persist;
+5. 그 consumed action을 가진 executor만 request를 send;
+6. confirmed receipt는 AUDIT_REQUEST_STATE=CONFIRMED로 기록.
+
+SUBMITTING 이후 crash/response loss가 발생하면 potentially sent로 취급한다.
+receipt가 없다는 이유만으로 새 request를 만들거나 resend하지 않는다. 결과를
+증명할 수 없으면 UNKNOWN으로 두고 reconciliation 또는 explicit User resolution을
+요구한다.
+
+packet은 exact task/milestone identity, revision, repo, PR/evidence pointer,
+해당 시 base/head SHA, authoritative docs, verification/review facts,
+VERIFIED_REQUIRED_DEPTH, EFFECTIVE_AUDIT_FLOOR, touched area/contract-change,
+ASTRA_GATE를 포함한다.
 
 Astra는 실제 relevant diff/evidence와 authoritative contract를 독립적으로 읽고:
+
 AUDIT_REQUEST_ID:
+AUDIT_ATTEMPT_ID:
 AUDIT_RESULT: PASS | PASS_WITH_NOTES | FAIL | DECISION_REQUIRED
 AUDITOR_IDENTITY_OR_SESSION:
 AUDITOR_DESIGNATION_POINTER: (Astra가 아닐 때 필수)
@@ -386,13 +442,27 @@ VERIFIED_AUDIT_DEPTH:
 VERIFIED_TOUCHED_AREAS:
 VERIFIED_CONTRACT_CHANGE_REQUIRED:
 FINDING_POINTERS:
+
 를 반환한다.
+
+audit result는 authenticated auditor identity/session이 exact outstanding request의
+ACCEPTED_AUDITOR_IDENTITY와 일치하고, designation pointer가 있으면 request에
+bind된 active User designation과 동일할 때만 수락한다.
 
 Astra가 audited change를 작성·수정했다면 User가 durable scope pointer로 non-author
 architecture auditor를 지정한다. 대체 auditor에게 Astra design authority는 이전되지 않는다.
+Grok, author, mechanical layer는 semantic judgment로 replacement architecture
+auditor를 고르거나 gate를 낮출 수 없다.
 
-관련 HEAD/revision 변경은 이전 result를 무효화한다. FAIL은 exact finding을 전달하고
-DECISION_REQUIRED는 User decision path로 간다.
+accepted auditor designation이 revoke/replace되거나 scope가 바뀌면:
+
+- old designation에 bind된 outstanding request는 invalid;
+- old designation으로 발급된 prior gate result는 current READY_FOR_MERGE를 충족하지 못함;
+- prior SUBMITTING/UNKNOWN delivery를 안전하게 reconcile한 뒤에만 새 designation으로
+  새 request를 만들 수 있음.
+
+관련 HEAD/revision 변경은 prior result를 무효화한다.
+FAIL은 exact finding을 전달하고 DECISION_REQUIRED는 User decision path로 간다.
 architecture decision은 Astra 분석 → User 결정 → durable pointer다.
 
 ## 15. Consequential decision gate
@@ -416,28 +486,29 @@ GitHub/ADR/task authority에 persist되어야 한다.
 
 ## 16. A0 최종 자격 검사
 
-A0가 완료되기 전에 mechanical layer는 task envelope의 명시적 A0 승인과 경로
-계약을 검사한다:
+A0 완료 전 mechanical layer는 task envelope의 명시적 A0 승인과 경로 계약을 검사한다:
 
 - A0_AUTHORIZATION_POINTER 존재;
-- A0_CHANGE_KIND가 허용된 A0 enum 값 중 하나;
+- A0_CHANGE_KIND가 허용된 A0 enum 값;
 - 실제 변경 경로가 A0_ALLOWED_PATHS의 부분집합;
-- A0_FORBIDDEN_PATHS와 일치하는 실제 변경 경로 없음;
-- 저장소 locked/sensitive 규칙이 여전히 충족됨.
+- A0_FORBIDDEN_PATHS와 일치하는 변경 경로 없음;
+- 저장소 locked/sensitive 규칙 충족.
 
 Grok은 이 경로 목록을 생성하거나 확대하지 않는다.
 
 A0 자격 검사 실패 시:
-A1으로 승격 → 독립 review → Astra audit.
+A1으로 승격 → independent review.
+그 review가 도출한 EFFECTIVE_AUDIT_FLOOR 또는 다른 repository rule이 Astra gate를
+요구할 때만 Astra를 호출한다.
 
-A0는 저장소 고유의 evidence/bookkeeping 규칙을 절대 우회하지 않는다.
+A0는 저장소 고유 evidence/bookkeeping 규칙을 우회하지 않는다.
 
-경로 검사만으로 A0 의미가 입증되지는 않는다. 최종 A0 자격은 exact
-revision/HEAD에 대한 typo/format-only 변경의 인증된 User attestation, 또는
-승인된 결정론적 transform verifier도 요구한다. 그렇지 않으면 A1으로
-승격한다. 자격을 갖춘 A0에 한해, 저장소 규칙이 요구하지 않는 한 Astra
-audit과 별도 review는 N/A다. 18절의 audit/depth predicate는 A1+에
-적용된다. 모든 verification/blocker/merge gate는 여전히 적용된다.
+경로 검사만으로 A0 의미가 입증되지는 않는다. final A0 qualification은 exact
+revision/HEAD에 대한 typo/format-only 변경의 authenticated User attestation 또는
+승인된 deterministic transform verifier도 요구한다. 그렇지 않으면 A1으로 승격한다.
+
+qualified A0는 저장소 규칙이 별도 요구하지 않는 한 separate review/Astra gate가
+N/A다. 모든 verification/blocker/merge gate는 계속 적용한다.
 
 ## 17. Derived state
 
@@ -484,13 +555,21 @@ PR deliverable의 READY_FOR_MERGE는 다음이 모두 참일 때만 참이다:
 - task revision current;
 - unresolved blocker/decision 없음;
 - current HEAD verification gate 충족;
-- 비-A0 substantive work는 current HEAD independent review PASS/PASS_WITH_NOTES
-  및 VERIFIED_REVIEW_DEPTH가 AUDIT_FLOOR를 충족;
+- 비-A0 substantive work는 current HEAD independent review PASS/PASS_WITH_NOTES;
+- A3 이외 review obligation에 대해 VERIFIED_REVIEW_DEPTH가 EFFECTIVE_AUDIT_FLOOR를
+  충족. A3 requirement는 reviewer depth만으로 충족되지 않고 Astra architecture
+  gate를 추가로 요구;
 - accepted current-head review의 VERIFIED_CONTRACT_CHANGE_REQUIRED가 NO이거나
   필요한 Astra/User decision이 durable하게 기록되어 current task revision에 반영;
-- Astra gate가 필요한 경우에만 applicable revision/head/evidence와 일치하는
-  Astra-gate PASS/PASS_WITH_NOTES 및 required depth 충족;
-- Astra gate가 필요 없으면 Astra result 부재는 merge blocker가 아님;
+- EFFECTIVE_AUDIT_FLOOR=A3이면 ASTRA_GATE=ARCHITECTURE이고, applicable
+  revision/head/evidence와 일치하는 accepted Astra-gate PASS/PASS_WITH_NOTES 및
+  VERIFIED_AUDIT_DEPTH=A3 충족;
+- 다른 explicit Astra gate가 있으면 그 accepted PASS/PASS_WITH_NOTES가 applicable
+  identity와 required depth를 충족;
+- Astra gate가 필요 없고 EFFECTIVE_AUDIT_FLOOR가 A3 미만이면 Astra result 부재는
+  merge blocker가 아님;
+- accepted Astra result에 auditor designation이 bind되어 있다면 그 designation이
+  여전히 active이고 unchanged;
 - 프로젝트 고유 merge 전제조건 충족.
 
 merge 결정은 User가 한다.
