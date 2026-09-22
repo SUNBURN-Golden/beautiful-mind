@@ -46,26 +46,24 @@ Grok은 코드·문서·모델 성능을 읽고 builder나 reviewer를 선택하
 
 ## 3. mechanical control layer는 필수
 
-원시(raw) Slack/GitHub/provider 이벤트는 Grok 행동을 직접 승인하지 않는다.
+raw Slack/GitHub/provider event는 외부 action을 직접 authorize하지 않는다.
 
-Grok을 호출하기 전에 mechanical layer는 반드시:
+builder, reviewer 또는 optional Grok relay adapter를 호출하기 전에 mechanical
+layer는 반드시:
 
-1. 이벤트 actor/source를 설정된 allowlist로 검증한다;
-2. 이벤트를 하나의 canonical `TASK_KEY = REPO + TASK_ID`로 매핑한다;
-3. 해당 TASK_KEY에 대한 single-writer 직렬화 primitive 아래에서 control-state
-   변경을 처리한다;
-4. canonical control record를 로드/갱신한다;
-5. stale/중복/자기 생성 이벤트를 거절한다;
-6. 필수 식별자를 포함한 정규화 이벤트를 emit한다.
+1. configured allowlist로 event actor/source 검증;
+2. 하나의 canonical TASK_KEY = REPO + TASK_ID로 mapping;
+3. TASK_KEY별 single-writer serialization primitive 아래 control-state mutation 처리;
+4. canonical control record load/update;
+5. stale/duplicate/self-generated event 거절;
+6. 필수 identifier를 가진 normalized event emit.
 
-GitHub issue/comment는 control record의 durable projection일 수 있으나,
-**댓글의 존재는 atomic claim이 아니다.** 구현은 control-state 변경에 대해
-writer가 하나인 실제 per-task 직렬화 primitive(queue, lock, GitHub Actions
-concurrency group 등)를 사용해야 한다.
+GitHub issue/comment는 control record의 durable projection이 될 수 있지만 comment
+존재 자체는 atomic claim이 아니다. queue, lock, GitHub Actions concurrency group
+등 실제 per-task serialization primitive를 사용한다.
 
-mechanical layer가 구현되고, exact SHA에서 독립 감사를 통과하고, User가
-명시적으로 활성화하기 전까지 automation은 비활성 상태를 유지한다.
-그때까지 User는 runbook에 따라 직렬화된 수동 dispatch를 수행할 수 있다.
+automation은 mechanical layer 구현, exact-SHA independent audit, User 명시 승인 전
+비활성이다. 그 전에는 runbook에 따른 serialized manual dispatch만 허용한다.
 
 ## 4. canonical task와 소유권
 
@@ -245,7 +243,7 @@ request, auditor identity/session, exact audited HEAD/evidence SHA에 고정한�
 
 Slack은 무슨 일이 일어나고 있는지 모두에게 알린다. GitHub는 무엇이 사실인지
 기록한다.
-agent memory와 Devin 재사용 지침은 독립 authority가 아니다. 현재 GitHub
+agent memory와 builder/provider 재사용 지침은 독립 authority가 아니다. 현재 GitHub
 규칙을 참조해야 한다.
 task별 runtime 상태, dispatch/audit/review 로그, transcript를 commit하지 않는다.
 기존 불변 task spec, ADR, 필수 엔지니어링 evidence/bookkeeping은 여전히 유효한
@@ -277,19 +275,23 @@ builder credential은 배정 repo/task branch/PR로 제한하고 merge/admin 권
 
 전체 저장소 write token 하나보다 repo-scoped 자격증명을 우선한다.
 
-## 12. 쿼터 및 장애 동작
+## 12. Relay 및 provider 장애 동작
 
-Grok 쿼터/장애는 caller/mechanical layer가 감지한다. Grok이 사용 불가한 뒤
-Grok의 추론으로 감지하지 않는다.
+Grok quota/outage는 caller/mechanical layer가 감지한다. Grok은 optional command
+relay이므로 unavailable 자체가 task ownership, evidence validity 또는
+deterministic builder/reviewer route를 막지 않는다.
 
-설정된 Grok 행동이 실패하면 caller/mechanical layer가 GitHub에 blocker를
-기록하고 `[BLOCKED] Reason: GROK_QUOTA`를 Slack에 직접 projection한다.
-mechanical route는 Grok 쿼터를 요구하지 않는다.
+명시 command를 Grok을 통해 요청했는데 relay가 unavailable이면 좁은
+RELAY_UNAVAILABLE status/pointer만 기록한다. 동일 pre-authorized mechanical
+command를 User 또는 다른 authenticated caller가 호출할 수 있다. second writer를
+만들거나 task semantics를 바꾸지 않는다.
 
-어떤 모델도 자동으로 대체 dispatcher로 지정되지 않는다.
+builder/provider 장애는 별개다. 배정 owner의 provider blocker를 기록하며 다른
+model로 조용히 대체하지 않는다. reassignment는 unresolved SUBMITTING/UNKNOWN
+launch의 reconciliation/fencing과 durable authorized control action을 요구한다.
 
-수동 dispatch도 canonical task/control record를 사용해야 하며, owner가 존재하거나
-launch state가 `UNKNOWN`이면 launch해서는 안 된다.
+manual dispatch도 canonical task/control record를 사용하며 existing owner 또는
+UNKNOWN launch state를 우회하지 않는다.
 
 ## 13. Merge
 
