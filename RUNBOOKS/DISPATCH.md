@@ -409,8 +409,11 @@ AUDIT_REQUIRED emit 전 mechanical layer는:
 
 1. request identity, accepted auditor/designation, task/milestone identity,
    exact HEAD/evidence SHA가 모두 일치하는 accepted result만 재사용;
-2. matching AUDIT_REQUEST_ID/AUDIT_ATTEMPT_ID가 SUBMITTING/CONFIRMED/UNKNOWN이면
-   새 request를 만들지 않고 기존 request를 reuse/reconcile;
+2. matching AUDIT_REQUEST_ID/AUDIT_ATTEMPT_ID가
+   NOT_STARTED/SUBMITTING/CONFIRMED/UNKNOWN이면 새 request를 만들지 않고 기존
+   request를 reuse/reconcile;
+   NOT_STARTED이면 기존 pending action만 resume한다. 다른 request/attempt를
+   만들거나 다른 delivery를 enqueue하지 않는다;
 3. 그 외에는 stable AUDIT_REQUEST_ID/AUDIT_ATTEMPT_ID를 만들고 accepted auditor
    identity/designation을 bind하고 AUDIT_REQUEST_STATE=NOT_STARTED로 설정한 뒤
    pending action을 atomic persist;
