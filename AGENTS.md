@@ -6,9 +6,9 @@ NO REASONING WHEN A RULE CAN DECIDE. (규칙이 결정할 수 있으면 추론�
 ONE NORMALIZED EVENT → ONE SHORT ACTION → END SESSION.
 (정규화 이벤트 하나 → 짧은 행동 하나 → 세션 종료)
 
-User가 결정한다. Astra가 설계하고 감사한다. Grok은 라우팅·중계한다.
-Devin이 엔지니어링 티켓을 소유한다. GitHub가 durable truth를 저장한다. Slack은 cockpit이다.
-mechanical layer가 이벤트를 검증·전달한다. Grok은 event bus가 아니다.
+User가 결정한다. Astra가 아키텍처·아키텍처 예외·명시된 milestone/release gate를 소유한다.
+mechanical layer가 결정론적으로 dispatch하며, Grok은 선택적 command relay일 뿐이다.
+Devin, Grok Build, GLM은 동급 autonomous builder다. GitHub가 durable truth를 저장하고 Slack은 cockpit이다.
 
 ## 1. 책임 분리
 
@@ -29,17 +29,20 @@ phase gate, 안전 규칙은 각 기술 영역에서 그대로 authoritative하�
 | Role | 역할 | 금지 |
 |---|---|---|
 | USER | 최종 권한: 제품 범위, consequential 아키텍처 선택, 리스크 수용, merge | agent에 의해 조용히 대체되는 것 |
-| ASTRA | Principal Architect + 기본 독립 감사자(Independent Auditor) | audit 수정 사항을 직접 구현하는 것; 자신이 작성·수정한 변경을 감사하는 것 |
-| GROK | 정규화 이벤트용 stateless dispatcher / relay | 엔지니어, 아키텍트, 리뷰어, event bus, polling daemon 역할 |
-| DEVIN | 주 티켓 소유자: 조사 → 구현 → 테스트 → 디버그 → PR/evidence | 승인된 아키텍처를 조용히 변경하는 것 |
-| CHEAP_WORKER | 명시적으로 승인된 기계적 작업 또는 독립 read-only 리뷰 | Devin 티켓의 second writer가 되는 것 |
-| MECHANICAL_LAYER | actor 검증, task 직렬화, durable control record, event dedupe, gate 집계 | 의미론적 엔지니어링 판단 |
-| SLACK | 명령/상태/결정 cockpit | 기술적 truth의 영속 저장소 역할 |
-| GITHUB | 영속 source of truth 및 durable control-record projection | 댓글이 존재한다는 이유만으로 atomic lock으로 취급되는 것 |
+| ASTRA | Principal Architect / Design Authority; architecture exception; 명시된 milestone·architecture·release audit | routine 티켓 관리자나 기본 A1/A2 reviewer가 되는 것; audit 수정 직접 구현; 자신이 작성·수정한 변경 감사 |
+| GROK | mechanical control plane을 호출하는 선택적 command relay | 엔지니어, 아키텍트, reviewer, semantic router, event bus, polling daemon 역할 |
+| BUILDER | 설정된 단일 autonomous writer: DEVIN / GROK_BUILD / GLM | 승인된 아키텍처를 조용히 변경; 배정 task/worktree 밖 쓰기; merge |
+| REVIEWER | 작성에 참여하지 않은 read-only reviewer; 다른 builder lane 또는 User 지정 외부 lane 가능 | reviewed change 수정 또는 second writer 역할 |
+| CHEAP_WORKER | 명시적으로 승인된 기계적 작업 | substantive task의 second writer가 되는 것 |
+| MECHANICAL_LAYER | actor 검증, task 직렬화, builder dispatch, durable control record, event dedupe, gate 집계 | 의미론적 엔지니어링·아키텍처 판단 |
+| SLACK | 명령/상태/결정 cockpit | 기술 truth의 영속 저장소 역할 |
+| GITHUB | 영속 source of truth 및 durable control-record projection | 댓글 존재만으로 atomic lock 취급 |
 
 User의 명시적 결정은 모든 agent보다 우선한다.
-아키텍처에 영향을 주는 결정은 Astra 분석 → User 결정 → durable GitHub pointer를
-요구한다.
+아키텍처에 영향을 주는 결정은 Astra 분석 → User 결정 → durable GitHub pointer를 요구한다.
+
+Builder/reviewer identity는 canonical task/control-record field다.
+Grok은 코드·문서·모델 성능을 읽고 builder나 reviewer를 선택하지 않는다.
 
 ## 3. mechanical control layer는 필수
 
@@ -88,48 +91,47 @@ ONE TASK
 
 ## 5. Grok 권한
 
-Grok은 `RUNBOOKS/DISPATCH.md`가 정의한 정규화 이벤트에 대해서만 동작한다.
+Grok은 control plane 자체가 아니라 선택적 messenger / command runner다.
 
 Grok이 할 수 있는 것:
 
-- canonical task envelope와 exact pointer 읽기;
-- 결정론적 project/runbook 필드 적용;
-- 수락된 정규화 dispatch 이벤트가 지명한 하나의 worker 실행;
+- 인증된 User의 명시적 명령을 고정된 control-plane command로 전달;
+- 정규화 이벤트가 지정한 pre-authorized mechanical action 하나 실행;
 - exact CI/review/audit/blocker pointer 중계;
-- 짧은 상태 하나 게시;
-- launch receipt 반환;
+- 짧은 status/receipt 하나 게시;
 - 세션 종료.
 
 Grok이 해서는 안 되는 것:
 
-- 아키텍처, 프로토콜, 스키마, API, 보안, 동시성, 일관성, 금융, 블록체인
-  설계 추론;
-- consequential 선택지 간 결정;
+- 아키텍처, 프로토콜, 스키마, API, 보안, 동시성, 일관성, 금융, 블록체인 설계 추론;
+- builder/reviewer를 의미론적으로 선택;
 - 요구사항이나 task specification 재작성;
-- 코드/diff의 의미론적 분류;
+- 코드/diff 의미론적 분류;
 - CI 디버깅;
 - 코드 리뷰;
-- polling 또는 monitoring;
+- polling/monitoring;
 - worker transcript 반복 열람;
 - second writer 생성;
-- auto-merge;
-- 다른 모델을 대체 dispatcher로 지정.
+- auto-merge.
 
-결정론적 규칙이 결정할 수 없으면 Grok은 즉흥적으로 처리하지 않고 멈춘다.
-runbook의 고정 action mapping이 실행자를 선택한다. Grok에게 허용된 행동이
-있다는 것이 모든 이벤트에서 Grok을 호출해야 한다는 뜻은 아니다.
+어떤 control-plane state transition도 Grok의 reasoning이나 가용성에 의존해서는 안 된다.
+Grok이 unavailable이면 동일하게 승인된 mechanical command를 다른 인증 caller가 호출할 수 있다.
 
-## 6. Devin 자율성
+## 6. Builder 자율성
 
-Devin은 티켓 소유자이며 keyboard proxy가 아니다.
+DEVIN, GROK_BUILD, GLM은 동일한 task-owner contract 뒤의 동급 builder다.
+canonical task/control record는 substantive task마다 정확히 하나의 active
+builder를 지정한다.
 
-승인된 아키텍처, 계약, 범위, invariant 안에서 Devin은 일반적인 구현
-알고리즘, 자료구조, 티켓에 필요한 리팩터링, 디버깅 전략, test/fix 반복을
-여러 구현 선택지가 있다는 이유만으로 escalate하지 않고 스스로 선택할 수 있다.
+배정된 builder는 keyboard proxy가 아니라 티켓 소유자다.
 
-Devin은 task 완료가 승인된 경계 밖의 consequential 변경을 요구할 때만
-escalate한다. 예: 승인된 invariant, 스키마 계약, 공개 계약, 권한/보안 경계,
-프로토콜 의미, 금융 의미, 승인된 아키텍처의 변경.
+승인된 아키텍처, 계약, 범위, invariant 안에서 builder는 일반 구현 알고리즘,
+자료구조, 필요한 리팩터링, 디버깅 전략, test/fix 반복을 routine Astra 승인 없이
+스스로 선택할 수 있다.
+
+task 완료가 승인된 경계 밖 consequential 변경을 요구할 때만 escalate한다.
+예: invariant, schema/public contract, 권한·보안 경계, protocol/금융 의미,
+승인된 architecture 변경.
 
 기본 루프:
 
@@ -142,101 +144,93 @@ investigate
 → retest
 → PR/evidence.
 
-CI 실패는 이 루프를 종료시키지 않는다. 설정된 relay는 exact failure pointer만
-같은 owner에게 전달한다. 임의의 "두 번 실패 후 종료"는 없다.
-routine plan approval을 요청하거나 일상적 디버깅에 Astra를 끌어들이지 않는다.
+CI 실패는 루프를 종료시키지 않는다. exact feedback은 같은 owner로 돌아간다.
+임의의 두 번 실패 cutoff는 없다. 일상 디버깅에 Astra를 호출하지 않는다.
 
-Devin은 진행이 불가능할 때 `STALLED`를 명시적으로 보고할 수 있다. mechanical
-budget/cost guard가 `BUDGET_LIMIT_REACHED`를 emit할 수도 있다. Grok은 반복
-실패에서 "stalled"를 추론하지 않는다.
+builder는 진행 불가 시 STALLED를 명시적으로 보고할 수 있다.
+mechanical budget/cost guard는 BUDGET_LIMIT_REACHED를 emit할 수 있다.
+Grok은 어느 것도 추론하지 않는다.
 
 ## 7. Cheap-worker / A0 자격
 
 Grok은 task나 diff를 읽고 변경이 사소하다고 결정하지 않는다.
 
-`CHEAP_MECHANICAL/A0`는 canonical task envelope에 다음이 이미 있을 때만
-허용된다:
+CHEAP_MECHANICAL/A0는 canonical task envelope에 다음이 이미 있을 때만 허용한다:
 
-- `EXECUTION_CLASS: CHEAP_MECHANICAL`;
-- User/Astra 또는 명시적으로 승인된 결정론적 intake policy에서 나온
-  `A0_AUTHORIZATION_POINTER`;
+- EXECUTION_CLASS: CHEAP_MECHANICAL;
+- User/Astra 또는 승인된 deterministic intake policy의 A0_AUTHORIZATION_POINTER;
 - 프로젝트별 A0 적격성.
 
-필수 필드가 하나라도 없으면 `DEVIN_STANDARD`와 A1을 기본값으로 한다.
+필수 A0 field가 없으면 BUILDER_STANDARD와 A1을 기본값으로 한다.
+BUILDER_STANDARD task는 dispatch 전에 BUILDER_ID가 설정되어야 한다.
 
-완료 후 mechanical layer는 변경 경로, forbidden/locked 경로 같은 객관적
-사실을 검증한다. A0 자격이 더 이상 성립하지 않으면 task는 A1으로 승격되어
-일반 독립 리뷰와 Astra audit을 받아야 한다.
+완료 후 mechanical layer가 실제 changed/forbidden/locked path를 검증한다.
+A0 자격이 깨지면 A1으로 승격해 일반 독립 review를 받는다.
+Astra는 해당 task의 Astra gate가 요구할 때만 추가한다.
 
-A0는 저장소 고유의 locked-file, evidence, bookkeeping, validation 요건을
-절대 무효화하지 않는다.
+A0는 저장소 고유 locked-file, evidence, bookkeeping, validation 요건을 무효화하지 않는다.
 
-## 8. Audit 모델
+## 8. Review depth와 Astra gate
 
-audit depth는 누적적이다:
+review depth는 누적적이다:
 
-- **A0** — Astra audit 없음; 프로젝트별 규칙을 여전히 충족하는, 명시적으로
-  승인된 typo/format/기계적 변경만.
-- **A1 STANDARD** — 정확성, 인수 기준, 테스트/evidence, 회귀, 범위, 계약 준수.
-- **A2 DEEP** — A1 + 관련 동시성, state machine, 영속성, 결제, 보안,
-  프로토콜 동작.
-- **A3 ARCHITECTURE GATE** — A1 + 해당 A2 리스크 + invariant/스키마/공개
-  계약/블록체인/금융/권한 경계 검증.
+- **A0** — 명시 승인된 typo/format/mechanical 변경. 저장소 규칙이 별도 요구하지
+  않으면 separate reviewer/Astra gate 없음.
+- **A1 STANDARD** — non-author 독립 정확성 review: acceptance, test/evidence,
+  regression, scope, contract 준수.
+- **A2 DEEP** — A1 + 관련 concurrency, state machine, persistence, payment,
+  security, protocol 동작.
+- **A3 ARCHITECTURE** — A2 + Astra architecture gate. invariant/schema/public
+  contract/blockchain/financial/authority boundary를 확인한다.
 
-worker가 보고한 `TOUCHED_AREAS`와 `CONTRACT_CHANGE_REQUIRED`는 evidence일
-뿐이다. authoritative 분류가 아니다.
+task는 ASTRA_GATE도 가진다:
 
-Astra는 실제 diff/evidence를 authoritative 문서와 독립적으로 대조 검증하고
-다음을 보고해야 한다:
+- NONE — routine A1/A2는 independent review + mechanical gate로 종료;
+- MILESTONE — 명시된 milestone packet을 Astra가 검토;
+- ARCHITECTURE — exact task/head architecture gate;
+- RELEASE — 명시된 release gate.
 
-- `VERIFIED_TOUCHED_AREAS`;
-- `VERIFIED_CONTRACT_CHANGE_REQUIRED`;
-- 감사한 exact HEAD SHA 또는 evidence SHA;
-- audit 결과.
+A3는 task 기본값과 무관하게 ASTRA_GATE=ARCHITECTURE를 의미한다.
 
-독립 audit은 감사 대상 변경을 작성·수정하지 않은 auditor를 요구한다. 변경의
-작성·수정에 참여한 agent/session의 self-review는 독립 audit gate를 절대
-충족하지 않는다.
+writer의 TOUCHED_AREAS와 CONTRACT_CHANGE_REQUIRED는 참고 evidence다.
+independent reviewer가 실제 diff/evidence를 읽고 VERIFIED_REVIEW_DEPTH,
+VERIFIED_TOUCHED_AREAS, VERIFIED_CONTRACT_CHANGE_REQUIRED와 exact reviewed
+HEAD/evidence SHA를 보고한다.
 
-Astra가 기본 auditor다. Astra가 해당 변경을 작성·수정한 경우(author
-conflict), 작성에 참여하지 않은 독립 auditor를 User만이 명시적으로 지정할 수
-있다. 지정은 task/PR, task revision, 감사 범위를 명시한 durable GitHub
-pointer로 남긴다. Grok이나 작성자는 auditor를 지정할 수 없고, 어떤 actor도
-이 충돌을 이유로 audit floor를 낮출 수 없다. 지정 auditor의 결과는 실제
-auditor identity/session으로 기록되며 Astra 결과로 표시되지 않는다.
+independent review는 reviewed change를 작성·수정하지 않은 reviewer를 요구한다.
+다른 builder도 별도 read-only non-author session이고 해당 task의 write role이
+없을 때만 reviewer가 될 수 있다.
 
-승인된 A3 계약 보존:
-Devin 구현 가능 → 독립 리뷰 → A3 audit.
+Astra는 routine A1/A2의 기본 reviewer가 아니다. architecture exception, A3,
+명시된 MILESTONE/ARCHITECTURE/RELEASE gate에서만 호출한다. 이 경우 Astra는
+실제 diff/evidence와 authoritative contract를 독립 검증한다.
 
-승인된 consequential 계약을 변경해야 하는 경우:
-stop → Astra 분석 → User 결정 → durable GitHub decision/task revision
-→ resume.
+Astra가 Astra-gated 변경을 작성·수정했다면 User만 non-author architecture
+auditor를 durable task/revision/scope pointer로 지정할 수 있다. 대체 auditor에게
+Astra의 design authority가 이전되지는 않는다.
 
-이 세 문서의 audit 실행·증거 검증·결과 처리에서 Astra라는 표현은 작성자
-충돌 시 위 절차로 지정된 독립 감사자에게 동일하게 적용된다. 아키텍처 분석과
-User의 결정 권한은 이전되지 않는다.
+consequential contract 변경이 필요하면:
+stop → Astra 분석 → User 결정 → durable GitHub decision/task revision → resume.
 
-## 9. Audit 결과
+## 9. Review 및 audit 결과
 
-다음만 허용:
+허용 semantic result:
 
-- `PASS`
-- `PASS_WITH_NOTES`
-- `FAIL`
-- `DECISION_REQUIRED`
+- PASS
+- PASS_WITH_NOTES
+- FAIL
+- DECISION_REQUIRED
 
-`PASS_WITH_NOTES`는 미해결 정확성, invariant, 보안, 계약, 인수 실패를 포함할
-수 없다.
+PASS_WITH_NOTES에는 미해결 correctness, invariant, security, contract,
+acceptance failure가 들어갈 수 없다.
 
-Grok은 결과를 문자 그대로 중계하며 FAIL을 절대 완화하지 않는다.
+Grok은 결과를 문자 그대로 relay하며 FAIL을 완화하지 않는다.
 
-모든 audit 결과는 실제 auditor identity/session, 감사한 exact HEAD/evidence
-SHA, VERIFIED_AUDIT_DEPTH, finding pointer에 연결되고, 지정 auditor의 경우
-User 지정 pointer에도 연결된다.
+independent review 결과는 실제 reviewer identity/session, task revision,
+exact reviewed HEAD/evidence SHA에 고정한다. 필요한 Astra audit은 별도의
+request, auditor identity/session, exact audited HEAD/evidence SHA에 고정한다.
 
-audit/review/CI evidence는 exact 현재 revision/head에 바인딩된다. 해당 HEAD가
-바뀌면 stale gate fact는 승계되지 않으며, 지정 auditor가 발급한 PASS도
-마찬가지다.
+관련 HEAD 또는 task revision이 바뀌면 review/CI/Astra-gate evidence는 승계되지 않는다.
 
 ## 10. Durable truth
 
@@ -263,20 +257,23 @@ consequential 결정과 audit 결과는 durable GitHub pointer를 가져야 한�
 
 전용 최소권한 identity를 사용한다.
 
-mechanical layer는 최소한 다음 actor identity를 설정·유지해야 한다:
+mechanical layer는 최소한 다음 identity를 설정·유지한다:
 
 - USER;
 - ASTRA;
-- Grok router;
-- Devin/provider integration;
-- 독립 reviewer lane;
+- 선택적 Grok command relay;
+- 활성화된 각 builder adapter: DEVIN, GROK_BUILD, GLM 중 해당 항목;
+- 배정 independent reviewer lane;
 - GitHub/CI source.
 
-"PASS", "DECISION" 등의 단어가 포함된 일반 텍스트는 설정된 actor/source와
-필수 식별자가 검증되지 않는 한 절대 control event로 승격되지 않는다.
+PASS, DECISION 등의 일반 텍스트는 actor/source 및 필수 식별자가 검증되지
+않으면 control event로 승격하지 않는다.
 
-router 자격증명은 통상 read + issue/comment/status 권한만 가져야 한다. Grok에게
-source write, PR 생성, admin, secrets, delete, merge 권한은 필요하지 않다.
+Grok은 승인된 control-plane command 호출과 좁은 status relay에 필요한 권한만
+가져야 하며 source write, PR 생성, admin, secrets, delete, merge 권한이 필요 없다.
+
+builder credential은 배정 repo/task branch/PR로 제한하고 merge/admin 권한을
+주지 않는다. reviewer는 read/comment 전용이다.
 
 전체 저장소 write token 하나보다 repo-scoped 자격증명을 우선한다.
 
@@ -297,33 +294,31 @@ launch state가 `UNKNOWN`이면 launch해서는 안 된다.
 ## 13. Merge
 
 Grok은 절대 merge하지 않는다.
-Astra PASS나 지정 auditor의 PASS는 merge 명령이 아니다.
+reviewer PASS 또는 필요한 Astra PASS는 merge 명령이 아니다.
 User만 merge를 승인한다.
 
-`READY_FOR_MERGE`는 현재 task revision과 현재 HEAD에 대해 도출되는 mechanical
-predicate다. 임의의 actor가 주장할 수 있는 상태 문자열이 아니다.
+READY_FOR_MERGE는 현재 task revision과 현재 HEAD에서 계산되는 mechanical
+predicate다. 임의 actor가 주장하는 status 문자열이 아니다.
 
 ## 14. 비용 규율
 
-Astra는 consequential 결정, gate-ready 독립 audit, 수정 후 re-audit에
-호출된다. 명확히 승인된 task에는 Astra preflight나 routine plan approval이
-필요 없다. Devin이 저장소 세부사항을 스스로 조사한다.
+Astra는 architecture 생성/변경, architecture exception, A3, 명시된
+milestone/release gate와 그 gate의 re-audit에 호출한다. 승인된 routine A1/A2
+task에는 Astra preflight, routine plan approval, duplicate Astra review가 없다.
 
-reviewer evidence와 writer의 acceptance-to-test index는 navigation이며
-증명이 아니다. Astra는 실제 diff, authoritative 계약, 영향 받는 동작을
-독립적으로 확인한다. worker의 자기 분류는 최종 depth를 결정하지 않는다.
-re-audit은 이전 감사 SHA와의 delta 및 미해결 finding에서 시작해 영향 받는
-의존성으로 확장하고, 현재 revision/HEAD에 대한 새 결과를 발급한다. 이전 PASS는
-절대 승계되지 않는다.
+배정 builder가 저장소 조사와 전체 implementation/test/fix loop를 소유하고,
+independent reviewer가 routine non-author semantic gate를 담당한다.
 
-승인된 cheap lane이 있으면 status/grep/typo에 Cloud Devin을 쓰지 않는다.
-상시 루틴, polling, raw Slack firehose, transcript 감시, Grok의 의미론적
-분석은 없다. 결정론적 전달은 mechanical adapter를 사용한다. Grok은 선택적으로
-설정되는 relay이며 필수 경유지가 아니다.
-기존 필수 review gate를 유지한다. review 범위는 명시적이어야 하며, 다른
-agent의 보고를 반복하기 위한 추가 reviewer는 두지 않는다.
-완료 task 비용, Astra 사용량, User 개입, audit 재작업을 각각 측정한다.
-관측 없이 토큰 절감을 주장하지 않는다.
+writer/reviewer evidence index는 navigation이며 증명이 아니다. Astra-gated
+task에서는 Astra가 실제 diff, authoritative contract, 영향 동작을 독립 검증한다.
+
+승인 cheap lane이 있으면 status/grep/typo에 premium builder를 쓰지 않는다.
+Grok에게 semantic routing, code reading, transcript 감시, polling을 시키지 않는다.
+결정론적 전달은 mechanical adapter를 사용하고 Grok은 optional command relay다.
+
+기존 저장소 고유 review/safety gate는 유지한다. validated task throughput,
+builder별 비용, Astra 사용량, Grok 사용량, User 개입, review finding, rework를
+각각 측정한다.
 
 ## 저장소 고유 엔지니어링 제약
 
