@@ -1,4 +1,4 @@
-# TASK ENVELOPE v3
+# TASK ENVELOPE v4
 
 이 envelope는 새 runtime 파일이 아니라 canonical GitHub task에 저장한다.
 기존 specification을 링크한다. 재작성하거나 중복하지 않는다.
@@ -20,21 +20,28 @@ AUTHORITATIVE_DOC_POINTERS:
 모든 section을 제공할 수 있다. 이미 승인되고 범위가 명확한 task에는 별도의
 Astra 승인이 필요하지 않다.
 누락된 consequential 요구사항은 명확화가 필요하다. 저장소 조사와 일반 구현
-선택은 Devin의 몫이다.
+선택은 배정 builder의 몫이다.
 
 ## RUNBOOKS/DISPATCH.md의 고정 기본값
 
-EXECUTION_CLASS: DEVIN_STANDARD
+EXECUTION_CLASS: BUILDER_STANDARD
+BUILDER_ID: CONFIG_REQUIRED
 DELIVERABLE_MODE: PR
 AUDIT_FLOOR: A1
+ASTRA_GATE: NONE
 REVIEW_POLICY: REQUIRED_NON_A0
 REVIEWER_LANE_ID: CONFIG_REQUIRED
 
-REPO/PROJECT는 project map과 일치해야 한다. verification/post-merge 정책은 그
-map과 저장소 규칙에서 온다. override에는 durable하게 승인된 pointer가 필요하다.
-Grok은 task를 분류하거나 누락 요구사항을 만들어내지 않는다.
-dispatch 전에 필수 reviewer identity를 확정한다. lane이 사용 불가하다는 이유로
-review를 조용히 면제할 수 없다.
+BUILDER_STANDARD의 BUILDER_ID는 dispatch 전에 DEVIN, GROK_BUILD, GLM 등 configured
+builder adapter 하나로 resolve되어야 한다. Grok은 task를 읽고 builder/reviewer를
+선택하지 않는다.
+
+REPO/PROJECT는 project map과 일치해야 한다. override에는 durable authorized
+pointer가 필요하다. unavailable builder/reviewer lane은 ownership/review를
+조용히 waive하거나 transfer할 수 없다.
+
+A3는 항상 ASTRA_GATE=ARCHITECTURE를 의미한다.
+그 외 ASTRA_GATE: NONE | MILESTONE | ARCHITECTURE | RELEASE.
 
 ## 조건부 pointer
 
@@ -63,18 +70,23 @@ A0는 runbook의 최종 자격 검사를 요구한다.
 CONTROL_RECORD_POINTER:
 CANONICAL_SLACK_THREAD:
 
-이 값은 실행 전에 intake/User가 provisioning한다. Grok이 만들어내지 않는다.
-Slack을 사용하면 task와 thread는 서로 링크한다. 변경 가능한
-claim/session/HEAD/gate 상태는 task spec이 아니라 control record에 속한다.
+실행 전에 intake/User가 provisioning한다. Grok이 만들어내지 않는다.
+mutable claim/session/HEAD/gate state는 task spec이 아니라 control record에 속한다.
+
+builder/reviewer reassignment는 durable control action이며 second writer를 만들거나
+unresolved SUBMITTING/UNKNOWN launch를 우회해서는 안 된다.
 
 ## Owner 지시
 
-고정된 task와 저장소 규칙을 따른다. routine plan approval 없이 조사, 구현,
-디버그, test/fix/retest를 수행하고 PR을 제출한다.
-보존된 승인 A3 계약은 구현 후 A3 audit을 허용한다.
-필수 consequential 계약 변경은 그 변경을 구현하기 전에 exact 질문과 evidence를
-포함한 DECISION_REQUIRED를 요구한다.
-CI/review/audit 피드백은 같은 active owner로 돌아간다.
+고정 task와 저장소 규칙을 따른다. 배정 builder로서 routine plan approval 없이
+조사, 구현, 디버그, test/fix/retest를 수행하고 PR을 제출한다.
+
+승인된 architecture, contract, authority/security boundary, consequential semantics를
+조용히 변경하지 않는다. 그런 변경이 필요하면 해당 변경을 중단하고
+DECISION_REQUIRED / architecture-exception evidence를 제출한다.
+
+CI/review/Astra-gate feedback은 prior attempt가 durable하게 fencing된 authorized
+reassignment가 없는 한 같은 active owner로 돌아간다.
 
 ## 완료 evidence index
 
@@ -82,11 +94,12 @@ CI/review/audit 피드백은 같은 active owner로 돌아간다.
 - 전체 변경 경로 및 인수 기준 -> test/CI evidence pointer;
 - 실제 명령/결과 및 저장소가 요구하는 evidence;
 - TOUCHED_AREAS 및 CONTRACT_CHANGE_REQUIRED: NO | YES (참고용);
-- 가능한 경우 독립 review pointer;
+- BUILDER_ID 및 가능한 경우 독립 review pointer;
+- review 시 VERIFIED_REVIEW_DEPTH / touched area / contract-change result;
+- ASTRA_GATE가 요구할 때만 Astra-gate pointer/result;
 - 미검증 동작, 잔여 리스크, 해당 시 BLOCKED/STALLED.
 
-Astra는 touched area와 계약 변경을 독립적으로 검증한다. 이 index는 저장소
-evidence 요건이나 독립 검토를 대체하지 않는다.
+routine A1/A2에서는 independent reviewer가 touched area와 contract-change를 검증한다. applicable Astra gate에서는 Astra가 이를 독립적으로 재검증한다. 이 index는 저장소 evidence 요건이나 독립 검토를 대체하지 않는다.
 transcript, 반복 상태, 변경 가능한 실행 상태는 여기에 두지 않는다.
 
 필수 필드 누락 시: BLOCKED / INCOMPLETE_TASK_ENVELOPE, 필드 이름만 기재.
