@@ -22,8 +22,10 @@ OPERATING_MODE: `MANUAL_ONLY`
 AUTOMATED_ACTION_ADAPTER: `MECHANICAL`
 GROK_EVENT_OVERRIDES: `NONE`
 
-DEFAULT_EXECUTION_CLASS: `DEVIN_STANDARD`
+DEFAULT_EXECUTION_CLASS: `BUILDER_STANDARD`
+DEFAULT_BUILDER_ID: `CONFIG_REQUIRED`
 DEFAULT_AUDIT_FLOOR: `A1`
+DEFAULT_ASTRA_GATE: `NONE`
 REVIEW_POLICY: `REQUIRED_NON_A0`
 REVIEWER_LANE_ID: `CONFIG_REQUIRED`
 
@@ -100,7 +102,8 @@ GitHub task와 task revision을 생성하거나 식별해야 한다.
 
 ## 4. 정규화 이벤트 계약
 
-정규화 이벤트만 Grok을 호출할 수 있다.
+외부 action adapter는 정규화 이벤트만 호출할 수 있다. Grok은 event bus가 아니며
+결정론적 workflow transition의 필수 경유지가 아니다.
 
 모든 정규화 이벤트는 다음을 포함한다:
 
@@ -118,10 +121,12 @@ PR_POINTER:
 HEAD_SHA:
 RUN_OR_RESULT_ID:
 
-해당하지 않는 필드는 명시적 `N/A`로 표기한다. 조용히 생략하지 않는다.
+해당하지 않는 field는 N/A로 명시한다.
+code result/gate event는 HEAD_SHA를, decision event는 TASK_REVISION과 durable
+decision pointer를 포함한다.
 
-코드를 참조하는 result/gate 이벤트는 HEAD_SHA를 반드시 포함한다.
-decision 이벤트는 TASK_REVISION과 durable decision pointer를 반드시 포함한다.
+Grok은 인증된 명시적 User command 또는 normalized one-shot relay만 받을 수 있다.
+builder/reviewer 선택은 canonical config에서 오며 Grok의 의미론적 판단이 아니다.
 
 ## 5. TASK_KEY와 canonical control record
 
@@ -145,7 +150,7 @@ control record 최소 사실(fact):
 - LAUNCH_REQUEST_ID
 - LAUNCH_STATE
 - ATTEMPT_ID
-- OWNER_WORKER
+- OWNER_WORKER / BUILDER_ID
 - OWNER_SESSION_ID
 - PR_POINTER
 - CURRENT_HEAD_SHA
@@ -208,59 +213,52 @@ recovery 이벤트로 재개할 수 있다. 이는 외부 실행의 exactly-once
 
 ## 8. 수동 dispatch 및 장애
 
-활성화 gate를 통과하기 전까지 OPERATING_MODE=MANUAL_ONLY다. 모든 자동
-dispatcher는 비활성이다. 이 모드에서 User가 유일한 launch executor이자
-control-record writer다. 댓글만으로는 동시성 lock이 아니다.
+activation gate 전에는 OPERATING_MODE=MANUAL_ONLY다. 자동 dispatcher는 모두
+비활성이고 User가 유일한 launch executor/control-record writer다.
 
-User -> Devin 직접 dispatch 전:
-1. canonical task/revision과 기존 owner/request를 식별한다;
-2. active owner가 있으면 재사용한다. 미해결 SUBMITTING/UNKNOWN request가 하나라도
-   있으면 차단한다;
-3. CLAIM_ID/LAUNCH_REQUEST_ID를 durable하게 예약하고 launch 전에 SUBMITTING을
-   기록한다;
-4. task pointer/revision만 전송하고 결과 session ID를 기록한다.
-GitHub 예약을 기록할 수 없으면 launch하지 않는다. 응답 손실은 두 번째 세션이
-아니라 reconciliation을 요구한다. 수동 claim/전송이 미해결인 동안 automation을
-활성화하지 않는다.
+User → 지정 builder 직접 dispatch 전:
+1. canonical task/revision, configured BUILDER_ID, 기존 owner/request 식별;
+2. active owner 재사용; unresolved SUBMITTING/UNKNOWN이 있으면 차단;
+3. CLAIM_ID/LAUNCH_REQUEST_ID를 durable하게 예약하고 launch 전 SUBMITTING 기록;
+4. task pointer/revision만 configured builder adapter에 전달하고 provider/session ID 기록.
 
-자동 모드에서 수동 dispatch는 직렬화된 MANUAL_CLAIM_ALLOWED action과 같은
-launch 프로토콜을 요구한다. 장애는 소유권을 우회하지 않는다.
-caller가 Grok 쿼터 실패를 직접 기록·projection한다. 대체 AI dispatcher는
-지정되지 않는다. 복구에는 명시적 이벤트/User 행동이 필요하다.
+GitHub 예약을 기록할 수 없으면 launch하지 않는다. 응답 손실은 second session이
+아니라 reconciliation을 요구한다.
+
+자동 모드의 manual dispatch도 serialized MANUAL_CLAIM_ALLOWED와 같은 launch
+protocol을 사용한다. 장애는 ownership을 우회하지 않는다.
+
+Grok 장애는 workflow 장애가 아니다. 동일 fixed mechanical command를 다른 인증
+caller가 호출할 수 있다. 배정 builder provider 장애는 blocker로 기록하며 다른
+builder를 조용히 선택하지 않는다. reassignment는 prior attempt fencing/reconciliation
+후 durable authorized control update를 요구한다.
 
 ## 9. Task-envelope 사용
 
-Grok은 canonical task record에서 `TASKS/TEMPLATE.md` 필드를 읽는다.
+mechanical layer가 canonical task record의 TASKS/TEMPLATE.md field를 읽는다.
+Grok은 pointer를 relay할 수 있지만 task를 의미론적으로 해석하지 않는다.
 
-Grok은 다음을 하지 않는다:
+dispatch path의 어떤 actor도 두 번째 task spec을 만들거나, 목표를 새 authority로
+paraphrase하거나, 누락 contract/invariant를 추론하거나, execution class,
+builder, reviewer, audit depth, Astra gate를 의미론적으로 선택하지 않는다.
 
-- 두 번째 task specification 작성;
-- 목표의 paraphrase;
-- 누락된 계약/invariant 추론;
-- 의미론적 읽기로 execution class 선택;
-- 의미론적 읽기로 audit depth 선택.
-
-canonical task에 EXECUTION_CLASS가 없으면:
-`DEVIN_STANDARD`를 사용한다.
-
-A0/CHEAP는 명시적 A0 승인을 요구한다.
+EXECUTION_CLASS가 없으면 BUILDER_STANDARD를 사용한다.
+BUILDER_STANDARD인데 BUILDER_ID가 없으면 BLOCKED다.
+A0/CHEAP는 명시 A0 승인을 요구한다.
 
 ## 10. Writer 자율성과 피드백
 
-이미 승인된 task에는 routine Astra preflight, plan approval, 진행 리뷰가
-필요하지 않다. Devin은 승인된 계약 안에서 조사하고 구현을 선택한다. CI
-실패에 임의의 2회 시도 제한은 없다.
+이미 승인된 task에는 routine Astra preflight, plan approval, progress review가
+필요 없다. 배정 builder가 승인 contract 안에서 조사하고 일반 구현 세부사항을
+선택한다. CI failure에 임의의 두 번 시도 cutoff는 없다.
 
-일반 writer 피드백은 항상 같은 OWNER_SESSION_ID로 돌아간다.
+일반 writer feedback은 항상 같은 OWNER_SESSION_ID로 돌아간다.
+CI/review/Astra-gate finding은 새 writer를 만들지 않는다.
+배정 builder가 승인 경계 안의 일반 구현/디버그/test 결정을 소유한다.
 
-CI/review/audit finding은 새 writer를 만들지 않는다.
-
-Devin은 승인된 경계 안의 일반 구현/디버그/테스트 결정을 소유한다.
-
-`STALLED`는 Devin/provider가 명시적으로 보고해야 한다.
-`BUDGET_LIMIT_REACHED`는 설정된 mechanical cost guard만 emit할 수 있다.
-
-Grok은 두 조건 중 어느 것도 추론하지 않는다.
+STALLED는 builder/provider가 명시적으로 보고해야 한다.
+BUDGET_LIMIT_REACHED는 configured mechanical cost guard만 emit한다.
+Grok은 둘 다 추론하지 않는다.
 
 ## 11. HEAD 및 task-revision guard
 
@@ -321,152 +319,81 @@ CI/verification 실패:
 
 ## 13. 독립 review gate
 
-reviewer 전송은 writer launch와 같은 NOT_STARTED -> SUBMITTING ->
-CONFIRMED/UNKNOWN 프로토콜을 사용하며, REVIEW_REQUEST_ID/REVIEW_ATTEMPT_ID를
-키로 한다. pending action을 request와 함께 persist한다. crash는 재전송
-허가가 아니다.
+review launch는 writer와 같은 NOT_STARTED → SUBMITTING → CONFIRMED/UNKNOWN
+idempotent protocol을 사용하고 REVIEW_REQUEST_ID/REVIEW_ATTEMPT_ID에 고정한다.
 
-review dispatch 자체도 idempotent하고 직렬화된다.
+현재 task revision + HEAD/evidence SHA에 이미 matching result/request가 있으면
+재사용한다. 없으면 stable IDs를 만들고 NOT_STARTED를 persist한 뒤 정확히 하나의
+REVIEW_DISPATCH_ALLOWED를 emit한다.
 
-TASK_KEY 직렬화 아래에서, 현재 task revision + HEAD/evidence SHA에 대한
-review request를 emit하기 전에:
+configured adapter는 REVIEWER_LANE_ID를 read-only로 launch한다. reviewer는
+reviewed change를 작성·수정하지 않았어야 한다. peer builder도 별도 non-author
+read-only session이고 해당 task write role이 없을 때만 가능하다.
 
-1. 일치하는 review PASS/FAIL이 이미 있으면 다른 reviewer를 launch하지 않는다;
-2. 일치하는 REVIEW_REQUEST_ID/session이 이미 있으면 재사용한다;
-3. 그 외에는 안정적인 REVIEW_REQUEST_ID와 REVIEW_ATTEMPT_ID를 생성한다;
-4. REVIEW_LAUNCH_STATE=`NOT_STARTED`로 설정한다;
-5. control record를 persist한다;
-6. 정확히 하나의 `REVIEW_DISPATCH_ALLOWED`를 emit한다.
+ambiguous launch는 REVIEW_LAUNCH_STATE=UNKNOWN이며 자동 relaunch를 금지한다.
 
-설정된 adapter는 REVIEW_REQUEST_ID를 키로 하는 review-launch receipt를
-반환한다.
-
-확인된 reviewer launch는 reviewer session과 REVIEW_LAUNCH_STATE=`CONFIRMED`를
-기록한다.
-
-reviewer launch가 성공했을 수 있으나 결과가 모호하면:
-REVIEW_LAUNCH_STATE=`UNKNOWN`.
-다른 reviewer를 자동 launch하지 않는다. 기존 request를 reconcile하거나 User
-해결을 요구한다.
-
-이 컨트롤 플레인의 모든 비-A0 실질 작업은 Astra audit 전에 독립 read-only
-review를 요구한다.
-
-verification gate 성공 후, current-head review가 없으면 mechanical layer가
-`REVIEW_DISPATCH_ALLOWED`를 emit한다.
-
-설정된 adapter는 설정된 REVIEWER_LANE_ID를 read-only 모드로 launch하고
-종료한다.
-
-reviewer lane이 사용 불가하면:
-
-derived state = `BLOCKED_REVIEW_LANE`
-
-review를 조용히 건너뛰지 않는다.
-User는 다른 독립 read-only reviewer를 설정/지정할 수 있다. reviewer는 writer가
-되어서는 안 된다.
-
-review 결과는 다음이 모두 충족될 때만 수락된다:
-
-- source actor가 설정된 reviewer;
-- TASK_REVISION 일치;
-- HEAD_SHA/evidence SHA가 현재 revision과 일치;
-- reviewer session/attempt ID가 dispatch된 review와 일치.
-
-Review FAIL:
-exact finding을 같은 writer에게 중계한다.
-새 HEAD는 이전 review를 무효화한다.
-
-Review PASS:
-mechanical layer가 current-head pass를 기록하고 `AUDIT_REQUIRED`를 emit한다.
-
-## 14. Astra audit gate
-
-audit-request 전달도 task revision + 현재 HEAD/evidence SHA로 직렬화된다.
-
-`AUDIT_REQUIRED`를 emit하기 전에 mechanical layer는:
-
-1. 그 exact revision/SHA에 대한 기존 수락 audit 결과만 재사용한다;
-2. 일치하는 AUDIT_REQUEST_ID가 이미 REQUESTED/DELIVERED/UNKNOWN이면 두 번째
-   request를 만들지 않는다;
-3. 그 외에는 안정적인 AUDIT_REQUEST_ID를 생성하고
-   AUDIT_REQUEST_STATE=`REQUESTED`로 설정하고, pending delivery를 원자적으로
-   persist한 뒤 request 하나를 emit한다. 전송 전에 SUBMITTING을 persist한다.
-   crash나 응답 손실은 reconcile될 때까지 재전송을 차단한다. SUBMITTING을
-   dedupe에 포함한다.
-
-audit-request 전달 결과가 모호하면:
-AUDIT_REQUEST_STATE=`UNKNOWN`.
-무턱대고 다시 게시하지 않는다. 기존 request를 reconcile하거나 User 행동을
+비-A0 substantive work는 더 엄격한 저장소 규칙이 없는 한 독립 read-only review를
 요구한다.
 
-설정된 adapter는 정규화된 `AUDIT_REQUIRED`에만 audit packet을 `#ai-audit`에
-보낸다.
+exact revision/head에 대해 reviewer는 다음을 반환한다:
+REVIEW_RESULT: PASS | PASS_WITH_NOTES | FAIL | DECISION_REQUIRED
+REVIEWER_IDENTITY_OR_SESSION:
+REVIEWED_TASK_REVISION:
+REVIEWED_HEAD_OR_EVIDENCE_SHA:
+VERIFIED_REVIEW_DEPTH:
+VERIFIED_TOUCHED_AREAS:
+VERIFIED_CONTRACT_CHANGE_REQUIRED:
+FINDING_POINTERS:
 
-Packet 필드:
+새 HEAD는 이전 review를 무효화한다.
+FAIL은 exact finding을 같은 writer에게 돌려보낸다.
+DECISION_REQUIRED 또는 VERIFIED_CONTRACT_CHANGE_REQUIRED=YES면 merge를 막고
+Astra/decision path로 진입한다.
 
-AUDIT_REQUEST_ID:
-Project:
-Task:
-Task revision:
-Repository:
-PR/evidence pointer:
-Base SHA:
-Current HEAD/evidence SHA:
-Objective/task-spec pointers:
-Authoritative document pointers:
-Verification facts:
-Independent review facts:
-Worker-reported touched areas:
-Worker-reported contract-change flag:
-Audit floor:
+PASS/PASS_WITH_NOTES이고 consequential contract change가 없으면:
+- Astra gate가 필요한 task/head는 AUDIT_REQUIRED emit;
+- 아니면 Astra 호출 없이 READY_FOR_MERGE predicate를 다시 계산한다.
 
-Astra는 실제 diff/evidence와 authoritative 문서를 독립적으로 읽는다.
+## 14. Astra gate
 
-수락 auditor(기본은 Astra)는 다음을 반환해야 한다:
+Astra는 routine A1/A2의 기본 reviewer가 아니다.
 
+이 section은 다음 중 하나일 때만 적용한다:
+- AUDIT_FLOOR=A3;
+- ASTRA_GATE=MILESTONE | ARCHITECTURE | RELEASE;
+- architecture exception/consequential contract change가 Astra 분석을 요구;
+- 저장소 authoritative rule이 Astra를 명시적으로 요구.
+
+A3는 ASTRA_GATE=ARCHITECTURE를 의미한다.
+
+Astra request delivery는 적용 task/milestone identity로 직렬화한다. matching
+accepted/outstanding request는 재사용하고, 없으면 stable AUDIT_REQUEST_ID 하나를
+persist하여 AUDIT_REQUIRED 하나만 emit한다. ambiguous delivery는 UNKNOWN으로
+남기고 reconcile 전 재전송하지 않는다.
+
+packet은 exact revision, repo, PR/evidence pointer, 해당 시 base/head SHA,
+authoritative docs, verification/review facts, touched area/contract-change,
+audit floor, ASTRA_GATE를 포함한다.
+
+Astra는 실제 relevant diff/evidence와 authoritative contract를 독립적으로 읽고:
 AUDIT_REQUEST_ID:
 AUDIT_RESULT: PASS | PASS_WITH_NOTES | FAIL | DECISION_REQUIRED
 AUDITOR_IDENTITY_OR_SESSION:
-AUDITOR_DESIGNATION_POINTER: (auditor가 Astra가 아닐 때 필수)
-AUDITED_TASK_REVISION:
+AUDITOR_DESIGNATION_POINTER: (Astra가 아닐 때 필수)
+AUDITED_TASK_REVISION_OR_MILESTONE:
 AUDITED_HEAD_OR_EVIDENCE_SHA:
 VERIFIED_AUDIT_DEPTH:
 VERIFIED_TOUCHED_AREAS:
 VERIFIED_CONTRACT_CHANGE_REQUIRED:
 FINDING_POINTERS:
+를 반환한다.
 
-mechanical layer는 수락 auditor로부터의 audit 결과만, 그리고 현재 task
-revision과 현재 head/evidence SHA에 대한 것만 수락한다.
+Astra가 audited change를 작성·수정했다면 User가 durable scope pointer로 non-author
+architecture auditor를 지정한다. 대체 auditor에게 Astra design authority는 이전되지 않는다.
 
-수락 auditor는:
-
-- 설정된 ASTRA actor. 단, Astra가 그 변경을 작성·수정한 경우(author
-  conflict)는 제외; 또는
-- author conflict 하에서, 설정된 User decision 이벤트가 지정한 독립 auditor.
-  그 durable GitHub 지정 pointer는 이 task/PR, TASK_REVISION, 감사 범위를
-  명시해야 하며, 지정 auditor는 작성에 참여하지 않았어야 한다.
-
-변경에 참여한 writer/session의 self-review는 거절된다.
-Grok이나 작성자는 auditor를 지정하거나 audit floor를 낮출 수 없다.
-지정 auditor의 결과는 AUDITOR_IDENTITY_OR_SESSION과
-AUDITOR_DESIGNATION_POINTER와 함께 기록되며, Astra 결과로 기록되지 않는다.
-HEAD 변경은 누가 발급했든 이전 PASS를 무효화한다.
-
-AUDIT_RESULT=FAIL:
-finding을 변경 없이 같은 writer에게 중계한다.
-
-AUDIT_RESULT=DECISION_REQUIRED:
-blocker를 기록하고 정규화 decision request를 emit한다.
-
-audit 결과는 미결 AUDIT_REQUEST_ID와도 일치해야 한다.
-re-audit은 이전 감사 SHA와의 delta 및 미해결 finding에서 시작해, 영향 받는
-의존성/계약을 확인한 뒤 현재 SHA에 대한 새 결과를 발급한다.
-writer의 evidence index는 navigation이며 절대 독립 증명이 아니다.
-
-감사 요청은 수락 auditor identity와 해당 User 지정 pointer를 고정한다.
-결과의 identity/session은 인증된 발신자 및 요청에 고정된 auditor와 일치해야
-한다. 지정 철회·변경 시 미결 요청과 해당 지정의 gate 결과를 무효화한다.
+관련 HEAD/revision 변경은 이전 result를 무효화한다. FAIL은 exact finding을 전달하고
+DECISION_REQUIRED는 User decision path로 간다.
+architecture decision은 Astra 분석 → User 결정 → durable pointer다.
 
 ## 15. Consequential decision gate
 
@@ -550,37 +477,35 @@ DONE_NO_CHANGE
 
 ## 18. READY_FOR_MERGE predicate
 
-PR deliverable의 경우 READY_FOR_MERGE는 다음이 모두 참일 때만 참이다:
+PR deliverable의 READY_FOR_MERGE는 다음이 모두 참일 때만 참이다:
 
-- PR이 존재하고 open 상태;
-- CURRENT_HEAD_SHA가 PR 현재 head와 동일;
-- task revision이 현재 것;
-- 미해결 blocker/decision 없음;
-- CURRENT_HEAD_SHA에 대해 verification gate 충족;
-- 필수 독립 review PASS가 CURRENT_HEAD_SHA와 일치;
-- 수락 auditor(14절; Astra, 또는 author conflict 시 User가 지정한 독립
-  auditor)의 PASS 또는 PASS_WITH_NOTES가 현재 task revision과 HEAD에 일치;
-- VERIFIED_AUDIT_DEPTH가 프로젝트/audit floor와 실제 검증된 touched area를
-  충족;
-- VERIFIED_CONTRACT_CHANGE_REQUIRED가 NO이거나, 필요한 User 결정이 durable하게
-  기록되고 현재 task revision에 반영됨;
+- PR open;
+- CURRENT_HEAD_SHA가 PR current head와 일치;
+- task revision current;
+- unresolved blocker/decision 없음;
+- current HEAD verification gate 충족;
+- 비-A0 substantive work는 current HEAD independent review PASS/PASS_WITH_NOTES
+  및 VERIFIED_REVIEW_DEPTH가 AUDIT_FLOOR를 충족;
+- accepted current-head review의 VERIFIED_CONTRACT_CHANGE_REQUIRED가 NO이거나
+  필요한 Astra/User decision이 durable하게 기록되어 current task revision에 반영;
+- Astra gate가 필요한 경우에만 applicable revision/head/evidence와 일치하는
+  Astra-gate PASS/PASS_WITH_NOTES 및 required depth 충족;
+- Astra gate가 필요 없으면 Astra result 부재는 merge blocker가 아님;
 - 프로젝트 고유 merge 전제조건 충족.
 
-merge 결정은 여전히 User가 한다.
+merge 결정은 User가 한다.
 
 ## 19. No-change / 비코드 완료
 
 writer는 DELIVERABLE_MODE가 허용할 때만 NO_CHANGE를 반환할 수 있다.
 
-A1+ NO_CHANGE의 경우:
-- exact evidence/base SHA 제공;
-- finding/evidence에 대한 필수 독립 review 수행;
-- Astra가 그 evidence SHA에 대해 no-change 결론을 audit;
-- PASS는 `DONE_NO_CHANGE`를 도출할 수 있음;
-- merge를 만들어내지 않음.
+A1+ NO_CHANGE는 exact evidence/base SHA와 required independent review를 제공한다.
+Astra gate가 필요한 task는 같은 evidence identity에 대해 그 gate도 받아야 한다.
+그 후에만 DONE_NO_CHANGE가 도출될 수 있다.
 
-NON_CODE_EVIDENCE는 프로젝트 고유의 승인/evidence gate를 따른다. 엔지니어링
-PR gate는 production/법무/콘텐츠 승인을 대체하지 않는다.
+merge를 만들어내지 않는다.
+NON_CODE_EVIDENCE는 project-specific approval/evidence gate를 따르며 engineering
+review/Astra gate가 production/legal/content approval을 대체하지 않는다.
 
 ## 20. Merge 및 DONE
 
@@ -643,25 +568,34 @@ Slack의 결정/audit은 해당 GitHub control record/decision/audit pointer가
 
 목표 논리 권한:
 
-- Grok router: repo/PR/check 읽기 + 좁게 한정된 task comment/status 중계;
+- Grok command relay: 승인 control-plane command 호출 + 좁은 status relay만;
   source write, PR 생성, admin, secrets, delete, merge 불가.
-- Devin owner: 배정된 repo + task branch/PR만; merge/admin 불가.
-- Cheap writer: 명시적으로 배정된 branch/task만.
-- Reviewer: repo/PR 읽기 + finding comment만; source write 불가.
-- Astra: repo/PR 읽기 + audit/decision evidence 쓰기만; source write/merge 불가.
-- Mechanical layer: 이벤트 검증 + control-record/claim/status 변경만;
-  source write/merge 불가.
+- DEVIN / GROK_BUILD / GLM builder adapter: 배정 repo + task branch/PR만;
+  merge/admin 불가.
+- Cheap writer: 명시 배정 branch/task만.
+- Reviewer: repo/PR read + finding comment만; source write 불가.
+- Astra: repo/PR read + architecture/audit/decision evidence write만; source write/merge 불가.
+- Mechanical layer: control-record/claim/status 변경과 configured builder/reviewer
+  launch만; source write/merge 불가.
 - User: 최종 권한.
 
-기술적 강제는 이 문서와 별개이며, 최소권한이 강제된다고 주장하기 전에 검증해야
-한다.
+shared build host는 하나의 security domain이다. worktree/process 분리는 credential
+격리가 아니다. builder별 worktree를 쓴다는 이유만으로 production/root/payment
+secret을 그 host에 두지 않는다.
 
 ## 24. 비용 규율
 
-AI 호출 전에 raw 이벤트를 dedupe하고 CI matrix를 집계한다.
-변경되지 않은 상태는 또 다른 상태, review, audit 요청을 만들지 않는다.
-Astra는 결정 질문이나 gate-ready evidence를 받으며, 진행 잡담을 받지 않는다.
-Devin은 저장소 조사와 전체 test/fix 루프를 소유한다.
-polling, 상시 세션, transcript 감시는 없다.
-완료 task별 agent 비용, Astra 사용량, User 개입, audit 재작업을 측정한다.
-사용 불가한 사용량 지표는 unknown으로 보고한다.
+AI 호출 전에 raw event를 dedupe하고 CI matrix를 집계한다.
+unchanged state는 또 다른 status, review, Astra request를 만들지 않는다.
+
+Astra는 architecture exception, explicit milestone/release packet, A3 gate-ready
+evidence를 받으며 routine progress chatter나 모든 A1/A2 PR을 받지 않는다.
+배정 builder가 전체 test/fix/retest loop를 소유하고 independent reviewer가 routine
+non-author review를 소유한다.
+
+polling, standing session, transcript surveillance는 없다.
+Grok은 project context를 읽는 대신 짧은 deterministic command를 실행/relay한다.
+
+validated completed-task throughput, builder별 비용, Astra/Grok 사용량, User 개입,
+review finding, rework, integration conflict를 측정한다.
+
