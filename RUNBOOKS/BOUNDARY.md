@@ -52,6 +52,7 @@ python3 -I /opt/astra/boundary/control_plane_boundary.py verify-install \
   --hook /opt/astra/boundary/control_plane_boundary_hook.sh \
   --policy /opt/astra/boundary/policy.json \
   --hook-sha256 <hook-sha256> --policy-sha256 <policy-sha256> \
+     --evaluator-sha256 <audited-evaluator-sha256> \
   --owner-uid 0 --forbid-prefix /runner/work/dir \
   --writable-check --env-file /path/to/runner/.env
 
@@ -82,3 +83,5 @@ workflow/ref/event/actor/source, policy 부재·변조, `.env` 변조, action pr
 검증된 경계 복구 전 disconnected를 유지한다. ledger/session을 초기화하거나
 UNKNOWN을 자동 해제하지 않는다. 설치·권한·부정 시험·기본 branch preflight를 exact
 source와 GitHub 근거에 연결한 뒤 독립 검증한다. 이 문서는 merge/activation PASS가 아니다.
+
+설치 시 hook·policy·evaluator의 예상 해시는 설치 파일에서 새로 계산해 신뢰하지 않고, 감사된 artifact/승인 기록에서 가져온다. 검사기는 세 파일과 상위 경로의 소유권·교체 가능성을 검사한다. runner `.env`의 모든 `ASTRA_BOUNDARY_*` 및 hook override는 금지한다. 검사기는 `/usr/bin/python3`를 고정 사용하며 DENY는 항상 worker 종료를 시도한다. 기존 report-only 환경변수는 지원하지 않는다.
